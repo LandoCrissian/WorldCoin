@@ -234,26 +234,85 @@ html { scroll-padding-top: 72px; }
     @media (prefers-reduced-motion: reduce){
       *{ transition: none !important; animation: none !important; }
     }
+
+    /* --- Hamburger menu --- */
+.nav{ position:relative; }
+.links{ display:flex; gap:16px; }
+.hamburger{
+  display:none; margin-left:8px;
+  width:40px; height:40px; border:1px solid var(--line); border-radius:10px;
+  background: var(--soft); cursor:pointer;
+  align-items:center; justify-content:center; gap:4px;
+}
+.hamburger span{
+  display:block; width:18px; height:2px; background: var(--text); border-radius:2px;
+}
+
+/* Mobile dropdown */
+.mobile-menu{
+  display:none;
+  position:fixed; left:0; right:0; top:64px; /* below header */
+  background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  padding:10px 12px; z-index: 9;
+}
+.mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
+.mobile-menu a.link + a.link{ border-top:1px solid var(--line); }
+
+/* Show hamburger and collapse links on small screens */
+@media (max-width: 640px){
+  .links{ display:none; }
+  .hamburger{ display:inline-flex; }
+  .actions{ margin-left:auto; gap:8px; }
+  .actions .btn{ padding:10px 12px; }
+}
+/* Hide mobile menu on desktop no matter what */
+@media (min-width: 641px){
+  .mobile-menu{ display:none !important; }
+}
+
+/* When menu is open */
+.mobile-menu.open{ display:block; }
+.hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
+.hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
+.hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
   </style>
 </head>
 <body>
   <header>
     <nav class="nav" aria-label="Primary">
-      <a class="brand" href="#top" aria-label="CROnation home">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20Z" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M2.5 12h19M12 2c0 4 4 8 10 8M12 22c0-4-4-8-10-8" stroke="currentColor" stroke-width="1.2" opacity=".6"/>
-        </svg>
-        <b>CROnation</b>
-      </a>
-      <div class="actions">
-        <a class="link" href="#map-section">Map</a>
-        <a class="link" href="#leaderboard">Leaderboard</a>
-        <a class="link" href="#about">About</a>
-        <button class="btn ghost" aria-disabled="true" title="Wallet connect coming soon">Connect Wallet</button>
-        <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
-      </div>
-    </nav>
+  <a class="brand" href="#top" aria-label="CROnation home">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20Z" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M2.5 12h19M12 2c0 4 4 8 10 8M12 22c0-4-4-8-10-8" stroke="currentColor" stroke-width="1.2" opacity=".6"/>
+    </svg>
+    <b>CROnation</b>
+  </a>
+
+  <!-- Desktop links -->
+  <div class="links">
+    <a class="link" href="#map-section">Map</a>
+    <a class="link" href="#leaderboard-card">Leaderboard</a>
+    <a class="link" href="#about">About</a>
+  </div>
+
+  <div class="actions">
+    <button class="btn ghost" aria-disabled="true" title="Wallet connect coming soon">Connect Wallet</button>
+    <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
+  </div>
+
+  <!-- Mobile hamburger -->
+  <button class="hamburger" id="hamburger"
+          aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+
+  <!-- Mobile dropdown menu -->
+  <div class="mobile-menu" id="mobile-menu" role="menu">
+    <a class="link" role="menuitem" href="#map-section">Map</a>
+    <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
+    <a class="link" role="menuitem" href="#about">About</a>
+  </div>
+</nav>
   </header>
 
   <main id="top">
