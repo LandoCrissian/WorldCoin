@@ -432,6 +432,31 @@ html { scroll-padding-top: 72px; }
   window.scrollTo({ top: y, behavior:'smooth' });
 }
 
+   // Hamburger toggle
+(function mobileMenu(){
+  const btn = document.getElementById('hamburger');
+  const menu = document.getElementById('mobile-menu');
+  if(!btn || !menu) return;
+
+  const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+  const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
+
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    expanded ? close() : open();
+  });
+
+  // Close on link click / ESC / outside tap
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+  window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+  window.addEventListener('click', e => {
+    if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close();
+  }, { passive:true });
+
+  // Close on resize to desktop
+  window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
+})(); 
+
     // Smooth scroll with sticky-header offset for in-page links
 (function attachSmoothAnchors() {
   const header = document.querySelector('header');
