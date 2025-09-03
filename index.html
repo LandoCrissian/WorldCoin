@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>CROnation — One World. One CROnation.</title>
 
   <!-- Fonts -->
@@ -46,6 +46,29 @@
       background: var(--bg);
       line-height: 1.5;
     }
+
+    /* iOS notch + sticky header comfort */
+header { padding-top: calc(env(safe-area-inset-top, 0px)); }
+
+/* Let native anchor jumps account for the sticky header */
+html { scroll-padding-top: 72px; }
+
+/* Safer map height on mobile (no 100vh bugs) */
+#map { height: clamp(280px, 58vh, 560px); }
+
+/* Better hit targets on mobile */
+.btn { min-height: 44px; }
+.nav a.link { padding: 10px 6px; }
+
+/* Keep Leaflet controls clear on small screens */
+.leaflet-control-zoom { margin: 10px; }
+.leaflet-control-zoom a { width: 34px; height: 34px; line-height: 34px; }
+
+/* Sections won’t hide under the sticky header when linked */
+#map-section, #leaderboard-card, #about { scroll-margin-top: 84px; }
+
+/* Subtle mobile refinement */
+* { -webkit-tap-highlight-color: transparent; }
 
     /* Layout */
     .container{
@@ -140,10 +163,12 @@
 
     /* Map */
     #map{
-      width:100%; height: 520px;
-      border-radius: 12px; overflow:hidden; border:1px solid var(--line);
-      background: var(--soft);
-    }
+  width:100%;
+  height: clamp(280px, 58vh, 560px);
+  border-radius: 12px; overflow:hidden; border:1px solid var(--line);
+  background: var(--soft);
+}
+    
     .leaflet-container{ font: inherit; }
     .map-note{ margin-top:10px; color:var(--muted); font-size: 14px; }
 
@@ -280,7 +305,7 @@
             </div>
             <div class="field">
               <label for="nickname">Nickname (optional)</label>
-              <input id="nickname" placeholder="e.g. Lando" />
+              <input id="nickname" placeholder="e.g. WillyBilly" />
             </div>
             <div class="field" style="grid-column:1 / -1;">
               <button class="btn primary" type="submit">Mint Passport (demo)</button>
@@ -343,8 +368,39 @@
     const el = (id)=>document.getElementById(id);
 
     function scrollToMap(){
-      document.getElementById('map-section').scrollIntoView({behavior:'smooth'});
-    }
+  const header = document.querySelector('header');
+  const y = document.getElementById('map-section').getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
+  window.scrollTo({ top: y, behavior:'smooth' });
+}
+
+    // Smooth scroll with sticky-header offset for in-page links
+(function attachSmoothAnchors() {
+  const header = document.querySelector('header');
+  const headerH = () => header.getBoundingClientRect().height;
+
+  document.querySelectorAll('a.link[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = a.getAttribute('href').slice(1);
+      const target = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+      if (!target) return;
+      const y = target.getBoundingClientRect().top + window.pageYOffset - headerH() - 8;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    });
+  });
+
+  // If the page loads with a hash, nudge into place
+  if (location.hash) {
+    setTimeout(() => {
+      const id = location.hash.slice(1);
+      const t = document.getElementById(id);
+      if (t) {
+        const y = t.getBoundingClientRect().top + window.pageYOffset - headerH() - 8;
+        window.scrollTo({ top: y });
+      }
+    }, 0);
+  }
+})();
 
     // Stats + leaderboard state
     const countryCounts = new Map(); // country -> count
@@ -399,11 +455,20 @@
         }).addTo(map);
 
         try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
-      })
-      .catch(err => {
-        console.error('Failed to load GeoJSON', err);
-        el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
-      });
+
+// iOS Safari sometimes needs a nudge after layout settles
+requestAnimationFrame(() => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 300);
+
+// Keep it correct on rotate / resize
+['orientationchange','resize'].forEach(ev =>
+  window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
+);
+})  // <-- closes the .then(data => { ... })
+.catch(err => {
+  console.error('Failed to load GeoJSON', err);
+  el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
+});
 
     function populateCountryDropdown(list){
       const sel = el('country');
