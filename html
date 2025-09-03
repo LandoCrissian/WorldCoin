@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Coin | One World. One Coin.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Space+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-blue: #00f7ff;
+      --neon-pink: #ff00ff;
+      --dark-bg: #0a0a0a;
+    }
+    body {
+      margin: 0;
+      font-family: 'Space Mono', monospace;
+      background: var(--dark-bg);
+      color: white;
+      text-align: center;
+    }
+    header {
+      padding: 2rem;
+    }
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.5rem;
+      color: var(--neon-blue);
+      text-shadow: 0 0 10px var(--neon-pink);
+    }
+    #map {
+      width: 90%;
+      max-width: 800px;
+      height: 400px;
+      background: #111;
+      margin: 1rem auto;
+      border: 2px solid var(--neon-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: gray;
+      font-size: 1.2rem;
+    }
+    button {
+      background: var(--neon-pink);
+      border: none;
+      padding: 0.8rem 1.5rem;
+      margin: 1rem;
+      font-size: 1rem;
+      font-family: 'Orbitron', sans-serif;
+      color: white;
+      cursor: pointer;
+      text-shadow: 0 0 5px black;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: var(--neon-blue);
+      transform: scale(1.05);
+    }
+    #leaderboard {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #111;
+      border: 1px solid #222;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    /* Popup modal */
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: #1a1a1a;
+      padding: 2rem;
+      border: 2px solid var(--neon-blue);
+      max-width: 400px;
+      width: 90%;
+      text-align: left;
+    }
+    .modal-content h2 {
+      margin-top: 0;
+      color: var(--neon-pink);
+    }
+    .passport {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 2px dashed var(--neon-pink);
+      background: #0d0d0d;
+      text-align: center;
+    }
+    .passport img {
+      width: 60px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌍 World Coin</h1>
+    <p>One World. One Coin. Join the Map.</p>
+    <button onclick="openModal()">Mark Your Country</button>
+  </header>
+
+  <!-- Map Placeholder -->
+  <div id="map">[ Interactive World Map Coming Soon ]</div>
+
+  <!-- Leaderboard -->
+  <div id="leaderboard">
+    <h2>🌐 Leaderboard</h2>
+    <p>USA 🇺🇸 — 120 citizens</p>
+    <p>India 🇮🇳 — 98 citizens</p>
+    <p>Brazil 🇧🇷 — 75 citizens</p>
+  </div>
+
+  <!-- Modal Popup -->
+  <div id="countryModal" class="modal">
+    <div class="modal-content">
+      <h2>Mark Your Country</h2>
+      <form id="countryForm">
+        <label>Nickname</label><br>
+        <input type="text" id="nickname" placeholder="Optional" style="width:100%;margin-bottom:1rem;"><br>
+        <label>Country</label><br>
+        <select id="country" style="width:100%;margin-bottom:1rem;">
+          <option value="">--Select--</option>
+          <option>USA</option>
+          <option>India</option>
+          <option>Brazil</option>
+          <option>Japan</option>
+          <option>UK</option>
+          <!-- Add more -->
+        </select><br>
+        <button type="submit">Mint Passport</button>
+      </form>
+
+      <!-- Fake NFT Passport Preview -->
+      <div class="passport" id="passportPreview" style="display:none;">
+        <h3>World Passport NFT</h3>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Globe_icon.svg/1024px-Globe_icon.svg.png" alt="Flag">
+        <p id="passportDetails"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById("countryModal");
+    const form = document.getElementById("countryForm");
+    const passport = document.getElementById("passportPreview");
+    const details = document.getElementById("passportDetails");
+
+    function openModal() {
+      modal.style.display = "flex";
+    }
+    window.onclick = function(event) {
+      if (event.target === modal) modal.style.display = "none";
+    }
+
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      const nick = document.getElementById("nickname").value || "Anonymous";
+      const country = document.getElementById("country").value;
+      if (!country) return alert("Please select a country");
+
+      details.innerHTML = `${nick} — ${country}<br>Passport #${Math.floor(Math.random()*99999)}`;
+      passport.style.display = "block";
+    }
+  </script>
+</body>
+</html>
