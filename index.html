@@ -214,10 +214,20 @@ html { scroll-padding-top: 72px; }
       display:grid; grid-template-columns: 72px 1fr; gap:12px; align-items:center;
       background: var(--soft);
     }
-    .passport .emblem{
-      width:64px; height:64px; border-radius:12px; display:grid; place-items:center;
-      background: #e9eef8; color:#1e3a8a; font-size: 22px; font-weight:700;
-    }
+    .passport .emblem {
+  display:grid;
+  place-items:center;
+  width:64px;
+  height:64px;
+  border-radius:12px;
+  overflow:hidden;
+  background: var(--soft);
+}
+.passport .emblem img {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
     .passport .info b{ display:block; font-size:16px; }
     .passport .info small{ color:var(--muted); }
 
@@ -370,14 +380,15 @@ html { scroll-padding-top: 72px; }
           </form>
 
           <div id="passport" class="passport" style="display:none;">
-            <div class="emblem" aria-hidden="true">CN</div>
-            <div class="info">
-              <b>CROnation Passport</b>
-              <small id="passport-details">—</small>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="emblem" aria-hidden="true">
+    <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" 
+         alt="CROnation logo" style="width:64px;height:64px;object-fit:contain;border-radius:12px;" />
+  </div>
+  <div class="info">
+    <b>CROnation Passport</b>
+    <small id="passport-details">—</small>
+  </div>
+</div>
 
       <div class="card" id="about">
         <div class="body">
