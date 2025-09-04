@@ -189,12 +189,47 @@ html { scroll-padding-top: 72px; }
       z-index:100;
     }
     .modal[open]{ display:flex; }
-    .modal .panel{
-      width: min(560px, 96vw);
-      background: var(--bg); border:1px solid var(--line); border-radius: 16px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.18);
-      overflow:hidden;
-    }
+    /* Modal panel */
+.modal .panel {
+  width: min(560px, 96vw);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35); /* darker shadow for contrast */
+  overflow: hidden;
+}
+
+/* Modal content */
+.modal .content {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  background: var(--bg); /* solid background so map doesn't bleed */
+}
+
+/* Modal backdrop */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65); /* darker dim behind modal */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+/* Inputs + selects inside modal */
+.modal input,
+.modal select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 92%, #000 8%); /* solid but theme-safe */
+  font: inherit;
+  color: var(--text);
+}
     .panel .header{
       padding: 14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;
     }
