@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>CROnation — One World. One CROnation.</title>
 
+  <!-- Theme colors for mobile UI chrome -->
+  <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -224,9 +228,9 @@
       display:flex; justify-content:flex-end; gap:10px;
     }
 
-    /* Inputs inside modal: solid, readable */
-    .modal input,
-    .modal select{
+    /* Inputs inside modal: solid, readable + iOS no-zoom */
+    input, select, textarea { font-size:16px; }
+    .modal input, .modal select{
       width:100%;
       padding:10px 12px;
       border:1px solid var(--line);
@@ -235,21 +239,14 @@
       font: inherit; color: var(--text);
     }
 
-    /* Fix iOS auto-zoom on focus */
-input, select, textarea { font-size:16px; }
+    /* Tap responsiveness */
+    button, a, .btn { touch-action: manipulation; }
 
-/* Passport image sizing (use the shared rules you already started) */
-.passport .emblem img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
+    /* Clickable shapes on the map */
+    .leaflet-interactive { cursor: pointer; }
 
-/* Responsive join form grid */
-.join-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
-.join-grid .full{ grid-column:1 / -1; }
-@media (min-width: 640px){
-  .join-grid{ grid-template-columns:1fr 1fr; }
-}
-
-/* Optional: tidy native selects a bit without killing iOS accessibility */
-select{ -webkit-appearance:menulist; appearance:menulist; }
+    /* Keyboard focus */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     /* Lock page scroll when modal is open */
     body.modal-open{ overflow:hidden; }
@@ -266,9 +263,7 @@ select{ -webkit-appearance:menulist; appearance:menulist; }
       display:grid; place-items:center;
       width:64px; height:64px; border-radius:12px; overflow:hidden; background: var(--soft);
     }
-    .passport .emblem img{
-      width:100%; height:100%; object-fit:contain; border-radius:12px;
-    }
+    .passport .emblem img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
     .passport .info b{ display:block; font-size:16px; }
     .passport .info small{ color:var(--muted); }
 
@@ -321,10 +316,7 @@ select{ -webkit-appearance:menulist; appearance:menulist; }
     /* Silence Leaflet tooltips when modal open */
     body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
 
-    /* iOS focus zoom prevention: ensure >=16px */
-    input, select, textarea { font-size:16px; }
-    
-    /* When menu is open */
+    /* Mobile menu open state */
     .mobile-menu.open{ display:block; }
     .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
@@ -404,58 +396,58 @@ select{ -webkit-appearance:menulist; appearance:menulist; }
       </aside>
 
       <!-- JOIN -->
-<div class="card">
-  <div class="body">
-    <h3>Join CROnation</h3>
+      <div class="card">
+        <div class="body">
+          <h3>Join CROnation</h3>
 
-    <form id="join-form" class="join-grid">
-      <div class="field">
-        <label for="country">Country</label>
-        <select id="country" required>
-          <option value="">Select your country</option>
-        </select>
+          <form id="join-form" class="join-grid" aria-label="Join CROnation form">
+            <div class="field">
+              <label for="country">Country</label>
+              <select id="country" required>
+                <option value="">Select your country</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="nickname">Nickname (optional)</label>
+              <input id="nickname" placeholder="e.g. WillyBilly" />
+            </div>
+
+            <div class="field full">
+              <button class="btn primary" type="submit">Mint Passport (demo)</button>
+            </div>
+          </form>
+
+          <!-- Passport preview -->
+          <div id="passport" class="passport" style="display:none;" role="status" aria-live="polite">
+            <div class="emblem" aria-hidden="true">
+              <img
+                src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
+                alt="CROnation logo" />
+            </div>
+            <div class="info">
+              <b>CROnation Passport</b>
+              <small id="passport-details">—</small>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="nickname">Nickname (optional)</label>
-        <input id="nickname" placeholder="e.g. WillyBilly" />
+      <!-- ABOUT -->
+      <div class="card" id="about">
+        <div class="body">
+          <h3>About</h3>
+          <p class="muted">
+            CROnation is a simple, global participation map for the Cronos community. It’s not a complicated
+            game or an overpromised utility — just a clean way to visualize where we all are, and a minimal
+            passport NFT to flex your origin.
+          </p>
+          <p class="muted">
+            Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room
+            to grow into wallet connections, airdrops, and seasonal leaderboards.
+          </p>
+        </div>
       </div>
-
-      <div class="field full">
-        <button class="btn primary" type="submit">Mint Passport (demo)</button>
-      </div>
-    </form>
-
-    <!-- Passport preview (stays inside this card) -->
-    <div id="passport" class="passport" style="display:none;">
-      <div class="emblem" aria-hidden="true">
-        <img
-          src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
-          alt="CROnation logo" />
-      </div>
-      <div class="info">
-        <b>CROnation Passport</b>
-        <small id="passport-details">—</small>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ABOUT (only once) -->
-<div class="card" id="about">
-  <div class="body">
-    <h3>About</h3>
-    <p class="muted">
-      CROnation is a simple, global participation map for the Cronos community. It’s not a complicated
-      game or an overpromised utility — just a clean way to visualize where we all are, and a minimal
-      passport NFT to flex your origin.
-    </p>
-    <p class="muted">
-      Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room
-      to grow into wallet connections, airdrops, and seasonal leaderboards.
-    </p>
-  </div>
-</div>
     </section>
 
     <!-- Modal (used when clicking map) -->
@@ -634,6 +626,7 @@ select{ -webkit-appearance:menulist; appearance:menulist; }
     // Modal handlers
     function openModal(country){
       const modal = el('join-modal');
+      if (modal.hasAttribute('open')) return; // guard double-open
       el('modal-country').value = country;
       el('modal-nickname').value = '';
       modal.setAttribute('open', '');
