@@ -2,12 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
   <title>CROnation — One World. One CROnation.</title>
 
-  <!-- Theme colors for mobile UI chrome -->
-  <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://cronation.netlify.app/" />
+  <meta name="description" content="Mark your country, mint a simple passport, and watch the Cronos community light up the world map." />
+  <meta name="theme-color" content="#2563eb" />
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:title" content="CROnation — One World. One CROnation." />
+  <meta property="og:description" content="Mark your country, mint a simple passport, and watch the Cronos community light up the world map." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://cronation.netlify.app/" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="CROnation — One World. One CROnation." />
+  <meta name="twitter:site" content="@cronation8" />
+  <meta name="twitter:description" content="Join the map. Mint your passport. One CROnation." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
+
+  <!-- Favicon (re-using logo) -->
+  <link rel="icon" href="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,307 +35,121 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+  <!-- Ethers (used when TOKEN_GATE is enabled) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
   <style>
     :root{
-      --bg: #ffffff;
-      --text: #0f172a;
-      --muted: #475569;
-      --line: #e2e8f0;
-      --soft: #f8fafc;
-      --accent: #2563eb;
-      --accent-600:#1d4ed8;
-      --success:#16a34a;
-      --warning:#d97706;
+      --bg:#ffffff; --text:#0f172a; --muted:#475569; --line:#e2e8f0; --soft:#f8fafc;
+      --accent:#2563eb; --accent-600:#1d4ed8; --success:#16a34a; --warning:#d97706;
     }
     @media (prefers-color-scheme: dark){
       :root{
-        --bg:#0b0d12;
-        --text:#e5e7eb;
-        --muted:#9ca3af;
-        --line:#1f2937;
-        --soft:#0f1219;
-        --accent:#3b82f6;
-        --accent-600:#2563eb;
+        --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219;
+        --accent:#3b82f6; --accent-600:#2563eb;
       }
-      .card{ box-shadow: none; }
+      .card{ box-shadow:none; }
     }
     *{ box-sizing:border-box; }
-    html, body { height: 100%; }
+    html,body{ height:100%; }
     body{
-      margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-      color: var(--text);
-      background: var(--bg);
-      line-height: 1.5;
-      -webkit-text-size-adjust: 100%;
+      margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol", sans-serif;
+      color:var(--text); background:var(--bg); line-height:1.5; -webkit-text-size-adjust:100%;
     }
 
-    /* iOS notch + sticky header comfort */
-    header { padding-top: calc(env(safe-area-inset-top, 0px)); }
-    html { scroll-padding-top: 72px; }
-
-    /* Safer map height on mobile (no 100vh bugs) */
-    #map { height: clamp(280px, 58vh, 560px); }
-
-    /* Better hit targets on mobile */
-    .btn { min-height: 44px; }
-    .nav a.link { padding: 10px 6px; }
-
-    /* Keep Leaflet controls clear on small screens */
-    .leaflet-control-zoom { margin: 10px; }
-    .leaflet-control-zoom a { width: 34px; height: 34px; line-height: 34px; }
-
-    /* Sections won’t hide under the sticky header when linked */
-    #map-section, #leaderboard-card, #about { scroll-margin-top: 84px; }
-
-    * { -webkit-tap-highlight-color: transparent; }
+    /* Sticky header + anchor offset */
+    header { padding-top: calc(env(safe-area-inset-top, 0px)); position:sticky; top:0;
+      backdrop-filter:saturate(120%) blur(8px); background: color-mix(in srgb, var(--bg) 86%, transparent);
+      border-bottom:1px solid var(--line); z-index:10; }
+    html { scroll-padding-top:72px; }
 
     /* Layout */
-    .container{
-      width: min(1120px, 92vw);
-      margin-inline:auto;
-      padding: 24px 0 72px;
-    }
-
-    header{
-      position: sticky;
-      top:0;
-      backdrop-filter: saturate(120%) blur(8px);
-      background: color-mix(in srgb, var(--bg) 86%, transparent);
-      border-bottom: 1px solid var(--line);
-      z-index: 10;
-    }
-    .nav{
-      width: min(1120px, 92vw);
-      margin-inline:auto;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      padding: 14px 0;
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;
-    }
-    .brand svg{ width:28px; height:28px; }
-    .brand b{ font-weight:700; letter-spacing:0.2px; }
-    .nav a.link{
-      text-decoration:none; color: var(--muted); font-weight:500; margin: 0 10px;
-    }
+    .container{ width:min(1120px, 92vw); margin-inline:auto; padding:24px 0 72px; }
+    .nav{ width:min(1120px, 92vw); margin-inline:auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; }
+    .nav a.link{ text-decoration:none; color:var(--muted); font-weight:500; margin:0 10px; }
     .actions{ display:flex; align-items:center; gap:10px; }
+
     .btn{
-      appearance:none; border:1px solid var(--line); background: var(--bg); color: var(--text);
+      appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text);
       padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer;
       transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      min-height:44px;
     }
     .btn:hover{ transform: translateY(-1px); }
-    .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }
-    .btn.primary:hover{ background: var(--accent-600); }
-    .btn.ghost{ background: transparent; }
+    .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn.primary:hover{ background:var(--accent-600); }
+    .btn.ghost{ background:transparent; }
 
-    /* Hero */
-    .hero{
-      padding: 48px 0 16px;
-      display:grid; gap:16px; align-items:center; text-align:center;
-    }
-    .hero h1{
-      margin:0;
-      font-size: clamp(28px, 3.2vw + 12px, 48px);
-      letter-spacing: -0.02em;
-    }
-    .hero p.lead{
-      margin: 6px auto 0;
-      color: var(--muted);
-      max-width: 740px;
-      font-size: clamp(15px, 1.2vw + 10px, 18px);
-    }
-    .hero .cta{
-      margin-top: 18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
-    }
+    .hero{ padding:48px 0 16px; display:grid; gap:16px; align-items:center; text-align:center; }
+    .hero h1{ margin:0; font-size: clamp(28px, 3.2vw + 12px, 48px); letter-spacing:-0.02em; }
+    .hero p.lead{ margin:6px auto 0; color:var(--muted); max-width:740px; font-size:clamp(15px, 1.2vw + 10px, 18px); }
+    .hero .cta{ margin-top:18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
-    /* Stats */
-    .stats{
-      margin-top: 28px;
-      display:grid; grid-template-columns: repeat(3, 1fr); gap:14px;
-    }
-    .stat{
-      padding:14px 16px; border:1px solid var(--line); border-radius:12px; background: var(--soft);
-      display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600;
-    }
+    .stats{ margin-top:28px; display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+    .stat{ padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--soft); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; }
     .stat small{ color:var(--muted); display:block; font-weight:500; }
 
-    /* Content grid */
-    .grid{
-      margin-top: 36px;
-      display:grid; gap:24px;
-      grid-template-columns: 1.3fr 1fr;
-    }
-    @media (max-width: 960px){
-      .grid{ grid-template-columns: 1fr; }
-    }
-    .card{
-      border:1px solid var(--line); border-radius:14px; background: var(--bg);
-      box-shadow: 0 2px 16px rgba(0,0,0,.04);
-    }
-    .card h3{ margin: 0 0 6px; font-size: 18px; }
-    .card .body{ padding: 16px; }
+    .grid{ margin-top:36px; display:grid; gap:24px; grid-template-columns:1.3fr 1fr; }
+    @media (max-width:960px){ .grid{ grid-template-columns:1fr; } }
+    .card{ border:1px solid var(--line); border-radius:14px; background:var(--bg); box-shadow:0 2px 16px rgba(0,0,0,.04); }
+    .card h3{ margin:0 0 6px; font-size:18px; }
+    .card .body{ padding:16px; }
     .muted{ color:var(--muted); }
 
-    /* Map */
-    #map{
-      width:100%;
-      height: clamp(280px, 58vh, 560px);
-      border-radius: 12px; overflow:hidden; border:1px solid var(--line);
-      background: var(--soft);
-    }
-    .leaflet-container{ font: inherit; }
-    .map-note{ margin-top:10px; color:var(--muted); font-size: 14px; }
+    #map{ width:100%; height:clamp(280px, 58vh, 560px); border-radius:12px; overflow:hidden; border:1px solid var(--line); background:var(--soft); }
+    .leaflet-container{ font:inherit; }
+    .map-note{ margin-top:10px; color:var(--muted); font-size:14px; }
+    .leaflet-control-zoom { margin:10px; }
+    .leaflet-control-zoom a { width:34px; height:34px; line-height:34px; }
 
-    /* Leaderboard */
-    table{ width:100%; border-collapse: collapse; }
-    th, td{ text-align:left; padding:10px 12px; border-bottom: 1px solid var(--line); }
+    table{ width:100%; border-collapse:collapse; }
+    th, td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
     th{ color:var(--muted); font-weight:600; font-size:14px; }
-    td{ font-weight:600; }
     .rank{ width:56px; color:var(--muted); font-weight:600; }
-    .country-name{ font-weight:600; }
     .count{ text-align:right; }
 
-    /* MODAL — high contrast, always above Leaflet */
-    .modal{
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.70);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      z-index: 5000;
-    }
+    /* Modal */
+    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.70); display:none; align-items:center; justify-content:center; padding:20px; z-index:5000; }
     .modal[open]{ display:flex; }
-
-    .modal .panel{
-      width: min(560px, 96vw);
-      background: var(--bg);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      box-shadow: 0 18px 60px rgba(0,0,0,.45);
-      overflow: hidden;
-      position: relative;
-      z-index: 5001;
-    }
-
-    .modal .header,
-    .modal .content,
-    .modal .footer{
-      background: var(--bg);
-    }
-
-    .modal .header{
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
-      display:flex; justify-content:space-between; align-items:center;
-    }
-
-    .modal .content{
-      padding: 16px;
-      display:grid; gap:16px;
-    }
-
-    .modal .footer{
-      padding: 16px;
-      border-top: 1px solid var(--line);
-      display:flex; justify-content:flex-end; gap:10px;
-    }
-
-    /* Inputs inside modal: solid, readable + iOS no-zoom */
-    input, select, textarea { font-size:16px; }
-    .modal input, .modal select{
-      width:100%;
-      padding:10px 12px;
-      border:1px solid var(--line);
-      border-radius:10px;
-      background: color-mix(in srgb, var(--bg) 92%, #000 8%);
-      font: inherit; color: var(--text);
-    }
-
-    /* Tap responsiveness */
-    button, a, .btn { touch-action: manipulation; }
-
-    /* Clickable shapes on the map */
-    .leaflet-interactive { cursor: pointer; }
-
-    /* Keyboard focus */
-    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-    /* Lock page scroll when modal is open */
+    .modal .panel{ width:min(560px, 96vw); background:var(--bg); border:1px solid var(--line); border-radius:16px; box-shadow:0 18px 60px rgba(0,0,0,.45); overflow:hidden; position:relative; z-index:5001; }
+    .modal .header, .modal .content, .modal .footer{ background:var(--bg); }
+    .modal .header{ padding:14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+    .modal .content{ padding:16px; display:grid; gap:16px; }
+    .modal .footer{ padding:16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; }
+    .modal input, .modal select{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:color-mix(in srgb, var(--bg) 92%, #000 8%); font:inherit; color:var(--text); }
     body.modal-open{ overflow:hidden; }
+    body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
 
-    /* Passport preview */
-    .passport{
-      border:1px dashed var(--line);
-      border-radius:12px;
-      padding:12px;
-      display:grid; grid-template-columns: 72px 1fr; gap:12px; align-items:center;
-      background: var(--soft);
-    }
-    .passport .emblem{
-      display:grid; place-items:center;
-      width:64px; height:64px; border-radius:12px; overflow:hidden; background: var(--soft);
-    }
+    /* Join form grid */
+    .join-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+    .join-grid .full{ grid-column:1 / -1; }
+    @media (min-width:640px){ .join-grid{ grid-template-columns:1fr 1fr; } }
+
+    /* Inputs big enough for iOS (prevents zoom) */
+    input, select, textarea{ font-size:16px; }
+
+    /* Passport */
+    .passport{ border:1px dashed var(--line); border-radius:12px; padding:12px; display:grid; grid-template-columns:72px 1fr; gap:12px; align-items:center; background:var(--soft); }
+    .passport .emblem{ display:grid; place-items:center; width:64px; height:64px; border-radius:12px; overflow:hidden; background:var(--soft); }
     .passport .emblem img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
     .passport .info b{ display:block; font-size:16px; }
     .passport .info small{ color:var(--muted); }
 
-    .footer{
-      margin-top: 48px; padding: 32px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px;
-    }
+    .footer{ margin-top:48px; padding:32px 0; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
 
-    .visually-hidden{
-      position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px);
-      white-space:nowrap; border:0; padding:0; margin:-1px;
-    }
+    .visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px; }
 
-    @media (prefers-reduced-motion: reduce){
-      *{ transition: none !important; animation: none !important; }
-    }
-
-    /* --- Hamburger menu --- */
+    /* Hamburger */
     .nav{ position:relative; }
     .links{ display:flex; gap:16px; }
-    .hamburger{
-      display:none; margin-left:8px;
-      width:40px; height:40px; border:1px solid var(--line); border-radius:10px;
-      background: var(--soft); cursor:pointer;
-      align-items:center; justify-content:center; gap:4px;
-    }
-    .hamburger span{
-      display:block; width:18px; height:2px; background: var(--text); border-radius:2px;
-    }
-
-    /* Mobile dropdown */
-    .mobile-menu{
-      display:none;
-      position:fixed; left:0; right:0; top:64px;
-      background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-      padding:10px 12px; z-index: 9;
-    }
+    .hamburger{ display:none; margin-left:8px; width:40px; height:40px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
+    .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
+    .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
     .mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
     .mobile-menu a.link + a.link{ border-top:1px solid var(--line); }
-
-    @media (max-width: 640px){
-      .links{ display:none; }
-      .hamburger{ display:inline-flex; }
-      .actions{ margin-left:auto; gap:8px; }
-      .actions .btn{ padding:10px 12px; }
-    }
-    @media (min-width: 641px){
-      .mobile-menu{ display:none !important; }
-    }
-
-    /* Silence Leaflet tooltips when modal open */
-    body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
-
-    /* Mobile menu open state */
+    @media (max-width:640px){ .links{ display:none; } .hamburger{ display:inline-flex; } .actions{ margin-left:auto; gap:8px; } .actions .btn{ padding:10px 12px; } }
+    @media (min-width:641px){ .mobile-menu{ display:none !important; } }
     .mobile-menu.open{ display:block; }
     .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
@@ -327,33 +160,31 @@
   <header>
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="#top" aria-label="CROnation home">
-        <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" 
-             alt="CROnation logo" style="width:32px;height:32px;border-radius:50%;" />
+        <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" style="width:32px;height:32px;border-radius:50%;" />
         <b>CROnation</b>
       </a>
 
-      <!-- Desktop links -->
       <div class="links">
         <a class="link" href="#map-section">Map</a>
         <a class="link" href="#leaderboard-card">Leaderboard</a>
         <a class="link" href="#about">About</a>
+        <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
       </div>
 
       <div class="actions">
-        <button class="btn ghost" aria-disabled="true" title="Wallet connect coming soon">Connect Wallet</button>
+        <button id="connectBtn" class="btn ghost" title="Connect wallet">Connect Wallet</button>
         <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
       </div>
 
-      <!-- Mobile hamburger -->
       <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
 
-      <!-- Mobile dropdown menu -->
       <div class="mobile-menu" id="mobile-menu" role="menu">
         <a class="link" role="menuitem" href="#map-section">Map</a>
         <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
         <a class="link" role="menuitem" href="#about">About</a>
+        <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
       </div>
     </nav>
   </header>
@@ -361,10 +192,10 @@
   <main id="top">
     <section class="container hero">
       <h1>One World. One CROnation.</h1>
-      <p class="lead">A clean, global map of our community on Cronos. Mark your country, mint a simple passport NFT, and watch the world light up.</p>
+      <p class="lead">A clean, global map of our community on Cronos. Mark your country, mint a simple passport, and watch the world light up.</p>
       <div class="cta">
         <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
-        <a href="#" class="btn" title="Buy (placeholder)">Buy CRON8</a>
+        <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
       </div>
 
       <div class="stats" role="status" aria-live="polite">
@@ -380,7 +211,7 @@
           <h3>Community Map</h3>
           <p class="muted">Tap a country to join. You can also use the form below.</p>
           <div id="map" aria-label="Interactive world map"></div>
-          <p class="map-note">Data is demo-only for now. Wallet connect + on-chain passport mint coming next.</p>
+          <p class="map-note">Demo today. Wallet gating + on-chain passport coming next.</p>
         </div>
       </div>
 
@@ -400,7 +231,7 @@
         <div class="body">
           <h3>Join CROnation</h3>
 
-          <form id="join-form" class="join-grid" aria-label="Join CROnation form">
+          <form id="join-form" class="join-grid">
             <div class="field">
               <label for="country">Country</label>
               <select id="country" required>
@@ -413,17 +244,16 @@
               <input id="nickname" placeholder="e.g. WillyBilly" />
             </div>
 
-            <div class="field full">
+            <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
               <button class="btn primary" type="submit">Mint Passport (demo)</button>
+              <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
             </div>
           </form>
 
           <!-- Passport preview -->
-          <div id="passport" class="passport" style="display:none;" role="status" aria-live="polite">
+          <div id="passport" class="passport" style="display:none;">
             <div class="emblem" aria-hidden="true">
-              <img
-                src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
-                alt="CROnation logo" />
+              <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" />
             </div>
             <div class="info">
               <b>CROnation Passport</b>
@@ -437,20 +267,13 @@
       <div class="card" id="about">
         <div class="body">
           <h3>About</h3>
-          <p class="muted">
-            CROnation is a simple, global participation map for the Cronos community. It’s not a complicated
-            game or an overpromised utility — just a clean way to visualize where we all are, and a minimal
-            passport NFT to flex your origin.
-          </p>
-          <p class="muted">
-            Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room
-            to grow into wallet connections, airdrops, and seasonal leaderboards.
-          </p>
+          <p class="muted">CROnation is a simple, global participation map for the Cronos community. It’s not a complicated game or an overpromised utility — just a clean way to visualize where we all are, and a minimal passport to flex your origin.</p>
+          <p class="muted">Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room to grow into wallet connections, airdrops, and seasonal leaderboards.</p>
         </div>
       </div>
     </section>
 
-    <!-- Modal (used when clicking map) -->
+    <!-- Modal (map click) -->
     <div class="modal" id="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
       <div class="panel">
         <div class="header">
@@ -464,7 +287,7 @@
           </div>
           <div class="field">
             <label for="modal-nickname">Nickname (optional)</label>
-            <input id="modal-nickname" placeholder="e.g. HillBillyCRO">
+            <input id="modal-nickname" placeholder="e.g. Lando">
           </div>
         </div>
         <div class="footer">
@@ -484,7 +307,33 @@
   </footer>
 
   <script>
+    /**** Launch Config + Flags ****/
+    const FLAGS = {
+      TOKEN_GATE: false,      // flip to true when ready
+    };
+    const LAUNCH = {
+      xHandle: 'cronation8',
+      siteUrl: 'https://cronation.netlify.app',
+      token: {
+        address: '0x0000000000000000000000000000000000000000', // TODO: set final
+        decimals: 18,
+        minBalance: '1',
+        chainIdHex: '0x19', // Cronos Mainnet (25)
+        rpc: 'https://evm.cronos.org',
+        // Optional ERC-20 ABI fragment for balanceOf
+        abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
+      }
+    };
+
+    /**** Helpers ****/
     const el = (id)=>document.getElementById(id);
+    const STORAGE_KEY = 'cronation_passports_v1';      // address -> {country,nick,serial}
+    const storage = {
+      getAll(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||{}; } catch{ return {}; } },
+      setAll(obj){ localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); },
+      get(addr){ const a=this.getAll(); return a[addr?.toLowerCase()]||null; },
+      put(addr, data){ const a=this.getAll(); a[addr?.toLowerCase()] = data; this.setAll(a); }
+    };
 
     function scrollToMap(){
       const header = document.querySelector('header');
@@ -492,36 +341,24 @@
       window.scrollTo({ top: y, behavior:'smooth' });
     }
 
-    // Hamburger toggle
+    /**** Mobile menu ****/
     (function mobileMenu(){
       const btn = document.getElementById('hamburger');
       const menu = document.getElementById('mobile-menu');
       if(!btn || !menu) return;
-
       const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
       const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
-
-      btn.addEventListener('click', () => {
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        expanded ? close() : open();
-      });
-
-      // Close on link click / ESC / outside tap
+      btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
       menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
       window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-      window.addEventListener('click', e => {
-        if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close();
-      }, { passive:true });
-
-      // Close on resize to desktop
+      window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
       window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
     })();
 
-    // Smooth scroll with sticky-header offset for in-page links
+    /**** Smooth in-page links ****/
     (function attachSmoothAnchors() {
       const header = document.querySelector('header');
       const headerH = () => header.getBoundingClientRect().height;
-
       document.querySelectorAll('a.link[href^="#"]').forEach(a => {
         a.addEventListener('click', (e) => {
           e.preventDefault();
@@ -532,7 +369,6 @@
           window.scrollTo({ top: y, behavior: 'smooth' });
         });
       });
-
       if (location.hash) {
         setTimeout(() => {
           const id = location.hash.slice(1);
@@ -545,94 +381,65 @@
       }
     })();
 
-    // Stats + leaderboard state
+    /**** Map + Countries ****/
     const countryCounts = new Map(); // country -> count
-    const countryList = [];          // for dropdown
+    const countryList = [];
     let totalCitizens = 0;
-
-    // Current year
     el('year').textContent = new Date().getFullYear();
 
-    // Initialize Leaflet map (minimal look, no tiles)
     const map = L.map('map', {
-      zoomControl: true,
-      minZoom: 1,
-      maxZoom: 6,
-      worldCopyJump: true,
-      attributionControl: false
+      zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
     }).setView([20, 0], 2);
 
-    // Load world countries GeoJSON
     const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
-
-    fetch(GEOJSON_URL)
-      .then(r => r.json())
-      .then(data => {
-        const features = data.features;
-
-        // Prepare country list
-        features.forEach(f => {
-          const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-          countryList.push(name);
-        });
-        countryList.sort((a,b)=>a.localeCompare(b));
-        populateCountryDropdown(countryList);
-
-        // Style + interactivity
-        const layer = L.geoJSON(data, {
-          style: feature => ({
-            color: '#cbd5e1',
-            weight: 1,
-            fillColor: '#e5e7eb',
-            fillOpacity: 1
-          }),
-          onEachFeature: (feature, l) => {
-            const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-            l.on({
-              mouseover: () => { l.setStyle({fillColor:'#dbeafe'}); },
-              mouseout:  () => { l.setStyle({fillColor:'#e5e7eb'}); },
-              click:     () => openModal(name)
-            });
-            l.bindTooltip(name, {sticky: true});
-          }
-        }).addTo(map);
-
-        try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
-
-        // iOS Safari needs size nudges
-        requestAnimationFrame(() => map.invalidateSize());
-        setTimeout(() => map.invalidateSize(), 300);
-
-        ['orientationchange','resize'].forEach(ev =>
-          window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
-        );
-      })
-      .catch(err => {
-        console.error('Failed to load GeoJSON', err);
-        el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
+    fetch(GEOJSON_URL).then(r => r.json()).then(data => {
+      const features = data.features;
+      features.forEach(f => {
+        const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+        countryList.push(name);
       });
+      countryList.sort((a,b)=>a.localeCompare(b));
+      populateCountryDropdown(countryList);
+
+      const layer = L.geoJSON(data, {
+        style: feature => ({ color:'#cbd5e1', weight:1, fillColor:'#e5e7eb', fillOpacity:1 }),
+        onEachFeature: (feature, l) => {
+          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+          l.on({
+            mouseover: () => { l.setStyle({fillColor:'#dbeafe'}); },
+            mouseout:  () => { l.setStyle({fillColor:'#e5e7eb'}); },
+            click:     () => openModal(name)
+          });
+          l.bindTooltip(name, {sticky: true});
+        }
+      }).addTo(map);
+
+      try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
+      requestAnimationFrame(() => map.invalidateSize());
+      setTimeout(() => map.invalidateSize(), 300);
+      ['orientationchange','resize'].forEach(ev =>
+        window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
+      );
+    }).catch(err => {
+      console.error('Failed to load GeoJSON', err);
+      el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
+    });
 
     function populateCountryDropdown(list){
       const sel = el('country');
       const frag = document.createDocumentFragment();
-      list.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name; opt.textContent = name;
-        frag.appendChild(opt);
-      });
+      list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
       sel.appendChild(frag);
     }
 
-    // Modal handlers
+    /**** Modal ****/
     function openModal(country){
       const modal = el('join-modal');
-      if (modal.hasAttribute('open')) return; // guard double-open
       el('modal-country').value = country;
       el('modal-nickname').value = '';
       modal.setAttribute('open', '');
-      document.body.classList.add('modal-open');   // prevent background scroll
+      document.body.classList.add('modal-open');
     }
-
     function closeModal(){
       el('join-modal').removeAttribute('open');
       document.body.classList.remove('modal-open');
@@ -642,41 +449,144 @@
     function mintFromModal(){
       const country = el('modal-country').value;
       const nick = el('modal-nickname').value || 'Anonymous';
-      performMint(country, nick);
+      attemptMint(country, nick);
       closeModal();
     }
 
-    // Form join flow
-    el('join-form').addEventListener('submit', (e)=>{
+    /**** Wallet + Token-gating (flagged) ****/
+    const connectBtn = el('connectBtn');
+    let provider = null, signer = null, userAddress = null;
+
+    async function connectWallet(){
+      if(!window.ethereum){
+        alert('No wallet detected. Please install MetaMask or a compatible Cronos wallet.');
+        return;
+      }
+      try{
+        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+        userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+
+        // If gating is on, ensure chain + balance
+        if(FLAGS.TOKEN_GATE){
+          await ensureChain();
+          const holds = await hasRequiredTokens(userAddress);
+          if(!holds){
+            alert('You need to hold the required token to join. Please acquire the token and try again.');
+            return;
+          }
+        }
+
+        // Update UI + restore passport if any
+        connectBtn.textContent = shortAddr(userAddress);
+        restorePassportIfAny();
+      }catch(err){
+        console.error(err);
+        alert('Wallet connection was cancelled or failed.');
+      }
+    }
+
+    function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
+
+    async function ensureChain(){
+      const desired = LAUNCH.token.chainIdHex;
+      const current = await provider.send('eth_chainId', []);
+      if(current?.toLowerCase() !== desired.toLowerCase()){
+        try{
+          await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
+        }catch(switchErr){
+          // Optionally add chain if missing — Cronos Mainnet
+          if(switchErr.code === 4902){
+            await provider.send('wallet_addEthereumChain', [{
+              chainId: desired,
+              chainName: 'Cronos Mainnet',
+              nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+              rpcUrls:[LAUNCH.token.rpc],
+              blockExplorerUrls:['https://cronoscan.com']
+            }]);
+          }else{ throw switchErr; }
+        }
+      }
+    }
+
+    async function hasRequiredTokens(address){
+      const token = LAUNCH.token.address;
+      if(!token || token === '0x0000000000000000000000000000000000000000'){ return false; }
+      const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+      const bal = await erc20.balanceOf(address);
+      const min = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+      return bal.gte(min);
+    }
+
+    connectBtn.addEventListener('click', async () => {
+      if (!FLAGS.TOKEN_GATE) {
+        // demo mode: just fake-connect for UX and restore any saved passport
+        if (!userAddress && window.ethereum) {
+          const accounts = await window.ethereum.request({ method:'eth_requestAccounts' }).catch(()=>[]);
+          userAddress = (accounts && accounts[0]) ? accounts[0] : 'demo';
+        } else if (!userAddress) {
+          userAddress = 'demo';
+        }
+        connectBtn.textContent = shortAddr(userAddress);
+        restorePassportIfAny();
+      } else {
+        await connectWallet();
+      }
+    });
+
+    /**** Join flows ****/
+    el('join-form').addEventListener('submit', async (e)=>{
       e.preventDefault();
+
+      // If gating is enabled, enforce it
+      if(FLAGS.TOKEN_GATE){
+        if(!userAddress){ await connectWallet(); if(!userAddress) return; }
+        const ok = await hasRequiredTokens(userAddress);
+        if(!ok){ alert('You need to hold the required token to join.'); return; }
+      }
+
       const country = el('country').value;
       if(!country){ alert('Please select your country'); return; }
       const nick = el('nickname').value || 'Anonymous';
-      performMint(country, nick);
+      attemptMint(country, nick);
     });
 
-    function performMint(country, nick){
+    function attemptMint(country, nick){
+      // Update counts
       const prev = countryCounts.get(country) || 0;
       countryCounts.set(country, prev + 1);
       totalCitizens += 1;
+      renderStats(); renderLeaderboard();
 
-      renderStats();
-      renderLeaderboard();
-      showPassport(country, nick);
+      // Create + show passport
+      const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
+      showPassport(country, nick, serial);
 
+      // Persist to localStorage by address if we have one
+      if(userAddress){ storage.put(userAddress, { country, nick, serial }); }
+
+      // Reset form
       el('country').value = '';
       el('nickname').value = '';
+
+      // Enable share
+      el('shareBtn').style.display = 'inline-flex';
+      el('shareBtn').onclick = () => shareToX({ country, nick, serial });
+    }
+
+    function showPassport(country, nick, serial){
+      const card = el('passport');
+      el('passport-details').textContent = `${nick} — ${country} • Passport #${serial}`;
+      card.style.display = 'grid';
+      card.scrollIntoView({behavior:'smooth', block:'center'});
     }
 
     function renderStats(){
-      const countriesRepresented = countryCounts.size;
-      el('stat-countries').textContent = countriesRepresented;
+      el('stat-countries').textContent = countryCounts.size;
       el('stat-citizens').textContent  = totalCitizens;
-
       let top = '—', max = -1;
-      countryCounts.forEach((count, name)=>{
-        if(count > max){ max = count; top = name; }
-      });
+      countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
       el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
     }
 
@@ -684,32 +594,71 @@
       const arr = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]).slice(0, 10);
       const tbody = el('leaderboard');
       tbody.innerHTML = '';
-      arr.forEach(([name, count], i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="rank">${i+1}</td>
-          <td class="country-name">${name}</td>
-          <td class="count">${count}</td>
-        `;
-        tbody.appendChild(tr);
-      });
       if(arr.length === 0){
         const tr = document.createElement('tr');
         tr.innerHTML = `<td class="rank">—</td><td class="muted">No countries yet</td><td class="count">0</td>`;
         tbody.appendChild(tr);
+        return;
+      }
+      arr.forEach(([name, count], i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="rank">${i+1}</td><td class="country-name">${name}</td><td class="count">${count}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function restorePassportIfAny(){
+      if(!userAddress) return;
+      const saved = storage.get(userAddress);
+      if(saved){
+        // increment counts once per restore session (idempotent-ish in demo)
+        if(!countryCounts.has(saved.country)){ countryCounts.set(saved.country, 0); }
+        // Don't double count stats on every load; just show passport.
+        showPassport(saved.country, saved.nick, saved.serial);
       }
     }
 
-    function showPassport(country, nick){
-      const card = el('passport');
-      const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
-      el('passport-details').textContent = `${nick} — ${country} • Passport #${serial}`;
-      card.style.display = 'grid';
-      card.scrollIntoView({behavior:'smooth', block:'center'});
+    // Modal form -> main mint
+    function performMint(country, nick){ attemptMint(country, nick); }
+
+    /**** Map modal bridging ****/
+    function mintFromModal(){
+      const country = el('modal-country').value;
+      const nick = el('modal-nickname').value || 'Anonymous';
+      attemptMint(country, nick);
+      closeModal();
     }
 
-    // Initial leaderboard render
-    renderLeaderboard();
+    /**** Share to X ****/
+    function shareToX({country, nick, serial}){
+      const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n`;
+      const url = LAUNCH.siteUrl;
+      const tags = 'Cronos,CROnation,CRON8,crofam';
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+      window.open(shareUrl, '_blank','noopener');
+    }
+
+    /**** Page boot ****/
+    (function boot(){
+      // Stats empty render
+      renderLeaderboard();
+
+      // Current year
+      el('year').textContent = new Date().getFullYear();
+
+      // Try restore if wallet already authorized (best-effort)
+      if(window.ethereum){
+        window.ethereum.request({ method:'eth_accounts' })
+          .then((accounts)=>{
+            if(accounts && accounts[0]){
+              userAddress = accounts[0];
+              connectBtn.textContent = shortAddr(userAddress);
+              restorePassportIfAny();
+            }
+          })
+          .catch(()=>{});
+      }
+    })();
   </script>
 </body>
 </html>
