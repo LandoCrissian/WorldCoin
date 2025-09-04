@@ -160,6 +160,15 @@
     .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
     .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
+
+    /* Keep header compact on phones */
+@media (max-width: 640px){
+  .links{ display:none; }
+  .hamburger{ display:inline-flex; }
+  .actions{ margin-left:auto; gap:8px; }
+  .actions .btn{ padding:10px 12px; }
+  .buy-link{ display:none; }          /* <— hide header Buy on mobile */
+}
   </style>
 </head>
 <body>
@@ -179,14 +188,15 @@
       </div>
 
       <div class="actions">
-        <button id="connectBtn" class="btn ghost" title="Connect wallet">Connect Wallet</button>
-        <a class="btn" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-        <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
-      </div>
+  <button id="connectBtn" class="btn ghost">Connect Wallet</button>
+  <a class="btn buy-link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+  <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
 
-      <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+  <!-- moved inside actions so it lines up correctly -->
+  <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</div>
 
       <div class="mobile-menu" id="mobile-menu" role="menu">
         <a class="link" role="menuitem" href="#map-section">Map</a>
