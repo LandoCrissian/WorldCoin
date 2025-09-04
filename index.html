@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta
@@ -8,10 +8,18 @@
   />
   <title>CROnation — One World. One CROnation.</title>
 
+  <!-- Force dark BEFORE paint (works in in-app browsers too) -->
+  <script>
+    // ensure dark even if the host app ignores prefers-color-scheme
+    document.documentElement.setAttribute('data-theme','dark');
+  </script>
+
   <!-- Canonical + SEO -->
   <link rel="canonical" href="https://cronation.netlify.app/" />
   <meta name="description" content="Mark your country, mint a simple passport, and watch the Cronos community light up the world map." />
-  <meta name="theme-color" content="#2563eb" />
+  <!-- Theme colors for status bars -->
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0b0d12" />
 
   <!-- Open Graph / Twitter -->
   <meta property="og:title" content="CROnation — One World. One CROnation." />
@@ -25,30 +33,28 @@
   <meta name="twitter:description" content="Join the map. Mint your passport. One CROnation." />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
 
-  <!-- Favicon (re-using logo) -->
+  <!-- Favicon -->
   <link rel="icon" href="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <!-- Ethers (used when TOKEN_GATE is enabled) -->
   <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <style>
+    /* Light defaults (kept for completeness), but we immediately override with [data-theme="dark"] */
     :root{
       --bg:#ffffff; --text:#0f172a; --muted:#475569; --line:#e2e8f0; --soft:#f8fafc;
       --accent:#2563eb; --accent-600:#1d4ed8; --success:#16a34a; --warning:#d97706;
     }
-    @media (prefers-color-scheme: dark){
-      :root{
-        --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219;
-        --accent:#3b82f6; --accent-600:#2563eb;
-      }
-      .card{ box-shadow:none; }
+    :root[data-theme="dark"]{
+      --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219;
+      --accent:#3b82f6; --accent-600:#2563eb;
     }
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
@@ -169,10 +175,12 @@
         <a class="link" href="#leaderboard-card">Leaderboard</a>
         <a class="link" href="#about">About</a>
         <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
+        <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
       </div>
 
       <div class="actions">
         <button id="connectBtn" class="btn ghost" title="Connect wallet">Connect Wallet</button>
+        <a class="btn" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
         <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
       </div>
 
@@ -185,6 +193,7 @@
         <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
         <a class="link" role="menuitem" href="#about">About</a>
         <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
+        <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
       </div>
     </nav>
   </header>
@@ -196,6 +205,7 @@
       <div class="cta">
         <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
         <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
+        <a href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener" class="btn" title="Buy CRON8">Buy CRON8</a>
       </div>
 
       <div class="stats" role="status" aria-live="polite">
@@ -315,12 +325,11 @@
       xHandle: 'cronation8',
       siteUrl: 'https://cronation.netlify.app',
       token: {
-        address: '0x0000000000000000000000000000000000000000', // TODO: set final
+        address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF', // CRON8 on Puush
         decimals: 18,
         minBalance: '1',
         chainIdHex: '0x19', // Cronos Mainnet (25)
         rpc: 'https://evm.cronos.org',
-        // Optional ERC-20 ABI fragment for balanceOf
         abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
       }
     };
@@ -468,7 +477,6 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
 
-        // If gating is on, ensure chain + balance
         if(FLAGS.TOKEN_GATE){
           await ensureChain();
           const holds = await hasRequiredTokens(userAddress);
@@ -478,7 +486,6 @@
           }
         }
 
-        // Update UI + restore passport if any
         connectBtn.textContent = shortAddr(userAddress);
         restorePassportIfAny();
       }catch(err){
@@ -496,7 +503,6 @@
         try{
           await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
         }catch(switchErr){
-          // Optionally add chain if missing — Cronos Mainnet
           if(switchErr.code === 4902){
             await provider.send('wallet_addEthereumChain', [{
               chainId: desired,
@@ -521,7 +527,7 @@
 
     connectBtn.addEventListener('click', async () => {
       if (!FLAGS.TOKEN_GATE) {
-        // demo mode: just fake-connect for UX and restore any saved passport
+        // demo mode: best-effort connect; fall back to "demo" address
         if (!userAddress && window.ethereum) {
           const accounts = await window.ethereum.request({ method:'eth_requestAccounts' }).catch(()=>[]);
           userAddress = (accounts && accounts[0]) ? accounts[0] : 'demo';
@@ -539,7 +545,6 @@
     el('join-form').addEventListener('submit', async (e)=>{
       e.preventDefault();
 
-      // If gating is enabled, enforce it
       if(FLAGS.TOKEN_GATE){
         if(!userAddress){ await connectWallet(); if(!userAddress) return; }
         const ok = await hasRequiredTokens(userAddress);
@@ -553,24 +558,19 @@
     });
 
     function attemptMint(country, nick){
-      // Update counts
       const prev = countryCounts.get(country) || 0;
       countryCounts.set(country, prev + 1);
       totalCitizens += 1;
       renderStats(); renderLeaderboard();
 
-      // Create + show passport
       const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
       showPassport(country, nick, serial);
 
-      // Persist to localStorage by address if we have one
       if(userAddress){ storage.put(userAddress, { country, nick, serial }); }
 
-      // Reset form
       el('country').value = '';
       el('nickname').value = '';
 
-      // Enable share
       el('shareBtn').style.display = 'inline-flex';
       el('shareBtn').onclick = () => shareToX({ country, nick, serial });
     }
@@ -611,9 +611,6 @@
       if(!userAddress) return;
       const saved = storage.get(userAddress);
       if(saved){
-        // increment counts once per restore session (idempotent-ish in demo)
-        if(!countryCounts.has(saved.country)){ countryCounts.set(saved.country, 0); }
-        // Don't double count stats on every load; just show passport.
         showPassport(saved.country, saved.nick, saved.serial);
       }
     }
@@ -640,13 +637,9 @@
 
     /**** Page boot ****/
     (function boot(){
-      // Stats empty render
       renderLeaderboard();
-
-      // Current year
       el('year').textContent = new Date().getFullYear();
 
-      // Try restore if wallet already authorized (best-effort)
       if(window.ethereum){
         window.ethereum.request({ method:'eth_accounts' })
           .then((accounts)=>{
