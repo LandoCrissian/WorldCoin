@@ -315,6 +315,12 @@ body.modal-open{ overflow:hidden; }
   .mobile-menu{ display:none !important; }
 }
 
+    /* When modal is open, silence Leaflet tooltips completely */
+body.modal-open .leaflet-tooltip {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* When menu is open */
 .mobile-menu.open{ display:block; }
 .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
