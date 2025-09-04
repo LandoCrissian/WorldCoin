@@ -663,5 +663,35 @@
       }
     })();
   </script>
+
+  <!-- Firebase App (core SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js"></script>
+
+<script>
+  // Your config from Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+    authDomain: "cronation-6058b.firebaseapp.com",
+    projectId: "cronation-6058b",
+    storageBucket: "cronation-6058b.appspot.com",
+    messagingSenderId: "303748855698",
+    appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  db.collection("passports").add({
+  country: "USA",
+  nickname: "TestUser",
+  created: Date.now()
+}).then(docRef => {
+  console.log("Passport written with ID:", docRef.id);
+}).catch(error => {
+  console.error("Error adding passport:", error);
+});
+</script>
 </body>
 </html>
