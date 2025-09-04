@@ -466,6 +466,93 @@
       }
     });
 
+    // === SAVE to Firestore ===
+async function savePassportToFirestore({ country, nick, serial, address }) {
+  if (!window.db) return;
+  try {
+    await db.collection('passports').add({
+      country,
+      nick,
+      serial,
+      address: address || null,
+      addressLower: address ? String(address).toLowerCase() : null,
+      created: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.error('Failed to save passport:', e);
+  }
+}
+
+    // === READ from Firestore (live) ===
+function hydrateFromFirestore() {
+  if (!window.db) return;
+
+  db.collection('passports').onSnapshot((snap) => {
+    // Rebuild counters from scratch to avoid double counts
+    countryCounts.clear();
+    totalCitizens = 0;
+
+    let myDoc = null;
+
+    snap.forEach((doc) => {
+      const p = doc.data() || {};
+      const c = p.country || 'Unknown';
+      countryCounts.set(c, (countryCounts.get(c) || 0) + 1);
+      totalCitizens += 1;
+
+      if (userAddress && p.addressLower &&
+          p.addressLower === String(userAddress).toLowerCase()) {
+        myDoc = p;
+      }
+    });
+
+    renderStats();
+    renderLeaderboard();
+
+    // If we see my saved passport in the DB, show it
+    if (myDoc) {
+      showPassport(myDoc.country, myDoc.nick || 'Anonymous', myDoc.serial || '—');
+    }
+  }, (err) => {
+    console.warn('Firestore listener error:', err);
+  });
+}
+
+    // === READ from Firestore (live) ===
+function hydrateFromFirestore() {
+  if (!window.db) return;
+
+  db.collection('passports').onSnapshot((snap) => {
+    // Rebuild counters from scratch to avoid double counts
+    countryCounts.clear();
+    totalCitizens = 0;
+
+    let myDoc = null;
+
+    snap.forEach((doc) => {
+      const p = doc.data() || {};
+      const c = p.country || 'Unknown';
+      countryCounts.set(c, (countryCounts.get(c) || 0) + 1);
+      totalCitizens += 1;
+
+      if (userAddress && p.addressLower &&
+          p.addressLower === String(userAddress).toLowerCase()) {
+        myDoc = p;
+      }
+    });
+
+    renderStats();
+    renderLeaderboard();
+
+    // If we see my saved passport in the DB, show it
+    if (myDoc) {
+      showPassport(myDoc.country, myDoc.nick || 'Anonymous', myDoc.serial || '—');
+    }
+  }, (err) => {
+    console.warn('Firestore listener error:', err);
+  });
+}
+
     // === NEW: save to Firestore ===
     async function savePassportToFirestore({ country, nick, serial, address }){
       if(!window.db) return;
@@ -554,14 +641,24 @@
     }
 
     (function boot(){
-      renderLeaderboard();
-      el('year').textContent = new Date().getFullYear();
-      if(window.ethereum){
-        window.ethereum.request({ method:'eth_accounts' })
-          .then((accounts)=>{ if(accounts && accounts[0]){ userAddress = accounts[0]; connectBtn.textContent = shortAddr(userAddress); restorePassportIfAny(); } })
-          .catch(()=>{});
-      }
-    })();
+  renderLeaderboard();
+  el('year').textContent = new Date().getFullYear();
+
+  // 🔴 Add this line:
+  hydrateFromFirestore();
+
+  if(window.ethereum){
+    window.ethereum.request({ method:'eth_accounts' })
+      .then((accounts)=>{
+        if(accounts && accounts[0]){
+          userAddress = accounts[0];
+          connectBtn.textContent = shortAddr(userAddress);
+          restorePassportIfAny();
+        }
+      })
+      .catch(()=>{});
+  }
+})();
   </script>
 </body>
 </html>
