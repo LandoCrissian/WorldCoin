@@ -67,18 +67,9 @@
     .btn.primary:hover{ background:var(--accent-600); }
     .btn.ghost{ background:transparent; }
 
-    a.btn {
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  text-decoration:none;
-}
+    a.btn { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
 
-    #connectBtn,
-    #buyBtn {
-  min-width: 160px; /* tweak to taste */
-  text-align: center;
-}
+    #connectBtn, #buyBtn { min-width:160px; text-align:center; }
 
     .hero{ padding:32px 0 8px; display:grid; gap:16px; align-items:center; text-align:center; }
     .hero h1{ margin:0; font-size: clamp(28px, 3.2vw + 12px, 48px); letter-spacing:-0.02em; }
@@ -125,19 +116,14 @@
     body.modal-open{ overflow:hidden; }
     body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
 
-    .passport{ border:1px dashed var(--line); border-radius:12px; padding:12px; display:grid; grid-template-columns:72px 1fr; gap:12px; align-items:center; background:var(--soft); }
-    .passport .emblem{ display:grid; place-items:center; width:64px; height:64px; border-radius:12px; overflow:hidden; background:var(--soft); }
-    .passport .emblem img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
-    .passport .info b{ display:block; font-size:16px; }
-    .passport .info small{ color:var(--muted); }
-    .passport .actions{ margin-top:8px; display:flex; gap:10px; }
-
-    .footer{ margin-top:48px; padding:32px 0; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
-    .visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px; }
-
+    /* --- Nav sizing/behavior --- */
+    .actions{ display:flex; align-items:center; gap:10px; flex-wrap:nowrap; min-width:0; }
+    .actions .btn, .actions a.btn{ display:inline-flex; align-items:center; justify-content:center; min-width:160px; white-space:nowrap; text-decoration:none; }
+    @media (max-width: 720px){ #buyBtn{ display:none; } .hamburger{ display:inline-flex; } }
+    .hamburger{ width:44px; height:44px; }
     .nav{ position:relative; }
     .links{ display:flex; gap:16px; }
-    .hamburger{ display:none; margin-left:8px; width:40px; height:40px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
+    .hamburger{ display:none; margin-left:8px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
     .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
     .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
     .mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
@@ -149,118 +135,72 @@
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
     .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
 
-    /* --- Nav sizing/behavior --- */
-.actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:nowrap;          /* no wrapping that breaks layout */
-  min-width:0;
-}
+    /* ===== Passport (with flag background) ===== */
+    .passport {
+      position: relative;
+      display: grid !important;
+      grid-template-columns: 96px 1fr;
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #0d203a;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    }
+    /* put all direct children above background */
+    .passport > * { position:relative; z-index:1; }
 
-.actions .btn,
-.actions a.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:160px;           /* same visual width for Connect/Buy */
-  white-space:nowrap;        /* prevent multi-line button labels */
-  text-decoration:none;      /* anchor button: remove underline */
-}
+    /* flag background layer */
+    #passport-flag{
+      position:absolute; inset:0;
+      background-size:cover; background-position:center;
+      filter:saturate(120%) blur(1.5px);
+      opacity:.18; pointer-events:none;
+      z-index:0;
+    }
 
-/* Keep Buy in the row on desktop, move it to the mobile menu on small */
-@media (max-width: 720px){
-  #buyBtn{ display:none; }   /* it's already in the mobile drawer */
-  .hamburger{ display:inline-flex; }
-}
+    /* subtle diagonal overlay */
+    .passport::before{
+      content:"";
+      position:absolute; inset:0;
+      background: repeating-linear-gradient(
+        -30deg,
+        rgba(255,255,255,.06) 0px,
+        rgba(255,255,255,.06) 18px,
+        rgba(255,255,255,0)   18px,
+        rgba(255,255,255,0)   42px
+      );
+      pointer-events:none;
+      z-index:0;
+    }
 
-/* Ensure hamburger has a consistent tap target */
-.hamburger{
-  width:44px; height:44px;
-}
+    .passport .emblem { width:96px; height:96px; border-radius:14px; overflow:hidden; background:color-mix(in srgb, var(--soft) 70%, #000 30%); border:1px solid rgba(148,163,184,.25); display:grid; place-items:center; }
+    .passport .emblem img{ width:100%; height:100%; object-fit:cover; background:#fff; }
 
-    /* ===== Fancy Passport ===== */
-.passport {
-  position: relative;
-  display: grid !important;
-  grid-template-columns: 96px 1fr;
-  gap: 16px;
-  align-items: center;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background:
-    radial-gradient(1200px 600px at 10% 0%, rgba(59,130,246,.12), transparent 60%),
-    conic-gradient(from 180deg at 80% 20%, rgba(37,99,235,.20), rgba(99,102,241,.12), rgba(59,130,246,.18), rgba(37,99,235,.20));
-  overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0,0,0,.25);
-}
+    .passport .info b{ display:block; font-size:18px; letter-spacing:.01em; }
+    .passport .info small{ color:var(--muted); }
 
-.passport::before {
-  content:"";
-  position:absolute; inset:-1px;
-  border-radius:16px;
-  background:
-    repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 8px, transparent 8px 16px),
-    radial-gradient(circle at 20% 80%, rgba(255,255,255,.05), transparent 40%);
-  pointer-events:none;
-}
+    .passport .chip{
+      display:inline-block; padding:4px 10px; border-radius:999px;
+      border:1px solid rgba(148,163,184,.28);
+      background: rgba(2,6,23,.35);
+      font-size:12px; font-weight:600; letter-spacing:.04em;
+    }
 
-.passport .serial {
-  position:absolute;
-  top:10px; right:12px;
-  font: 600 12px/1 Inter, sans-serif;
-  letter-spacing:.08em;
-  color:#cbd5e1;
-  background: rgba(2,6,23,.45);
-  border:1px solid rgba(148,163,184,.25);
-  padding:6px 8px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-}
+    /* Big watermark text */
+    #passport-watermark{
+      position: absolute; right:16px; bottom:16px; left:16px;
+      font-weight:800; font-size:42px; line-height:1.05;
+      text-transform:uppercase; letter-spacing:.06em;
+      color:#fff; opacity:.08; pointer-events:none;
+      word-break: break-word;
+      z-index:0; /* sits with background */
+    }
 
-.passport .watermark {
-  position:absolute; inset:auto 8px 6px auto;
-  right:12px; bottom:10px;
-  font-weight:800; opacity:.06; pointer-events:none;
-  text-transform:uppercase; letter-spacing:.06em;
-  white-space:nowrap; font-size: clamp(18px, 3.6vw, 28px);
-}
-
-.passport .emblem {
-  width: 96px; height: 96px; border-radius: 14px;
-  overflow: hidden; background: color-mix(in srgb, var(--soft) 70%, #000 30%);
-  border:1px solid rgba(148,163,184,.25);
-  display:grid; place-items:center;
-}
-
-.passport .emblem img {
-  width:100%; height:100%; object-fit: cover;
-}
-
-.passport .info b {
-  display:block; font-size:18px; letter-spacing:.01em;
-}
-
-.passport .meta {
-  margin-top:4px; color:var(--muted); font-size:14px;
-}
-
-.passport .chips {
-  margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;
-}
-
-.passport .chip {
-  font-weight:600; font-size:12px; letter-spacing:.04em;
-  padding:6px 8px; border-radius:999px;
-  border:1px solid rgba(148,163,184,.28);
-  background: rgba(2,6,23,.35);
-}
-
-.passport .actions { margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
-
-/* optional subtle shine on hover */
-.passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
+    .passport .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+    .passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
   </style>
 </head>
 <body>
@@ -366,40 +306,42 @@
           </form>
 
           <!-- Passport card -->
-<div id="passport" class="passport" style="display:none; margin-top:12px;">
-  <div class="emblem">
-    <img id="passport-pfp" 
-         src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" 
-         alt="CROnation logo">
-  </div>
-  <div class="info">
-    <b>CROnation Passport <span id="passport-serial">#000000</span></b>
-    <small>
-      <span id="passport-nick">—</span> — <span id="passport-country">—</span>
-      <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
-    </small>
+          <div id="passport" class="passport" style="display:none; margin-top:12px;">
+            <div id="passport-flag" aria-hidden="true"></div>
 
-    <!-- watermark background text -->
-    <div id="passport-watermark" aria-hidden="true" 
-         style="opacity:.08; font-weight:800; font-size:32px; margin-top:8px;">
-    </div>
+            <div class="emblem">
+              <img id="passport-pfp"
+                   src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
+                   alt="CROnation logo">
+            </div>
 
-    <div class="actions" style="margin-top:12px; display:flex; gap:10px; align-items:center;">
-      <label class="btn" style="cursor:pointer;">
-        <input id="pfpInput" type="file" accept="image/*" style="display:none;">
-        Upload PFP
-      </label>
-      <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
-    </div>
-  </div>
-</div>
+            <div class="info">
+              <b>CROnation Passport <span id="passport-serial">#000000</span></b>
+              <small>
+                <span id="passport-nick">—</span> — <span id="passport-country">—</span>
+                <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+              </small>
 
-      <!-- ABOUT -->
-      <div class="card" id="about">
-        <div class="body">
-          <h3>About</h3>
-          <p class="muted">CROnation is a simple, global participation map for the Cronos community. It’s not a complicated game or an overpromised utility — just a clean way to visualize where we all are, and a minimal passport to flex your origin.</p>
-          <p class="muted">Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room to grow into wallet connections, airdrops, and seasonal leaderboards.</p>
+              <div class="actions">
+                <label class="btn" style="cursor:pointer;">
+                  <input id="pfpInput" type="file" accept="image/*" style="display:none;">
+                  Upload PFP
+                </label>
+                <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
+              </div>
+            </div>
+
+            <div id="passport-watermark" aria-hidden="true"></div>
+          </div>
+
+          <!-- ABOUT -->
+          <div class="card" id="about">
+            <div class="body">
+              <h3>About</h3>
+              <p class="muted">CROnation is a simple, global participation map for the Cronos community. It’s not a complicated game or an overpromised utility — just a clean way to visualize where we all are, and a minimal passport to flex your origin.</p>
+              <p class="muted">Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room to grow into wallet connections, airdrops, and seasonal leaderboards.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -481,22 +423,19 @@
     }
 
     // --- Country coloring ---
-const countryLayers = new Map(); // country -> Leaflet layer
-
-function colorFor(count){
-  // tweak thresholds/colors to taste
-  if (count >= 25) return '#1d4ed8'; // strong
-  if (count >= 10) return '#3b82f6'; // mid
-  if (count >= 1)  return '#93c5fd'; // light
-  return '#e5e7eb';                 // none (default)
-}
-
-function updateCountryStyle(name){
-  const layer = countryLayers.get(name);
-  if (!layer) return;
-  const count = countryCounts.get(name) || 0;
-  layer.setStyle({ fillColor: colorFor(count) });
-}
+    const countryLayers = new Map(); // country -> Leaflet layer
+    function colorFor(count){
+      if (count >= 25) return '#1d4ed8';
+      if (count >= 10) return '#3b82f6';
+      if (count >= 1)  return '#93c5fd';
+      return '#e5e7eb';
+    }
+    function updateCountryStyle(name){
+      const layer = countryLayers.get(name);
+      if (!layer) return;
+      const count = countryCounts.get(name) || 0;
+      layer.setStyle({ fillColor: colorFor(count) });
+    }
 
     /**** Mobile menu ****/
     (function mobileMenu(){
@@ -532,36 +471,22 @@ function updateCountryStyle(name){
       populateCountryDropdown(countryList);
 
       const layer = L.geoJSON(data, {
-  style: (feature) => {
-    const name =
-      feature.properties.ADMIN ||
-      feature.properties.name ||
-      feature.properties.COUNTRY || 'Unknown';
-    const count = countryCounts.get(name) || 0;
-    return {
-      color: '#cbd5e1',
-      weight: 1,
-      fillColor: colorFor(count),
-      fillOpacity: 1
-    };
-  },
-  onEachFeature: (feature, l) => {
-    const name =
-      feature.properties.ADMIN ||
-      feature.properties.name ||
-      feature.properties.COUNTRY || 'Unknown';
-
-    // remember this layer so we can recolor later
-    countryLayers.set(name, l);
-
-    l.on({
-      mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
-      mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
-      click:     () => openModal(name)
-    });
-    l.bindTooltip(name, { sticky: true });
-  }
-}).addTo(map);
+        style: (feature) => {
+          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+          const count = countryCounts.get(name) || 0;
+          return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+        },
+        onEachFeature: (feature, l) => {
+          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+          countryLayers.set(name, l);
+          l.on({
+            mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
+            mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
+            click:     () => openModal(name)
+          });
+          l.bindTooltip(name, { sticky: true });
+        }
+      }).addTo(map);
 
       try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
       requestAnimationFrame(() => map.invalidateSize());
@@ -602,35 +527,29 @@ function updateCountryStyle(name){
     function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
     async function connectWallet(){
-  if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
-  try{
-    // Request account access (shows popup if not granted)
-    const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-    userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-    if(!userAddress) return;
+      if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
+      try{
+        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+        userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+        window.userAddress = userAddress;  // <-- expose for the chip
+        if(!userAddress) return;
 
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    signer   = provider.getSigner();
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer   = provider.getSigner();
 
-    // Ensure Cronos (shows switch/add popup if needed)
-    await ensureChain();
+        await ensureChain();
 
-    // Friendly, short sign-message to confirm presence
-    const message =
-      `CROnation — Verify Wallet\n` +
-      `Address: ${userAddress}\n` +
-      `Time: ${new Date().toISOString()}`;
+        const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
+        const signature = await signer.signMessage(message);
+        localStorage.setItem('cronation_sig', signature);
 
-    const signature = await signer.signMessage(message);
-    localStorage.setItem('cronation_sig', signature);
-
-    connectBtn.textContent = shortAddr(userAddress);
-    restorePassportIfAny();
-  }catch(err){
-    console.error(err);
-    alert('Wallet connection was cancelled or failed.');
-  }
-}
+        connectBtn.textContent = shortAddr(userAddress);
+        restorePassportIfAny();
+      }catch(err){
+        console.error(err);
+        alert('Wallet connection was cancelled or failed.');
+      }
+    }
 
     async function ensureChain(){
       const desired = LAUNCH.token.chainIdHex;
@@ -680,14 +599,12 @@ function updateCountryStyle(name){
         return;
       }
 
-      // Gate at mint time
       if(FLAGS.TOKEN_GATE){
         await ensureChain();
         const ok = await hasRequiredTokens(userAddress);
         if(!ok){ alert('You need to hold the required token to mint.'); return; }
       }
 
-      // One passport per wallet
       const addrKey = userAddress.toLowerCase();
       const docRef = db.collection('passports').doc(addrKey);
       const snap = await docRef.get();
@@ -716,42 +633,59 @@ function updateCountryStyle(name){
       if(form) form.style.display = 'none';
     }
 
+    /* === Flag mapping (strict/common names only) === */
+    const ISO2 = {
+      "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
+      "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
+      "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
+      "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
+      "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
+      "Nigeria":"ng","Kenya":"ke"
+    };
+    const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
+    function setPassportFlag(country){
+      const layer = document.getElementById('passport-flag');
+      if(!layer) return;
+      const iso2 = countryToISO2(country);
+      layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
+    }
 
-function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
-function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
-function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
+    /* === Passport rendering === */
+    function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
+    function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
 
-function showPassport(country, nick, serial){
-  const card = document.getElementById('passport');
-  if(!card) return;
+    function showPassport(country, nick, serial){
+      const card = document.getElementById('passport');
+      if(!card) return;
 
-  setText('passport-nick', nick);
-  setText('passport-country', country);
-  setText('passport-serial', '#'+serial);
-  setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
-  setText('passport-address-chip', shortAddr(window.userAddress||''));
+      setText('passport-nick', nick);
+      setText('passport-country', country);
+      setText('passport-serial', '#'+serial);
+      setText('passport-watermark', (country||'').toUpperCase());
+      setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
 
-  card.style.display = 'grid';
-  try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+      setPassportFlag(country);
 
-  const shareBtn = document.getElementById('shareBtn');
-  if(shareBtn){
-    shareBtn.style.display = 'inline-flex';
-    shareBtn.onclick = () => shareToX({ country, nick, serial });
-  }
+      card.style.display = 'grid';
+      try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
 
-  const pfpInput = document.getElementById('pfpInput');
-  if (pfpInput && !pfpInput._wired){
-    pfpInput._wired = true;
-    pfpInput.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if(!file) return;
-      const url = URL.createObjectURL(file);
-      setSrc('passport-pfp', url);
-    });
-  }
-}
+      const shareBtn = document.getElementById('shareBtn');
+      if(shareBtn){
+        shareBtn.style.display = 'inline-flex';
+        shareBtn.onclick = () => shareToX({ country, nick, serial });
+      }
 
+      const pfpInput = document.getElementById('pfpInput');
+      if (pfpInput && !pfpInput._wired){
+        pfpInput._wired = true;
+        pfpInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if(!file) return;
+          const url = URL.createObjectURL(file);
+          setSrc('passport-pfp', url);
+        });
+      }
+    }
 
     // Stats + leaderboard
     function renderStats(){
@@ -778,8 +712,8 @@ function showPassport(country, nick, serial){
       });
     }
 
-    // recolor every country after counts change
-countryLayers.forEach((_, name) => updateCountryStyle(name));
+    // recolor after counts change
+    countryLayers.forEach((_, name) => updateCountryStyle(name));
 
     async function restorePassportIfAny(){
       if(!userAddress) return;
@@ -793,22 +727,18 @@ countryLayers.forEach((_, name) => updateCountryStyle(name));
 
     // Real-time listener for stats/leaderboard
     db.collection('passports').onSnapshot((qs)=>{
-  countryCounts.clear();
-  totalCitizens = 0;
-
-  qs.forEach(doc=>{
-    const d = doc.data();
-    if(!d || !d.country) return;
-    countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-    totalCitizens += 1;
-  });
-
-  renderStats();
-  renderLeaderboard();
-
-  // 🔁 Repaint all countries based on new counts
-  countryLayers.forEach((_, name) => updateCountryStyle(name));
-});
+      countryCounts.clear();
+      totalCitizens = 0;
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d || !d.country) return;
+        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+        totalCitizens += 1;
+      });
+      renderStats();
+      renderLeaderboard();
+      countryLayers.forEach((_, name) => updateCountryStyle(name));
+    });
 
     // Form submit
     el('join-form').addEventListener('submit', async (e)=>{
@@ -838,7 +768,6 @@ countryLayers.forEach((_, name) => updateCountryStyle(name));
 
     /**** Page boot ****/
     (function boot(){
-      // Update mint buttons state from PASSPORT_MINT_ENABLED
       const mintBtn = el('mintBtn');
       const modalMintBtn = el('modalMintBtn');
       if(!FLAGS.PASSPORT_MINT_ENABLED){
