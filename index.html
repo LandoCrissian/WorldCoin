@@ -135,22 +135,14 @@
     .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
     .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
-
-    @media (max-width: 640px){
-      .links{ display:none; }
-      .hamburger{ display:inline-flex; }
-      .actions{ margin-left:auto; gap:8px; }
-      .actions .btn{ padding:10px 12px; }
-      .buy-link{ display:none; }
-    }
   </style>
 </head>
 <body>
-  <!-- Mint disabled + gate notice -->
+  <!-- Status notice -->
   <div class="notice" role="status" aria-live="polite">
     <div class="wrap">
-      <span>Mint is currently <b>disabled</b>.</span>
-      <span>Connect your wallet — <b>CRON8 holders only</b> — then select your country.</span>
+      <span><b>Passport mint is LIVE.</b></span>
+      <span><small>On-chain NFT mint is coming soon. Connect your wallet (CRON8 holders) and select your country.</small></span>
     </div>
   </div>
 
@@ -170,12 +162,12 @@
       </div>
 
       <div class="actions">
-  <button id="connectBtn" class="btn ghost">Connect Wallet</button>
-  <a class="btn buy-link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-  <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
-    <span></span><span></span><span></span>
-  </button>
-</div>
+        <button id="connectBtn" class="btn ghost">Connect Wallet</button>
+        <a class="btn buy-link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+        <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
 
       <div class="mobile-menu" id="mobile-menu" role="menu">
         <a class="link" role="menuitem" href="#map-section">Map</a>
@@ -244,11 +236,11 @@
             </div>
 
             <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button id="mintBtn" class="btn primary" type="submit">Mint Passport (disabled)</button>
+              <button id="mintBtn" class="btn primary" type="submit">Mint Passport</button>
             </div>
           </form>
 
-          <!-- Passport preview (becomes the only thing visible after mint/restore) -->
+          <!-- Passport preview -->
           <div id="passport" class="passport" style="display:none; margin-top:12px;">
             <div class="emblem" aria-hidden="true">
               <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" />
@@ -262,7 +254,7 @@
             </div>
           </div>
 
-          <small class="muted">Mint is disabled right now. You can still connect your wallet and pick your country.</small>
+          <small class="muted">Passport mint is on. On-chain NFT mint is not live yet.</small>
         </div>
       </div>
 
@@ -294,7 +286,7 @@
           </div>
         </div>
         <div class="footer">
-          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()" disabled>Mint Passport (disabled)</button>
+          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
         </div>
       </div>
     </div>
@@ -312,12 +304,12 @@
   <script>
     /**** Flags ****/
     const FLAGS = {
-  TOKEN_GATE: true,          // CRON8 holders only
-  REQUIRE_WALLET: true,
-  AUTO_CONNECT: false,
-  PASSPORT_MINT_ENABLED: true,  // ✅ allow Firestore mint
-  NFT_MINT_ENABLED: false       // ⛔ on-chain NFT later
-};
+      TOKEN_GATE: true,              // CRON8 holders only (checked at mint time)
+      REQUIRE_WALLET: true,
+      AUTO_CONNECT: false,
+      PASSPORT_MINT_ENABLED: true,   // Firestore passport = ON
+      NFT_MINT_ENABLED: false        // On-chain NFT = later
+    };
 
     const LAUNCH = {
       xHandle: 'cronation8',
@@ -364,22 +356,6 @@
       window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
       window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
       window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
-    })();
-
-    /**** Smooth anchors ****/
-    (function attachSmoothAnchors() {
-      const header = document.querySelector('header');
-      const headerH = () => header.getBoundingClientRect().height;
-      document.querySelectorAll('a.link[href^="#"]').forEach(a => {
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          const id = a.getAttribute('href').slice(1);
-          const target = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
-          if (!target) return;
-          const y = target.getBoundingClientRect().top + window.pageYOffset - headerH() - 8;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        });
-      });
     })();
 
     /**** Map + Countries ****/
@@ -446,14 +422,6 @@
     }
     window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-    function mintFromModal(){
-      // still respects MINT_ENABLED
-      const country = el('modal-country').value;
-      const nick = el('modal-nickname').value || 'Anonymous';
-      attemptMint(country, nick);
-      closeModal();
-    }
-
     /**** Wallet + gating ****/
     const connectBtn = el('connectBtn');
     let provider = null, signer = null, userAddress = null;
@@ -469,14 +437,9 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
 
-        if(FLAGS.TOKEN_GATE){
-          await ensureChain();
-          const holds = await hasRequiredTokens(userAddress);
-          if(!holds){ alert('You need to hold the required token to mint.'); }
-        }
-
+        // Do NOT gate on connect — we gate at mint time.
         connectBtn.textContent = shortAddr(userAddress);
-        restorePassportIfAny(); // if already minted, hide form and show passport
+        restorePassportIfAny();
       }catch(err){
         console.error(err);
         alert('Wallet connection was cancelled or failed.');
@@ -518,30 +481,28 @@
       }
     }
 
-    connectBtn.addEventListener('click', async () => {
-      await connectWallet();
-    });
+    connectBtn.addEventListener('click', connectWallet);
 
     /**** Firestore-backed mint ****/
     async function attemptMint(country, nick){
-  if(!FLAGS.PASSPORT_MINT_ENABLED){
-    alert('Passport mint is temporarily paused.');
-    return;
-  }
-  // (rest of your function: connect if needed -> ensureChain -> token check -> Firestore write)
-}
+      if(!FLAGS.PASSPORT_MINT_ENABLED){
+        alert('Passport mint is temporarily paused.');
+        return;
+      }
       if(FLAGS.REQUIRE_WALLET && !userAddress){
         alert('Please connect your wallet first.');
         return;
       }
 
-      // Optional token-gate check (enforced at mint time)
+      // Gate at mint time
       if(FLAGS.TOKEN_GATE){
+        await ensureChain();
         const ok = await hasRequiredTokens(userAddress);
         if(!ok){ alert('You need to hold the required token to mint.'); return; }
       }
 
-      const addrKey = (userAddress || 'demo').toLowerCase();
+      // One passport per wallet
+      const addrKey = userAddress.toLowerCase();
       const docRef = db.collection('passports').doc(addrKey);
       const snap = await docRef.get();
       if(snap.exists){
@@ -554,7 +515,7 @@
 
       const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
       await docRef.set({
-        address: userAddress || null,
+        address: userAddress,
         country, nick,
         serial,
         created: firebase.firestore.FieldValue.serverTimestamp()
@@ -573,12 +534,9 @@
       const card = el('passport');
       el('passport-details').textContent = `${nick} — ${country} • Passport #${serial}`;
       card.style.display = 'grid';
-
-      // always show share button when passport is visible (including restore)
       const shareBtn = el('shareBtn');
       shareBtn.style.display = 'inline-flex';
       shareBtn.onclick = () => shareToX({ country, nick, serial });
-
       card.scrollIntoView({behavior:'smooth', block:'center'});
     }
 
@@ -613,7 +571,7 @@
       if(snap.exists){
         const p = snap.data();
         showPassport(p.country, p.nick, p.serial);
-        hideJoinForm(); // hide join on restore too
+        hideJoinForm();
       }
     }
 
@@ -640,7 +598,7 @@
       await attemptMint(country, nick);
     });
 
-    /**** Map modal bridging ****/
+    // Modal -> mint
     function mintFromModal(){
       const country = el('modal-country').value;
       const nick = el('modal-nickname').value || 'Anonymous';
@@ -659,17 +617,16 @@
 
     /**** Page boot ****/
     (function boot(){
-      // disable buttons visually if mint is off
+      // Update mint buttons state from PASSPORT_MINT_ENABLED
       const mintBtn = el('mintBtn');
       const modalMintBtn = el('modalMintBtn');
-      if(!FLAGS.MINT_ENABLED){
+      if(!FLAGS.PASSPORT_MINT_ENABLED){
         if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
         if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
       }else{
         if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
         if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
       }
-
       el('year').textContent = new Date().getFullYear();
     })();
   </script>
