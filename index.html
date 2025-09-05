@@ -34,22 +34,25 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-  <!-- Ethers (when TOKEN_GATE is enabled) -->
+  <!-- Ethers -->
   <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- Firebase (compat builds so we can use window.firebase in plain <script>) -->
+  <!-- Firebase (compat builds) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
 
   <style>
-    :root{ --bg:#ffffff; --text:#0f172a; --muted:#475569; --line:#e2e8f0; --soft:#f8fafc; --accent:#2563eb; --accent-600:#1d4ed8; --success:#16a34a; --warning:#d97706; }
-    :root[data-theme="dark"]{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
+    :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
-    body{ margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol", sans-serif; color:var(--text); background:var(--bg); line-height:1.5; -webkit-text-size-adjust:100%; }
+    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; color:var(--text); background:var(--bg); line-height:1.5; }
 
     header{ padding-top: calc(env(safe-area-inset-top, 0px)); position:sticky; top:0; backdrop-filter:saturate(120%) blur(8px); background: color-mix(in srgb, var(--bg) 86%, transparent); border-bottom:1px solid var(--line); z-index:10; }
     html { scroll-padding-top:72px; }
+
+    .notice{ background:color-mix(in srgb, var(--accent) 12%, var(--bg) 88%); border-bottom:1px solid var(--line); color:var(--text); }
+    .notice .wrap{ width:min(1120px,92vw); margin:0 auto; padding:10px 0; font-weight:600; display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+    .notice small{ color:var(--muted); font-weight:500; }
 
     .container{ width:min(1120px, 92vw); margin-inline:auto; padding:24px 0 72px; }
     .nav{ width:min(1120px, 92vw); margin-inline:auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
@@ -57,14 +60,14 @@
     .nav a.link{ text-decoration:none; color:var(--muted); font-weight:500; margin:0 10px; }
     .actions{ display:flex; align-items:center; gap:10px; }
 
-    .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; transition: transform .12s ease, border-color .12s ease, background .12s ease; min-height:44px; }
+    .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; transition:.12s; min-height:44px; }
     .btn:hover{ transform: translateY(-1px); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
     .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
     .btn.primary:hover{ background:var(--accent-600); }
     .btn.ghost{ background:transparent; }
-    .btn[disabled]{ opacity:.6; cursor:not-allowed; filter:saturate(.7); }
 
-    .hero{ padding:48px 0 16px; display:grid; gap:16px; align-items:center; text-align:center; }
+    .hero{ padding:32px 0 8px; display:grid; gap:16px; align-items:center; text-align:center; }
     .hero h1{ margin:0; font-size: clamp(28px, 3.2vw + 12px, 48px); letter-spacing:-0.02em; }
     .hero p.lead{ margin:6px auto 0; color:var(--muted); max-width:740px; font-size:clamp(15px, 1.2vw + 10px, 18px); }
     .hero .cta{ margin-top:18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
@@ -114,6 +117,7 @@
     .passport .emblem img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
     .passport .info b{ display:block; font-size:16px; }
     .passport .info small{ color:var(--muted); }
+    .passport .actions{ margin-top:8px; display:flex; gap:10px; }
 
     .footer{ margin-top:48px; padding:32px 0; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
     .visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px; }
@@ -142,6 +146,14 @@
   </style>
 </head>
 <body>
+  <!-- Mint disabled + gate notice -->
+  <div class="notice" role="status" aria-live="polite">
+    <div class="wrap">
+      <span>Mint is currently <b>disabled</b>.</span>
+      <span>Connect your wallet — <b>CRON8 holders only</b> — then select your country.</span>
+    </div>
+  </div>
+
   <header>
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="#top" aria-label="CROnation home">
@@ -161,9 +173,7 @@
         <button id="connectBtn" class="btn ghost">Connect Wallet</button>
         <a class="btn buy-link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
         <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
-        <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
-          <span></span><span></span><span></span>
-        </button>
+        <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false"><span></span><span></span><span></span></button>
       </div>
 
       <div class="mobile-menu" id="mobile-menu" role="menu">
@@ -199,22 +209,23 @@
           <h3>Community Map</h3>
           <p class="muted">Tap a country to join. You can also use the form below.</p>
           <div id="map" aria-label="Interactive world map"></div>
-          <p class="map-note">Wallet gating + on-chain passport coming next.</p>
+          <p class="map-note">Mint currently disabled; CRON8 holder check applies when enabled.</p>
         </div>
       </div>
 
-        <aside class="card" id="leaderboard-card">
-          <div class="body">
-            <h3>Leaderboard</h3>
-            <table aria-describedby="leaderboard-desc">
-              <caption id="leaderboard-desc" class="visually-hidden">Top countries by citizen count</caption>
-              <thead><tr><th class="rank">#</th><th>Country</th><th class="count">Citizens</th></tr></thead>
-              <tbody id="leaderboard"></tbody>
-            </table>
-          </div>
-        </aside>
+      <aside class="card" id="leaderboard-card">
+        <div class="body">
+          <h3>Leaderboard</h3>
+          <table aria-describedby="leaderboard-desc">
+            <caption id="leaderboard-desc" class="visually-hidden">Top countries by citizen count</caption>
+            <thead><tr><th class="rank">#</th><th>Country</th><th class="count">Citizens</th></tr></thead>
+            <tbody id="leaderboard"></tbody>
+          </table>
+        </div>
+      </aside>
 
-      <div class="card">
+      <!-- JOIN -->
+      <div class="card" id="join-card">
         <div class="body">
           <h3>Join CROnation</h3>
 
@@ -232,23 +243,29 @@
             </div>
 
             <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button id="mintBtn" class="btn primary" type="submit" disabled>Mint Passport</button>
-              <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
+              <button id="mintBtn" class="btn primary" type="submit">Mint Passport (disabled)</button>
             </div>
           </form>
 
-          <div id="passport" class="passport" style="display:none;">
+          <!-- Passport preview (becomes the only thing visible after mint/restore) -->
+          <div id="passport" class="passport" style="display:none; margin-top:12px;">
             <div class="emblem" aria-hidden="true">
               <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" />
             </div>
             <div class="info">
               <b>CROnation Passport</b>
               <small id="passport-details">—</small>
+              <div class="actions">
+                <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
+              </div>
             </div>
           </div>
+
+          <small class="muted">Mint is disabled right now. You can still connect your wallet and pick your country.</small>
         </div>
       </div>
 
+      <!-- ABOUT -->
       <div class="card" id="about">
         <div class="body">
           <h3>About</h3>
@@ -258,7 +275,7 @@
       </div>
     </section>
 
-    <!-- Modal -->
+    <!-- Modal (map click) -->
     <div class="modal" id="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
       <div class="panel">
         <div class="header">
@@ -276,7 +293,7 @@
           </div>
         </div>
         <div class="footer">
-          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()" disabled>Mint Passport (demo)</button>
+          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()" disabled>Mint Passport (disabled)</button>
         </div>
       </div>
     </div>
@@ -292,12 +309,14 @@
   </footer>
 
   <script>
-    /**** Launch Config + Flags ****/
+    /**** Flags ****/
     const FLAGS = {
-      TOKEN_GATE: true,
-      REQUIRE_WALLET: true,
-      AUTO_CONNECT: false
+      TOKEN_GATE: true,       // require CRON8 to mint
+      REQUIRE_WALLET: true,   // one passport per wallet
+      AUTO_CONNECT: false,    // do not auto request accounts
+      MINT_ENABLED: false     // <-- turn ON when you're ready to mint live
     };
+
     const LAUNCH = {
       xHandle: 'cronation8',
       siteUrl: 'https://cronation.netlify.app',
@@ -311,7 +330,7 @@
       }
     };
 
-    /**** Firebase init (uses compat SDKs loaded in <head>) ****/
+    /**** Firebase ****/
     const firebaseConfig = {
       apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
       authDomain: "cronation-6058b.firebaseapp.com",
@@ -325,17 +344,6 @@
 
     /**** Helpers ****/
     const el = (id)=>document.getElementById(id);
-
-    // Mint enable/disable state
-    let canMint = false;
-    function setMintEnabled(enabled){
-      canMint = !!enabled;
-      const b1 = el('mintBtn');
-      const b2 = el('modalMintBtn');
-      if(b1) b1.disabled = !enabled;
-      if(b2) b2.disabled = !enabled;
-    }
-
     function scrollToMap(){
       const header = document.querySelector('header');
       const y = document.getElementById('map-section').getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
@@ -344,8 +352,8 @@
 
     /**** Mobile menu ****/
     (function mobileMenu(){
-      const btn = document.getElementById('hamburger');
-      const menu = document.getElementById('mobile-menu');
+      const btn = el('hamburger');
+      const menu = el('mobile-menu');
       if(!btn || !menu) return;
       const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
       const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
@@ -356,7 +364,7 @@
       window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
     })();
 
-    /**** Smooth in-page links ****/
+    /**** Smooth anchors ****/
     (function attachSmoothAnchors() {
       const header = document.querySelector('header');
       const headerH = () => header.getBoundingClientRect().height;
@@ -370,20 +378,10 @@
           window.scrollTo({ top: y, behavior: 'smooth' });
         });
       });
-      if (location.hash) {
-        setTimeout(() => {
-          const id = location.hash.slice(1);
-          const t = document.getElementById(id);
-          if (t) {
-            const y = t.getBoundingClientRect().top + window.pageYOffset - headerH() - 8;
-            window.scrollTo({ top: y });
-          }
-        }, 0);
-      }
     })();
 
     /**** Map + Countries ****/
-    const countryCounts = new Map(); // country -> count (live from Firestore)
+    const countryCounts = new Map(); // live from Firestore
     const countryList = [];
     let totalCitizens = 0;
     el('year').textContent = new Date().getFullYear();
@@ -394,8 +392,7 @@
 
     const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
     fetch(GEOJSON_URL).then(r => r.json()).then(data => {
-      const features = data.features;
-      features.forEach(f => {
+      data.features.forEach(f => {
         const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
         countryList.push(name);
       });
@@ -403,7 +400,7 @@
       populateCountryDropdown(countryList);
 
       const layer = L.geoJSON(data, {
-        style: feature => ({ color:'#cbd5e1', weight:1, fillColor:'#e5e7eb', fillOpacity:1 }),
+        style: () => ({ color:'#cbd5e1', weight:1, fillColor:'#e5e7eb', fillOpacity:1 }),
         onEachFeature: (feature, l) => {
           const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
           l.on({
@@ -448,7 +445,7 @@
     window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
     function mintFromModal(){
-      if(!canMint){ alert('Connect wallet to mint.'); return; }
+      // still respects MINT_ENABLED
       const country = el('modal-country').value;
       const nick = el('modal-nickname').value || 'Anonymous';
       attemptMint(country, nick);
@@ -458,7 +455,6 @@
     /**** Wallet + gating ****/
     const connectBtn = el('connectBtn');
     let provider = null, signer = null, userAddress = null;
-    setMintEnabled(false);
 
     function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
@@ -467,29 +463,21 @@
       try{
         const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
         userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-        if(!userAddress) { setMintEnabled(false); return; }
-
+        if(!userAddress) return;
         provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer   = provider.getSigner();
+        signer = provider.getSigner();
 
         if(FLAGS.TOKEN_GATE){
           await ensureChain();
           const holds = await hasRequiredTokens(userAddress);
-          if(!holds){
-            setMintEnabled(false);
-            connectBtn.textContent = shortAddr(userAddress);
-            alert('You need to hold the required token to mint.');
-            return;
-          }
+          if(!holds){ alert('You need to hold the required token to mint.'); }
         }
 
         connectBtn.textContent = shortAddr(userAddress);
-        setMintEnabled(true);
-        restorePassportIfAny();
+        restorePassportIfAny(); // if already minted, hide form and show passport
       }catch(err){
         console.error(err);
         alert('Wallet connection was cancelled or failed.');
-        setMintEnabled(false);
       }
     }
 
@@ -529,25 +517,24 @@
     }
 
     connectBtn.addEventListener('click', async () => {
-      if (!FLAGS.REQUIRE_WALLET && !FLAGS.TOKEN_GATE) {
-        userAddress = userAddress || 'demo';
-        connectBtn.textContent = shortAddr(userAddress);
-        setMintEnabled(true);
-        restorePassportIfAny();
-      } else {
-        await connectWallet();
-      }
+      await connectWallet();
     });
 
     /**** Firestore-backed mint ****/
     async function attemptMint(country, nick){
+      if(!FLAGS.MINT_ENABLED){
+        alert('Mint is currently disabled.');
+        return;
+      }
       if(FLAGS.REQUIRE_WALLET && !userAddress){
         alert('Please connect your wallet first.');
         return;
       }
-      if(!canMint){
-        alert('Mint is locked until your wallet is connected and verified.');
-        return;
+
+      // Optional token-gate check (enforced at mint time)
+      if(FLAGS.TOKEN_GATE){
+        const ok = await hasRequiredTokens(userAddress);
+        if(!ok){ alert('You need to hold the required token to mint.'); return; }
       }
 
       const addrKey = (userAddress || 'demo').toLowerCase();
@@ -556,13 +543,9 @@
       if(snap.exists){
         const p = snap.data();
         showPassport(p.country, p.nick, p.serial);
+        hideJoinForm();
         alert('You already have a passport. Showing it now.');
         return;
-      }
-
-      if(FLAGS.TOKEN_GATE){
-        const ok = await hasRequiredTokens(userAddress);
-        if(!ok){ alert('You need to hold the required token to join.'); return; }
       }
 
       const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
@@ -574,23 +557,28 @@
       });
 
       showPassport(country, nick, serial);
+      hideJoinForm();
+    }
 
-      const shareBtn = el('shareBtn');
-      shareBtn.style.display = 'inline-flex';
-      shareBtn.onclick = () => shareToX({ country, nick, serial });
-
-      el('country').value = '';
-      el('nickname').value = '';
+    function hideJoinForm(){
+      const form = el('join-form');
+      if(form) form.style.display = 'none';
     }
 
     function showPassport(country, nick, serial){
       const card = el('passport');
       el('passport-details').textContent = `${nick} — ${country} • Passport #${serial}`;
       card.style.display = 'grid';
+
+      // always show share button when passport is visible (including restore)
+      const shareBtn = el('shareBtn');
+      shareBtn.style.display = 'inline-flex';
+      shareBtn.onclick = () => shareToX({ country, nick, serial });
+
       card.scrollIntoView({behavior:'smooth', block:'center'});
     }
 
-    // Live stats from Firestore
+    // Stats + leaderboard
     function renderStats(){
       el('stat-countries').textContent = countryCounts.size;
       el('stat-citizens').textContent  = totalCitizens;
@@ -621,6 +609,7 @@
       if(snap.exists){
         const p = snap.data();
         showPassport(p.country, p.nick, p.serial);
+        hideJoinForm(); // hide join on restore too
       }
     }
 
@@ -647,6 +636,14 @@
       await attemptMint(country, nick);
     });
 
+    /**** Map modal bridging ****/
+    function mintFromModal(){
+      const country = el('modal-country').value;
+      const nick = el('modal-nickname').value || 'Anonymous';
+      attemptMint(country, nick);
+      closeModal();
+    }
+
     /**** Share to X ****/
     function shareToX({country, nick, serial}){
       const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n`;
@@ -658,32 +655,18 @@
 
     /**** Page boot ****/
     (function boot(){
-      renderLeaderboard();
-      el('year').textContent = new Date().getFullYear();
-
-      // Optional auto-connect (kept off by default)
-      if (FLAGS.AUTO_CONNECT && window.ethereum) {
-        window.ethereum.request({ method:'eth_accounts' })
-          .then(async (accounts)=>{
-            if(accounts && accounts[0]){
-              userAddress = accounts[0];
-              provider = new ethers.providers.Web3Provider(window.ethereum);
-              signer   = provider.getSigner();
-              connectBtn.textContent = shortAddr(userAddress);
-
-              if(FLAGS.TOKEN_GATE){
-                await ensureChain();
-                const holds = await hasRequiredTokens(userAddress);
-                setMintEnabled(holds);
-              }else{
-                setMintEnabled(true);
-              }
-
-              restorePassportIfAny();
-            }
-          })
-          .catch(()=>{});
+      // disable buttons visually if mint is off
+      const mintBtn = el('mintBtn');
+      const modalMintBtn = el('modalMintBtn');
+      if(!FLAGS.MINT_ENABLED){
+        if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
+        if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
+      }else{
+        if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
+        if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
       }
+
+      el('year').textContent = new Date().getFullYear();
     })();
   </script>
 </body>
