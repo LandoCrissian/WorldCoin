@@ -178,6 +178,89 @@
 .hamburger{
   width:44px; height:44px;
 }
+
+    /* ===== Fancy Passport ===== */
+.passport {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: 96px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    radial-gradient(1200px 600px at 10% 0%, rgba(59,130,246,.12), transparent 60%),
+    conic-gradient(from 180deg at 80% 20%, rgba(37,99,235,.20), rgba(99,102,241,.12), rgba(59,130,246,.18), rgba(37,99,235,.20));
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+
+.passport::before {
+  content:"";
+  position:absolute; inset:-1px;
+  border-radius:16px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 8px, transparent 8px 16px),
+    radial-gradient(circle at 20% 80%, rgba(255,255,255,.05), transparent 40%);
+  pointer-events:none;
+}
+
+.passport .serial {
+  position:absolute;
+  top:10px; right:12px;
+  font: 600 12px/1 Inter, sans-serif;
+  letter-spacing:.08em;
+  color:#cbd5e1;
+  background: rgba(2,6,23,.45);
+  border:1px solid rgba(148,163,184,.25);
+  padding:6px 8px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+
+.passport .watermark {
+  position:absolute; inset:auto 8px 6px auto;
+  right:12px; bottom:10px;
+  font-weight:800; opacity:.06; pointer-events:none;
+  text-transform:uppercase; letter-spacing:.06em;
+  white-space:nowrap; font-size: clamp(18px, 3.6vw, 28px);
+}
+
+.passport .emblem {
+  width: 96px; height: 96px; border-radius: 14px;
+  overflow: hidden; background: color-mix(in srgb, var(--soft) 70%, #000 30%);
+  border:1px solid rgba(148,163,184,.25);
+  display:grid; place-items:center;
+}
+
+.passport .emblem img {
+  width:100%; height:100%; object-fit: cover;
+}
+
+.passport .info b {
+  display:block; font-size:18px; letter-spacing:.01em;
+}
+
+.passport .meta {
+  margin-top:4px; color:var(--muted); font-size:14px;
+}
+
+.passport .chips {
+  margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;
+}
+
+.passport .chip {
+  font-weight:600; font-size:12px; letter-spacing:.04em;
+  padding:6px 8px; border-radius:999px;
+  border:1px solid rgba(148,163,184,.28);
+  background: rgba(2,6,23,.35);
+}
+
+.passport .actions { margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+
+/* optional subtle shine on hover */
+.passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
   </style>
 </head>
 <body>
@@ -283,22 +366,33 @@
           </form>
 
           <!-- Passport preview -->
-          <div id="passport" class="passport" style="display:none; margin-top:12px;">
-            <div class="emblem" aria-hidden="true">
-              <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" />
-            </div>
-            <div class="info">
-              <b>CROnation Passport</b>
-              <small id="passport-details">—</small>
-              <div class="actions">
-                <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
-              </div>
-            </div>
-          </div>
+          <div id="passport" class="passport" style="display:none;">
+  <span id="passport-serial" class="serial">#000000</span>
+  <span id="passport-watermark" class="watermark">COUNTRY</span>
 
-          <small class="muted">Passport mint is on. On-chain NFT mint is not live yet.</small>
-        </div>
-      </div>
+  <div class="emblem">
+    <!-- Optional user PFP; falls back to CROnation logo -->
+    <img id="passport-pfp" src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="Passport emblem">
+  </div>
+
+  <div class="info">
+    <b>CROnation Passport</b>
+    <div class="meta">
+      <span id="passport-nick">—</span> • <span id="passport-country">—</span>
+    </div>
+    <div class="chips">
+      <span class="chip" id="passport-address-chip">—</span>
+      <span class="chip">CRON8 Holder</span>
+    </div>
+    <div class="actions">
+      <label class="btn ghost" style="cursor:pointer;">
+        Upload PFP
+        <input id="pfpInput" type="file" accept="image/*" style="display:none;">
+      </label>
+      <button id="shareBtn" type="button" class="btn">Share to 𝕏</button>
+    </div>
+  </div>
+</div>
 
       <!-- ABOUT -->
       <div class="card" id="about">
@@ -622,15 +716,42 @@ function updateCountryStyle(name){
       if(form) form.style.display = 'none';
     }
 
-    function showPassport(country, nick, serial){
-      const card = el('passport');
-      el('passport-details').textContent = `${nick} — ${country} • Passport #${serial}`;
-      card.style.display = 'grid';
-      const shareBtn = el('shareBtn');
-      shareBtn.style.display = 'inline-flex';
-      shareBtn.onclick = () => shareToX({ country, nick, serial });
-      card.scrollIntoView({behavior:'smooth', block:'center'});
-    }
+    <script>
+function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : '—'; }
+
+function showPassport(country, nick, serial){
+  const card = el('passport');
+
+  // fill fields
+  el('passport-nick').textContent = nick;
+  el('passport-country').textContent = country;
+  el('passport-serial').textContent = `#${serial}`;
+  el('passport-watermark').textContent = country.toUpperCase().slice(0, 22);
+  el('passport-address-chip').textContent = shortAddr(userAddress || '');
+
+  // show + scroll
+  card.style.display = 'grid';
+  card.scrollIntoView({behavior:'smooth', block:'center'});
+
+  // Share button (keeps your existing logic)
+  const shareBtn = el('shareBtn');
+  shareBtn.style.display = 'inline-flex';
+  shareBtn.onclick = () => shareToX({ country, nick, serial });
+
+  // Optional: let user upload a PFP for the passport card
+  const pfpInput = el('pfpInput');
+  if (pfpInput && !pfpInput._wired){
+    pfpInput._wired = true;
+    pfpInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+      const url = URL.createObjectURL(file);
+      const img = el('passport-pfp');
+      img.src = url;
+    });
+  }
+}
+</script>
 
     // Stats + leaderboard
     function renderStats(){
