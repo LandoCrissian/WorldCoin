@@ -292,10 +292,11 @@
 
   <script>
     /**** Launch Config + Flags ****/
-    const FLAGS = {
-      TOKEN_GATE: false,      // flip to true when ready
-      REQUIRE_WALLET: true    // <- one-passport-per-wallet
-    };
+const FLAGS = {
+  TOKEN_GATE: false,
+  REQUIRE_WALLET: true,
+  AUTO_CONNECT: false   // <- Option 1: don't auto-connect on page load
+};
     const LAUNCH = {
       xHandle: 'cronation8',
       siteUrl: 'https://cronation.netlify.app',
@@ -641,18 +642,19 @@
     (function boot(){
       renderLeaderboard();
       el('year').textContent = new Date().getFullYear();
-      // Try restore if wallet already authorized
-      if(window.ethereum){
-        window.ethereum.request({ method:'eth_accounts' })
-          .then((accounts)=>{
-            if(accounts && accounts[0]){
-              userAddress = accounts[0];
-              connectBtn.textContent = shortAddr(userAddress);
-              restorePassportIfAny();
-            }
-          })
-          .catch(()=>{});
+     
+      // Try restore if wallet already authorized (only if you want auto-connect)
+if (FLAGS.AUTO_CONNECT && window.ethereum) {
+  window.ethereum.request({ method:'eth_accounts' })
+    .then((accounts)=>{
+      if(accounts && accounts[0]){
+        userAddress = accounts[0];
+        connectBtn.textContent = shortAddr(userAddress);
+        restorePassportIfAny();
       }
+    })
+    .catch(()=>{});
+}
     })();
   </script>
 </body>
