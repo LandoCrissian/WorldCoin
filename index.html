@@ -186,7 +186,6 @@
       <div class="cta">
         <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
         <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
-        <a href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener" class="btn" title="Buy CRON8">Buy CRON8</a>
       </div>
 
       <div class="stats" role="status" aria-live="polite">
@@ -429,22 +428,37 @@
     function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
     async function connectWallet(){
-      if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
-      try{
-        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-        userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-        if(!userAddress) return;
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
+  if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
+  try{
+    // 1) Request accounts (wallet may or may not show a popup if already authorized)
+    const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+    userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+    if(!userAddress) return;
 
-        // Do NOT gate on connect — we gate at mint time.
-        connectBtn.textContent = shortAddr(userAddress);
-        restorePassportIfAny();
-      }catch(err){
-        console.error(err);
-        alert('Wallet connection was cancelled or failed.');
-      }
-    }
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+
+    // 2) Make sure we’re on Cronos (this *will* show a switch/add popup if needed)
+    await ensureChain();
+
+    // 3) Ask user to sign a short message to confirm they’re really present
+    const message = [
+      'CROnation — Verify Wallet',
+      `Address: ${userAddress}`,
+      `Timestamp: ${new Date().toISOString()}`
+    ].join('\n');
+
+    const signature = await signer.signMessage(message);
+    // Optional: keep for later (e.g., show “Verified” badge or server verify later)
+    localStorage.setItem('cronation_sig', signature);
+
+    connectBtn.textContent = shortAddr(userAddress);
+    restorePassportIfAny();
+  }catch(err){
+    console.error(err);
+    alert('Wallet connection was cancelled or failed.');
+  }
+}
 
     async function ensureChain(){
       const desired = LAUNCH.token.chainIdHex;
