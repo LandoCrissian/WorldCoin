@@ -62,6 +62,7 @@
     .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
     .btn.primary:hover{ background:var(--accent-600); }
     .btn.ghost{ background:transparent; }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; filter:saturate(.7); }
 
     .hero{ padding:48px 0 16px; display:grid; gap:16px; align-items:center; text-align:center; }
     .hero h1{ margin:0; font-size: clamp(28px, 3.2vw + 12px, 48px); letter-spacing:-0.02em; }
@@ -202,16 +203,16 @@
         </div>
       </div>
 
-      <aside class="card" id="leaderboard-card">
-        <div class="body">
-          <h3>Leaderboard</h3>
-          <table aria-describedby="leaderboard-desc">
-            <caption id="leaderboard-desc" class="visually-hidden">Top countries by citizen count</caption>
-            <thead><tr><th class="rank">#</th><th>Country</th><th class="count">Citizens</th></tr></thead>
-            <tbody id="leaderboard"></tbody>
-          </table>
-        </div>
-      </aside>
+        <aside class="card" id="leaderboard-card">
+          <div class="body">
+            <h3>Leaderboard</h3>
+            <table aria-describedby="leaderboard-desc">
+              <caption id="leaderboard-desc" class="visually-hidden">Top countries by citizen count</caption>
+              <thead><tr><th class="rank">#</th><th>Country</th><th class="count">Citizens</th></tr></thead>
+              <tbody id="leaderboard"></tbody>
+            </table>
+          </div>
+        </aside>
 
       <div class="card">
         <div class="body">
@@ -231,7 +232,7 @@
             </div>
 
             <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn primary" type="submit">Mint Passport (demo)</button>
+              <button id="mintBtn" class="btn primary" type="submit" disabled>Mint Passport (demo)</button>
               <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
             </div>
           </form>
@@ -275,7 +276,7 @@
           </div>
         </div>
         <div class="footer">
-          <button class="btn primary" onclick="mintFromModal()">Mint Passport (demo)</button>
+          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()" disabled>Mint Passport (demo)</button>
         </div>
       </div>
     </div>
@@ -292,11 +293,11 @@
 
   <script>
     /**** Launch Config + Flags ****/
-const FLAGS = {
-  TOKEN_GATE: true,     
-  REQUIRE_WALLET: true,
-  AUTO_CONNECT: false
-};
+    const FLAGS = {
+      TOKEN_GATE: true,
+      REQUIRE_WALLET: true,
+      AUTO_CONNECT: false
+    };
     const LAUNCH = {
       xHandle: 'cronation8',
       siteUrl: 'https://cronation.netlify.app',
@@ -324,6 +325,17 @@ const FLAGS = {
 
     /**** Helpers ****/
     const el = (id)=>document.getElementById(id);
+
+    // Mint enable/disable state
+    let canMint = false;
+    function setMintEnabled(enabled){
+      canMint = !!enabled;
+      const b1 = el('mintBtn');
+      const b2 = el('modalMintBtn');
+      if(b1) b1.disabled = !enabled;
+      if(b2) b2.disabled = !enabled;
+    }
+
     function scrollToMap(){
       const header = document.querySelector('header');
       const y = document.getElementById('map-section').getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
@@ -436,6 +448,7 @@ const FLAGS = {
     window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
     function mintFromModal(){
+      if(!canMint){ alert('Connect wallet to mint.'); return; }
       const country = el('modal-country').value;
       const nick = el('modal-nickname').value || 'Anonymous';
       attemptMint(country, nick);
@@ -445,6 +458,7 @@ const FLAGS = {
     /**** Wallet + gating ****/
     const connectBtn = el('connectBtn');
     let provider = null, signer = null, userAddress = null;
+    setMintEnabled(false);
 
     function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
@@ -453,22 +467,29 @@ const FLAGS = {
       try{
         const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
         userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-        if(!userAddress) return;
+        if(!userAddress) { setMintEnabled(false); return; }
+
         provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
+        signer   = provider.getSigner();
 
         if(FLAGS.TOKEN_GATE){
           await ensureChain();
           const holds = await hasRequiredTokens(userAddress);
-          if(!holds){ alert('You need to hold the required token to join.'); return; }
+          if(!holds){
+            setMintEnabled(false);
+            connectBtn.textContent = shortAddr(userAddress);
+            alert('You need to hold the required token to mint.');
+            return;
+          }
         }
 
         connectBtn.textContent = shortAddr(userAddress);
-        // Restore from Firestore if already minted
+        setMintEnabled(true);
         restorePassportIfAny();
       }catch(err){
         console.error(err);
         alert('Wallet connection was cancelled or failed.');
+        setMintEnabled(false);
       }
     }
 
@@ -493,25 +514,25 @@ const FLAGS = {
     }
 
     async function hasRequiredTokens(address){
-  try{
-    const token = LAUNCH.token.address;
-    if(!token || token === '0x0000000000000000000000000000000000000000') return false;
-    const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
-    const bal = await erc20.balanceOf(address);
-    const min = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
-    return bal.gte(min);
-  }catch(e){
-    console.error('Token-gate check failed:', e);
-    alert('Could not verify token balance. Check network and token address.');
-    return false;
-  }
-}
+      try{
+        const token = LAUNCH.token.address;
+        if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+        const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+        const bal = await erc20.balanceOf(address);
+        const min = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+        return bal.gte(min);
+      }catch(e){
+        console.error('Token-gate check failed:', e);
+        alert('Could not verify token balance. Check network and token address.');
+        return false;
+      }
+    }
 
     connectBtn.addEventListener('click', async () => {
       if (!FLAGS.REQUIRE_WALLET && !FLAGS.TOKEN_GATE) {
-        // (fallback demo mode if you ever turn REQUIRE_WALLET off)
         userAddress = userAddress || 'demo';
         connectBtn.textContent = shortAddr(userAddress);
+        setMintEnabled(true);
         restorePassportIfAny();
       } else {
         await connectWallet();
@@ -524,8 +545,11 @@ const FLAGS = {
         alert('Please connect your wallet first.');
         return;
       }
+      if(!canMint){
+        alert('Mint is locked until your wallet is connected and verified.');
+        return;
+      }
 
-      // Check if this wallet already minted
       const addrKey = (userAddress || 'demo').toLowerCase();
       const docRef = db.collection('passports').doc(addrKey);
       const snap = await docRef.get();
@@ -536,14 +560,12 @@ const FLAGS = {
         return;
       }
 
-      // Optional token-gate check
       if(FLAGS.TOKEN_GATE){
         const ok = await hasRequiredTokens(userAddress);
         if(!ok){ alert('You need to hold the required token to join.'); return; }
       }
 
       const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
-      // Write one doc per wallet (enforces uniqueness)
       await docRef.set({
         address: userAddress || null,
         country, nick,
@@ -553,12 +575,10 @@ const FLAGS = {
 
       showPassport(country, nick, serial);
 
-      // Enable share
       const shareBtn = el('shareBtn');
       shareBtn.style.display = 'inline-flex';
       shareBtn.onclick = () => shareToX({ country, nick, serial });
 
-      // reset form
       el('country').value = '';
       el('nickname').value = '';
     }
@@ -627,14 +647,6 @@ const FLAGS = {
       await attemptMint(country, nick);
     });
 
-    /**** Map modal bridging ****/
-    function mintFromModal(){
-      const country = el('modal-country').value;
-      const nick = el('modal-nickname').value || 'Anonymous';
-      attemptMint(country, nick);
-      closeModal();
-    }
-
     /**** Share to X ****/
     function shareToX({country, nick, serial}){
       const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n`;
@@ -648,19 +660,30 @@ const FLAGS = {
     (function boot(){
       renderLeaderboard();
       el('year').textContent = new Date().getFullYear();
-     
-      // Try restore if wallet already authorized (only if you want auto-connect)
-if (FLAGS.AUTO_CONNECT && window.ethereum) {
-  window.ethereum.request({ method:'eth_accounts' })
-    .then((accounts)=>{
-      if(accounts && accounts[0]){
-        userAddress = accounts[0];
-        connectBtn.textContent = shortAddr(userAddress);
-        restorePassportIfAny();
+
+      // Optional auto-connect (kept off by default)
+      if (FLAGS.AUTO_CONNECT && window.ethereum) {
+        window.ethereum.request({ method:'eth_accounts' })
+          .then(async (accounts)=>{
+            if(accounts && accounts[0]){
+              userAddress = accounts[0];
+              provider = new ethers.providers.Web3Provider(window.ethereum);
+              signer   = provider.getSigner();
+              connectBtn.textContent = shortAddr(userAddress);
+
+              if(FLAGS.TOKEN_GATE){
+                await ensureChain();
+                const holds = await hasRequiredTokens(userAddress);
+                setMintEnabled(holds);
+              }else{
+                setMintEnabled(true);
+              }
+
+              restorePassportIfAny();
+            }
+          })
+          .catch(()=>{});
       }
-    })
-    .catch(()=>{});
-}
     })();
   </script>
 </body>
