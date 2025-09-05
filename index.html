@@ -365,31 +365,31 @@
             </div>
           </form>
 
-          <!-- Passport preview -->
-          <div id="passport" class="passport" style="display:none;">
-  <span id="passport-serial" class="serial">#000000</span>
-  <span id="passport-watermark" class="watermark">COUNTRY</span>
-
+          <!-- Passport card -->
+<div id="passport" class="passport" style="display:none; margin-top:12px;">
   <div class="emblem">
-    <!-- Optional user PFP; falls back to CROnation logo -->
-    <img id="passport-pfp" src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="Passport emblem">
+    <img id="passport-pfp" 
+         src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" 
+         alt="CROnation logo">
   </div>
-
   <div class="info">
-    <b>CROnation Passport</b>
-    <div class="meta">
-      <span id="passport-nick">—</span> • <span id="passport-country">—</span>
+    <b>CROnation Passport <span id="passport-serial">#000000</span></b>
+    <small>
+      <span id="passport-nick">—</span> — <span id="passport-country">—</span>
+      <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+    </small>
+
+    <!-- watermark background text -->
+    <div id="passport-watermark" aria-hidden="true" 
+         style="opacity:.08; font-weight:800; font-size:32px; margin-top:8px;">
     </div>
-    <div class="chips">
-      <span class="chip" id="passport-address-chip">—</span>
-      <span class="chip">CRON8 Holder</span>
-    </div>
-    <div class="actions">
-      <label class="btn ghost" style="cursor:pointer;">
-        Upload PFP
+
+    <div class="actions" style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+      <label class="btn" style="cursor:pointer;">
         <input id="pfpInput" type="file" accept="image/*" style="display:none;">
+        Upload PFP
       </label>
-      <button id="shareBtn" type="button" class="btn">Share to 𝕏</button>
+      <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
     </div>
   </div>
 </div>
@@ -716,42 +716,42 @@ function updateCountryStyle(name){
       if(form) form.style.display = 'none';
     }
 
-    <script>
-function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : '—'; }
+
+function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
+function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
+function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
 
 function showPassport(country, nick, serial){
-  const card = el('passport');
+  const card = document.getElementById('passport');
+  if(!card) return;
 
-  // fill fields
-  el('passport-nick').textContent = nick;
-  el('passport-country').textContent = country;
-  el('passport-serial').textContent = `#${serial}`;
-  el('passport-watermark').textContent = country.toUpperCase().slice(0, 22);
-  el('passport-address-chip').textContent = shortAddr(userAddress || '');
+  setText('passport-nick', nick);
+  setText('passport-country', country);
+  setText('passport-serial', '#'+serial);
+  setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
+  setText('passport-address-chip', shortAddr(window.userAddress||''));
 
-  // show + scroll
   card.style.display = 'grid';
-  card.scrollIntoView({behavior:'smooth', block:'center'});
+  try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
 
-  // Share button (keeps your existing logic)
-  const shareBtn = el('shareBtn');
-  shareBtn.style.display = 'inline-flex';
-  shareBtn.onclick = () => shareToX({ country, nick, serial });
+  const shareBtn = document.getElementById('shareBtn');
+  if(shareBtn){
+    shareBtn.style.display = 'inline-flex';
+    shareBtn.onclick = () => shareToX({ country, nick, serial });
+  }
 
-  // Optional: let user upload a PFP for the passport card
-  const pfpInput = el('pfpInput');
+  const pfpInput = document.getElementById('pfpInput');
   if (pfpInput && !pfpInput._wired){
     pfpInput._wired = true;
     pfpInput.addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
       if(!file) return;
       const url = URL.createObjectURL(file);
-      const img = el('passport-pfp');
-      img.src = url;
+      setSrc('passport-pfp', url);
     });
   }
 }
-</script>
+
 
     // Stats + leaderboard
     function renderStats(){
