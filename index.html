@@ -210,7 +210,7 @@
           <h3>Community Map</h3>
           <p class="muted">Tap a country to join. You can also use the form below.</p>
           <div id="map" aria-label="Interactive world map"></div>
-          <p class="map-note">Mint currently disabled; CRON8 holder check applies when enabled.</p>
+          <p class="map-note">Passport is live. On-chain NFT mint coming soon.</p>
         </div>
       </div>
 
@@ -312,11 +312,12 @@
   <script>
     /**** Flags ****/
     const FLAGS = {
-      TOKEN_GATE: true,       // require CRON8 to mint
-      REQUIRE_WALLET: true,   // one passport per wallet
-      AUTO_CONNECT: false,    // do not auto request accounts
-      MINT_ENABLED: false     // <-- turn ON when you're ready to mint live
-    };
+  TOKEN_GATE: true,          // CRON8 holders only
+  REQUIRE_WALLET: true,
+  AUTO_CONNECT: false,
+  PASSPORT_MINT_ENABLED: true,  // ✅ allow Firestore mint
+  NFT_MINT_ENABLED: false       // ⛔ on-chain NFT later
+};
 
     const LAUNCH = {
       xHandle: 'cronation8',
@@ -523,10 +524,12 @@
 
     /**** Firestore-backed mint ****/
     async function attemptMint(country, nick){
-      if(!FLAGS.MINT_ENABLED){
-        alert('Mint is currently disabled.');
-        return;
-      }
+  if(!FLAGS.PASSPORT_MINT_ENABLED){
+    alert('Passport mint is temporarily paused.');
+    return;
+  }
+  // (rest of your function: connect if needed -> ensureChain -> token check -> Firestore write)
+}
       if(FLAGS.REQUIRE_WALLET && !userAddress){
         alert('Please connect your wallet first.');
         return;
