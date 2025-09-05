@@ -148,6 +148,36 @@
     .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
     .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
+
+    /* --- Nav sizing/behavior --- */
+.actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:nowrap;          /* no wrapping that breaks layout */
+  min-width:0;
+}
+
+.actions .btn,
+.actions a.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:160px;           /* same visual width for Connect/Buy */
+  white-space:nowrap;        /* prevent multi-line button labels */
+  text-decoration:none;      /* anchor button: remove underline */
+}
+
+/* Keep Buy in the row on desktop, move it to the mobile menu on small */
+@media (max-width: 720px){
+  #buyBtn{ display:none; }   /* it's already in the mobile drawer */
+  .hamburger{ display:inline-flex; }
+}
+
+/* Ensure hamburger has a consistent tap target */
+.hamburger{
+  width:44px; height:44px;
+}
   </style>
 </head>
 <body>
@@ -480,26 +510,24 @@ function updateCountryStyle(name){
     async function connectWallet(){
   if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
   try{
-    // 1) Request accounts (wallet may or may not show a popup if already authorized)
+    // Request account access (shows popup if not granted)
     const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
     userAddress = (accounts && accounts[0]) ? accounts[0] : null;
     if(!userAddress) return;
 
     provider = new ethers.providers.Web3Provider(window.ethereum);
-    signer = provider.getSigner();
+    signer   = provider.getSigner();
 
-    // 2) Make sure we’re on Cronos (this *will* show a switch/add popup if needed)
+    // Ensure Cronos (shows switch/add popup if needed)
     await ensureChain();
 
-    // 3) Ask user to sign a short message to confirm they’re really present
-    const message = [
-      'CROnation — Verify Wallet',
-      `Address: ${userAddress}`,
-      `Timestamp: ${new Date().toISOString()}`
-    ].join('\n');
+    // Friendly, short sign-message to confirm presence
+    const message =
+      `CROnation — Verify Wallet\n` +
+      `Address: ${userAddress}\n` +
+      `Time: ${new Date().toISOString()}`;
 
     const signature = await signer.signMessage(message);
-    // Optional: keep for later (e.g., show “Verified” badge or server verify later)
     localStorage.setItem('cronation_sig', signature);
 
     connectBtn.textContent = shortAddr(userAddress);
@@ -644,17 +672,22 @@ countryLayers.forEach((_, name) => updateCountryStyle(name));
 
     // Real-time listener for stats/leaderboard
     db.collection('passports').onSnapshot((qs)=>{
-      countryCounts.clear();
-      totalCitizens = 0;
-      qs.forEach(doc=>{
-        const d = doc.data();
-        if(!d || !d.country) return;
-        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-        totalCitizens += 1;
-      });
-      renderStats();
-      renderLeaderboard();
-    });
+  countryCounts.clear();
+  totalCitizens = 0;
+
+  qs.forEach(doc=>{
+    const d = doc.data();
+    if(!d || !d.country) return;
+    countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+    totalCitizens += 1;
+  });
+
+  renderStats();
+  renderLeaderboard();
+
+  // 🔁 Repaint all countries based on new counts
+  countryLayers.forEach((_, name) => updateCountryStyle(name));
+});
 
     // Form submit
     el('join-form').addEventListener('submit', async (e)=>{
