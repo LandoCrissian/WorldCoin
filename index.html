@@ -574,6 +574,7 @@ async function loadCitizensIntoModal(country){
   try{
     const citizens = await fetchCitizens(country);
     renderCitizens(box, citizens);
+    toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
   }catch(e){
     console.error(e);
     box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
@@ -692,30 +693,40 @@ async function loadCitizensIntoModal(country){
   function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
   async function connectWallet(){
-    if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
-    try{
-      const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-      userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-      window.userAddress = userAddress;
-      if(!userAddress) return;
-
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer   = provider.getSigner();
-
-      await ensureChain();
-
-      const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
-      const signature = await signer.signMessage(message);
-      localStorage.setItem('cronation_sig', signature);
-
-      connectBtn.textContent = shortAddr(userAddress);
-      restorePassportIfAny();
-      restorePfpIfAny(userAddress);
-    }catch(err){
-      console.error(err);
-      alert('Wallet connection was cancelled or failed.');
-    }
+  if(!window.ethereum){
+    alert('No wallet detected. Please install a Cronos-compatible wallet.');
+    toast('No wallet detected');                      // 👈 toast
+    return;
   }
+  try{
+    setBusy(true);                                    // 👈 start loader
+
+    const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+    userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+    window.userAddress = userAddress;
+    if(!userAddress){ setBusy(false); return; }
+
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer   = provider.getSigner();
+
+    await ensureChain();
+
+    const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
+    const signature = await signer.signMessage(message);
+    localStorage.setItem('cronation_sig', signature);
+
+    connectBtn.textContent = shortAddr(userAddress);
+    toast('Wallet connected');                         // 👈 toast
+    restorePassportIfAny();
+    restorePfpIfAny(userAddress);
+  }catch(err){
+    console.error(err);
+    alert('Wallet connection was cancelled or failed.');
+    toast('Connection cancelled');                     // 👈 toast
+  }finally{
+    setBusy(false);                                    // 👈 stop loader
+  }
+}
 
   async function ensureChain(){
     const desired = LAUNCH.token.chainIdHex;
@@ -745,33 +756,43 @@ async function loadCitizensIntoModal(country){
       const bal = await erc20.balanceOf(address);
       const min = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
       return bal.gte(min);
-    }catch(e){
-      console.error('Token-gate check failed:', e);
-      alert('Could not verify token balance. Check network and token address.');
-      return false;
-    }
+    const ok = bal.gte(min);
+if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }       // 👈 toast on fail
+return ok;
+...
+}catch(e){
+  console.error('Token-gate check failed:', e);
+  alert('Could not verify token balance. Check network and token address.');
+  toast('Token check failed');                         // 👈 toast
+  return false;
+}
   }
 
   if (connectBtn) connectBtn.addEventListener('click', connectWallet);
 
   /**** Firestore-backed mint ****/
   async function attemptMint(country, nick){
-    if(!FLAGS.PASSPORT_MINT_ENABLED){ alert('Passport mint is temporarily paused.'); return; }
-    if(FLAGS.REQUIRE_WALLET && !userAddress){ alert('Please connect your wallet first.'); return; }
+  if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
+  if(FLAGS.REQUIRE_WALLET && !userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
+
+  try{
+    setBusy(true);                                     // 👈 start loader
 
     if(FLAGS.TOKEN_GATE){
       await ensureChain();
       const ok = await hasRequiredTokens(userAddress);
-      if(!ok){ alert('You need to hold the required token to mint.'); return; }
+      if(!ok){ return; }                               // toast already shown in hasRequiredTokens
     }
 
     const addrKey = userAddress.toLowerCase();
     const docRef = db.collection('passports').doc(addrKey);
     const snap = await docRef.get();
+
     if(snap.exists){
       const p = snap.data();
       showPassport(p.country, p.nick, p.serial);
       hideJoinForm();
+      toast('You already minted — showing passport');  // 👈 toast
       alert('You already have a passport. Showing it now.');
       return;
     }
@@ -787,7 +808,15 @@ async function loadCitizensIntoModal(country){
     showPassport(country, nick, serial);
     hideJoinForm();
     hideCTAIfMinted();
+    toast(`Minted! Passport #${serial}`);              // 👈 success
+  }catch(err){
+    console.error(err);
+    toast('Mint failed — try again');                  // 👈 error toast
+    alert('Mint failed. Please try again.');
+  }finally{
+    setBusy(false);                                    // 👈 stop loader
   }
+}
 
   function hideJoinForm(){
     const form = el('join-form');
@@ -983,6 +1012,7 @@ if (pfpInput && !pfpInput._wired){
     if(snap.exists){
       const p = snap.data();
       showPassport(p.country, p.nick, p.serial);
+      toast('Welcome back — passport restored');
       hideJoinForm();
     }
   }
@@ -1003,13 +1033,17 @@ if (pfpInput && !pfpInput._wired){
   });
 
   // Form submit
-  el('join-form').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const country = el('country').value;
-    if(!country){ alert('Please select your country'); return; }
-    const nick = el('nickname').value || 'Anonymous';
-    await attemptMint(country, nick);
-  });
+  // Form submit
+el('join-form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const country = el('country').value;
+  if(!country){ 
+    toast('Choose your country');
+    return; 
+  }
+  const nick = el('nickname').value || 'Anonymous';
+  await attemptMint(country, nick);
+});
 
   // Modal -> mint
   function mintFromModal(){
@@ -1026,6 +1060,7 @@ if (pfpInput && !pfpInput._wired){
     const url = LAUNCH.siteUrl;
     const tags = 'Cronos,CROnation,CRON8,crofam';
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+    toast('Opening 𝕏 to share…');
     window.open(shareUrl, '_blank','noopener');
   }
 
