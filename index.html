@@ -32,14 +32,14 @@
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <!-- Ethers -->
   <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <!-- Firebase (compat builds) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
 
   <style>
     :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
@@ -149,10 +149,8 @@
       overflow: hidden;
       box-shadow: 0 12px 40px rgba(0,0,0,.25);
     }
-    /* put all direct children above background */
     .passport > * { position:relative; z-index:1; }
 
-    /* flag background layer */
     #passport-flag{
       position:absolute; inset:0;
       background-size:cover; background-position:center;
@@ -161,7 +159,6 @@
       z-index:0;
     }
 
-    /* subtle diagonal overlay */
     .passport::before{
       content:"";
       position:absolute; inset:0;
@@ -189,42 +186,38 @@
       font-size:12px; font-weight:600; letter-spacing:.04em;
     }
 
-    /* Big watermark text */
     #passport-watermark{
       position: absolute; right:16px; bottom:16px; left:16px;
       font-weight:800; font-size:42px; line-height:1.05;
       text-transform:uppercase; letter-spacing:.06em;
       color:#fff; opacity:.08; pointer-events:none;
       word-break: break-word;
-      z-index:0; /* sits with background */
+      z-index:0;
     }
 
     .passport .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
     .passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
 
-    /* tiny country flag next to the country name */
-.flag-icon{
-  width:18px; height:12px;
-  border-radius:2px;
-  margin-left:6px;
-  object-fit:cover;
-  box-shadow:0 0 0 1px rgba(255,255,255,.15) inset;
-}
+    .flag-icon{
+      width:18px; height:12px;
+      border-radius:2px;
+      margin-left:6px;
+      object-fit:cover;
+      box-shadow:0 0 0 1px rgba(255,255,255,.15) inset;
+    }
 
-/* subtle “document” finish */
-.passport{
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.03), transparent 38%),
-    #0d203a; /* keeps your base color */
-}
+    .passport{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), transparent 38%),
+        #0d203a;
+    }
 
-/* quick activation glow when minted */
-@keyframes glowPulse {
-  0%   { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
-  50%  { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 24px rgba(59,130,246,.8); }
-  100% { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
-}
-.passport.activated{ animation: glowPulse 1.8s ease-in-out 1; }
+    @keyframes glowPulse {
+      0%   { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
+      50%  { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 24px rgba(59,130,246,.8); }
+      100% { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
+    }
+    .passport.activated{ animation: glowPulse 1.8s ease-in-out 1; }
   </style>
 </head>
 <body>
@@ -342,16 +335,11 @@
             <div class="info">
               <b>CROnation Passport <span id="passport-serial">#000000</span></b>
               <small>
-                <span id="passport-nick">—</span> — <span id="passport-country">—</span>
+                <span id="passport-nick">—</span> —
+                <span id="passport-country">—</span>
+                <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
                 <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
               </small>
-
-              <small>
-  <span id="passport-nick">—</span> — 
-  <span id="passport-country">—</span>
-  <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
-  <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
-</small>
 
               <div class="actions">
                 <label class="btn" style="cursor:pointer;">
@@ -413,11 +401,11 @@
   <script>
     /**** Flags ****/
     const FLAGS = {
-      TOKEN_GATE: true,              // CRON8 holders only (checked at mint time)
+      TOKEN_GATE: true,
       REQUIRE_WALLET: true,
       AUTO_CONNECT: false,
-      PASSPORT_MINT_ENABLED: true,   // Firestore passport = ON
-      NFT_MINT_ENABLED: false        // On-chain NFT = later
+      PASSPORT_MINT_ENABLED: true,
+      NFT_MINT_ENABLED: false
     };
 
     const LAUNCH = {
@@ -449,12 +437,14 @@
     const el = (id)=>document.getElementById(id);
     function scrollToMap(){
       const header = document.querySelector('header');
-      const y = document.getElementById('map-section').getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
+      const sec = document.getElementById('map-section');
+      if(!header || !sec) return;
+      const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
       window.scrollTo({ top: y, behavior:'smooth' });
     }
 
     // --- Country coloring ---
-    const countryLayers = new Map(); // country -> Leaflet layer
+    const countryLayers = new Map();
     function colorFor(count){
       if (count >= 25) return '#1d4ed8';
       if (count >= 10) return '#3b82f6';
@@ -483,7 +473,7 @@
     })();
 
     /**** Map + Countries ****/
-    const countryCounts = new Map(); // live from Firestore
+    const countryCounts = new Map();
     const countryList = [];
     let totalCitizens = 0;
     el('year').textContent = new Date().getFullYear();
@@ -532,6 +522,7 @@
 
     function populateCountryDropdown(list){
       const sel = el('country');
+      if(!sel) return;
       const frag = document.createDocumentFragment();
       list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
       sel.appendChild(frag);
@@ -540,13 +531,16 @@
     /**** Modal ****/
     function openModal(country){
       const modal = el('join-modal');
-      el('modal-country').value = country;
+      if(!modal) return;
+      el('modal-country').value = country || '';
       el('modal-nickname').value = '';
       modal.setAttribute('open', '');
       document.body.classList.add('modal-open');
     }
     function closeModal(){
-      el('join-modal').removeAttribute('open');
+      const modal = el('join-modal');
+      if(!modal) return;
+      modal.removeAttribute('open');
       document.body.classList.remove('modal-open');
     }
     window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
@@ -562,7 +556,7 @@
       try{
         const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
         userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-        window.userAddress = userAddress;  // <-- expose for the chip
+        window.userAddress = userAddress;
         if(!userAddress) return;
 
         provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -617,18 +611,12 @@
       }
     }
 
-    connectBtn.addEventListener('click', connectWallet);
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
 
     /**** Firestore-backed mint ****/
     async function attemptMint(country, nick){
-      if(!FLAGS.PASSPORT_MINT_ENABLED){
-        alert('Passport mint is temporarily paused.');
-        return;
-      }
-      if(FLAGS.REQUIRE_WALLET && !userAddress){
-        alert('Please connect your wallet first.');
-        return;
-      }
+      if(!FLAGS.PASSPORT_MINT_ENABLED){ alert('Passport mint is temporarily paused.'); return; }
+      if(FLAGS.REQUIRE_WALLET && !userAddress){ alert('Please connect your wallet first.'); return; }
 
       if(FLAGS.TOKEN_GATE){
         await ensureChain();
@@ -674,6 +662,7 @@
       "Nigeria":"ng","Kenya":"ke"
     };
     const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
+
     function setPassportFlag(country){
       const layer = document.getElementById('passport-flag');
       if(!layer) return;
@@ -682,20 +671,19 @@
     }
 
     function setPassportFlagIcon(country){
-  const icon = document.getElementById('passport-flag-icon');
-  if(!icon) return;
-  const iso2 = countryToISO2(country);
-  if (iso2){
-    // small crisp flag for the badge
-    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-    icon.style.display = 'inline-block';
-    icon.alt = country + ' flag';
-  } else {
-    icon.removeAttribute('src');
-    icon.style.display = 'none';
-    icon.alt = '';
-  }
-}
+      const icon = document.getElementById('passport-flag-icon');
+      if(!icon) return;
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+        icon.style.display = 'inline-block';
+        icon.alt = country + ' flag';
+      } else {
+        icon.removeAttribute('src');
+        icon.style.display = 'none';
+        icon.alt = '';
+      }
+    }
 
     /* === Passport rendering === */
     function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
@@ -708,17 +696,15 @@
       setText('passport-nick', nick);
       setText('passport-country', country);
       setText('passport-serial', '#'+serial);
-      setText('passport-watermark', (country||'').toUpperCase());
+      setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
       setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
 
-      setPassportFlag(country);      // you already call this
-setPassportFlagIcon(country);  // add this line
+      setPassportFlag(country);
+      setPassportFlagIcon(country);
 
-// flash the activation glow
-card.classList.remove('activated');
-requestAnimationFrame(()=>{    // ensure the reflow so the animation restarts
-  card.classList.add('activated');
-});
+      // flash the activation glow
+      card.classList.remove('activated');
+      requestAnimationFrame(()=>{ card.classList.add('activated'); });
 
       card.style.display = 'grid';
       try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
@@ -732,12 +718,21 @@ requestAnimationFrame(()=>{    // ensure the reflow so the animation restarts
       const pfpInput = document.getElementById('pfpInput');
       if (pfpInput && !pfpInput._wired){
         pfpInput._wired = true;
+        let lastObjectUrl = null;
+        const imgEl = document.getElementById('passport-pfp');
         pfpInput.addEventListener('change', (e) => {
           const file = e.target.files && e.target.files[0];
           if(!file) return;
-          const url = URL.createObjectURL(file);
-          setSrc('passport-pfp', url);
+          if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+          if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+          if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+          lastObjectUrl = URL.createObjectURL(file);
+          if (imgEl) imgEl.src = lastObjectUrl;
         });
+        const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+        window.addEventListener('pagehide', cleanup, { once:true });
+        window.addEventListener('beforeunload', cleanup, { once:true });
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'unloaded') cleanup(); });
       }
     }
 
@@ -753,6 +748,7 @@ requestAnimationFrame(()=>{    // ensure the reflow so the animation restarts
     function renderLeaderboard(){
       const arr = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]).slice(0, 10);
       const tbody = el('leaderboard');
+      if(!tbody) return;
       tbody.innerHTML = '';
       if(arr.length === 0){
         const tr = document.createElement('tr');
@@ -813,12 +809,12 @@ requestAnimationFrame(()=>{    // ensure the reflow so the animation restarts
 
     /**** Share to X ****/
     function shareToX({country, nick, serial}){
-  const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\ncc @cronation8`;
-  const url = LAUNCH.siteUrl;
-  const tags = 'Cronos,CROnation,CRON8,crofam';
-  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-  window.open(shareUrl, '_blank','noopener');
-}
+      const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\ncc @${LAUNCH.xHandle}`;
+      const url = LAUNCH.siteUrl;
+      const tags = 'Cronos,CROnation,CRON8,crofam';
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+      window.open(shareUrl, '_blank','noopener');
+    }
 
     /**** Page boot ****/
     (function boot(){
