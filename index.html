@@ -365,16 +365,17 @@
               </small>
 
               <!-- Passport controls (outside the passport card) -->
-<div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
+
+            <div id="passport-watermark" aria-hidden="true"></div>
+          </div>
+
+            <div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
   <label class="btn block" style="cursor:pointer;">
     <input id="pfpInput" type="file" accept="image/*" style="display:none;">
     Upload PFP
   </label>
   <button id="shareBtn" type="button" class="btn block">Share to 𝕏</button>
 </div>
-
-            <div id="passport-watermark" aria-hidden="true"></div>
-          </div>
 
           <!-- ABOUT -->
           <div class="card" id="about">
@@ -390,36 +391,29 @@
 
     <!-- Modal (map click) -->
     <div class="modal" id="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
-      <div class="panel">
-        <div class="header">
-          <b id="join-title">Join CROnation</b>
-          <button class="btn" onclick="closeModal()">Close</button>
-        </div>
-        <div class="content">
-  <div class="field">
-    <label for="modal-country">Country</label>
-    <input id="modal-country" disabled>
-  </div>
-  <div class="field">
-    <label for="modal-nickname">Nickname (optional)</label>
-    <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
-  </div>
-
-  <div class="field full">
-    <div id="citizens-list" class="citizens-list"></div>
-  </div>
-</div>
-
-        <div class="field full">
-  <div id="citizens-list" class="citizens-list"></div>
-</div>
-
-
-        <div class="footer">
-          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
-        </div>
+  <div class="panel">
+    <div class="header">
+      <b id="join-title">Join CROnation</b>
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>
+    <div class="content">
+      <div class="field">
+        <label for="modal-country">Country</label>
+        <input id="modal-country" disabled>
+      </div>
+      <div class="field">
+        <label for="modal-nickname">Nickname (optional)</label>
+        <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
+      </div>
+      <div class="field full">
+        <div id="citizens-list" class="citizens-list"></div>
       </div>
     </div>
+    <div class="footer">
+      <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
+    </div>
+  </div>
+</div>
   </main>
 
   <footer class="footer">
@@ -878,6 +872,7 @@ if (pfpInput && !pfpInput._wired){
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'unloaded') cleanup();
   });
+}
 }
 
   // Stats + leaderboard
