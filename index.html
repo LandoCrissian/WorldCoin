@@ -247,9 +247,44 @@
 }
 
     #passport + #passport-controls { margin-top:12px; }
+
+    /* --- Toast + Loader --- */
+.toast {
+  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+  background:#0f1219;border:1px solid var(--line);color:var(--text);
+  padding:10px 12px;border-radius:10px;
+  box-shadow:0 8px 30px rgba(0,0,0,.35);
+  z-index:6000;opacity:0;pointer-events:none;transition:.2s;
+}
+.toast.show { opacity:1;pointer-events:auto; }
+
+.loader {
+  position:fixed;inset:0;background:rgba(0,0,0,.45);
+  display:none;align-items:center;justify-content:center;
+  z-index:5500;
+}
+.loader[aria-busy="true"] { display:flex; }
+
+.loader .dot {
+  width:8px;height:8px;border-radius:50%;background:#fff;
+  margin:0 4px;animation:ld 1s infinite;
+}
+.loader .dot:nth-child(2){animation-delay:.15s;}
+.loader .dot:nth-child(3){animation-delay:.3s;}
+
+@keyframes ld {
+  0%,80%,100%{opacity:.2;transform:scale(.8);}
+  40%{opacity:1;transform:scale(1);}
+}
   </style>
 </head>
 <body>
+
+  <!-- Global toast + loader -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="loader" class="loader" aria-hidden="true">
+  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+</div>
   <!-- Status notice -->
   <div class="notice" role="status" aria-live="polite">
     <div class="wrap">
@@ -475,6 +510,20 @@ window.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: y, behavior:'smooth' });
   }
   window.scrollToMap = scrollToMap;
+
+  function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function setBusy(on){
+  const l=document.getElementById('loader');
+  l.setAttribute('aria-busy',on?'true':'false');
+  l.setAttribute('aria-hidden',on?'false':'true');
+}
 
   /* UI helpers + privacy */
 function hideCTAIfMinted(){
