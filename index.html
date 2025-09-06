@@ -817,7 +817,7 @@
       window.open(shareUrl, '_blank','noopener');
     }
 
-    /**** Page boot ****/
+        /**** Page boot ****/
     (function boot(){
       const mintBtn = el('mintBtn');
       const modalMintBtn = el('modalMintBtn');
@@ -828,8 +828,9 @@
         if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
         if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
       }
-      el('year').textContent = new Date().})();
-   }); // end DOMContentLoaded
-   </script>
+      el('year').textContent = new Date().getFullYear();
+    })(); // end boot IIFE
+  });   // end DOMContentLoaded
+  </script>
 </body>
 </html>
