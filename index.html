@@ -218,6 +218,20 @@
       100% { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
     }
     .passport.activated{ animation: glowPulse 1.8s ease-in-out 1; }
+
+    /* Leaderboard accordions */
+#leaderboard details { border:1px solid var(--line); border-radius:10px; background:var(--soft); margin-bottom:10px; }
+#leaderboard summary { list-style:none; cursor:pointer; padding:10px 12px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
+#leaderboard summary::-webkit-details-marker{ display:none; }
+#leaderboard .badge { background:rgba(148,163,184,.18); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; margin-left:10px; }
+#leaderboard .panel { padding:10px 12px; border-top:1px solid var(--line); }
+
+/* Citizens list (modal + leaderboard) */
+.citizens-list .citizen { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); }
+.citizens-list .citizen:last-child{ border-bottom:none; }
+.citizens-list .avatar { width:24px; height:24px; border-radius:50%; background:#0f1219; display:grid; place-items:center; font-size:12px; font-weight:700; }
+.citizens-list .meta { display:flex; gap:8px; align-items:center; }
+.citizens-list small { color:var(--muted); }
   </style>
 </head>
 <body>
@@ -267,7 +281,7 @@
       <h1>One World. One CROnation.</h1>
       <p class="lead">A clean, global map of our community on Cronos. Mark your country, mint a simple passport, and watch the world light up.</p>
       <div class="cta">
-        <button class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
+        <button id="markBtn" class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
         <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
       </div>
 
@@ -289,15 +303,11 @@
       </div>
 
       <aside class="card" id="leaderboard-card">
-        <div class="body">
-          <h3>Leaderboard</h3>
-          <table aria-describedby="leaderboard-desc">
-            <caption id="leaderboard-desc" class="visually-hidden">Top countries by citizen count</caption>
-            <thead><tr><th class="rank">#</th><th>Country</th><th class="count">Citizens</th></tr></thead>
-            <tbody id="leaderboard"></tbody>
-          </table>
-        </div>
-      </aside>
+  <div class="body">
+    <h3>Leaderboard</h3>
+    <div id="leaderboard"></div>
+  </div>
+</aside>
 
       <!-- JOIN -->
       <div class="card" id="join-card">
@@ -373,15 +383,25 @@
           <button class="btn" onclick="closeModal()">Close</button>
         </div>
         <div class="content">
-          <div class="field">
-            <label for="modal-country">Country</label>
-            <input id="modal-country" disabled>
-          </div>
-          <div class="field">
-            <label for="modal-nickname">Nickname (optional)</label>
-            <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
-          </div>
-        </div>
+  <div class="field">
+    <label for="modal-country">Country</label>
+    <input id="modal-country" disabled>
+  </div>
+  <div class="field">
+    <label for="modal-nickname">Nickname (optional)</label>
+    <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
+  </div>
+
+  <div class="field full">
+    <div id="citizens-list" class="citizens-list"></div>
+  </div>
+</div>
+
+        <div class="field full">
+  <div id="citizens-list" class="citizens-list"></div>
+</div>
+
+
         <div class="footer">
           <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
         </div>
@@ -445,6 +465,61 @@ window.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: y, behavior:'smooth' });
   }
   window.scrollToMap = scrollToMap;
+
+  /* UI helpers + privacy */
+function hideCTAIfMinted(){
+  const btn = document.getElementById('markBtn');
+  if (btn) btn.style.display = 'none';
+}
+function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+function initialsFromNick(n){
+  n = (n||'').trim();
+  if(!n) return '👤';
+  const parts = n.split(/\s+/).slice(0,2);
+  return parts.map(p=>p[0]).join('').toUpperCase();
+}
+
+/* Firestore: get citizens for a country */
+async function fetchCitizens(country){
+  const qs = await db.collection('passports').where('country','==',country).get();
+  const rows = [];
+  qs.forEach(doc=>{
+    const d = doc.data();
+    if(!d) return;
+    rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
+  });
+  rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
+  return rows;
+}
+
+/* Render citizens into a container */
+function renderCitizens(container, citizens){
+  if(!container) return;
+  if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
+  container.innerHTML = citizens.map(c=>`
+    <div class="citizen">
+      <div class="avatar">${initialsFromNick(c.nick)}</div>
+      <div class="meta">
+        <b>${c.nick || 'Anonymous'}</b>
+        <small>${shortAddrFull(c.address)}</small>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* Load citizens into the modal */
+async function loadCitizensIntoModal(country){
+  const box = document.getElementById('citizens-list');
+  if(!box) return;
+  box.innerHTML = `<small class="muted">Loading citizens…</small>`;
+  try{
+    const citizens = await fetchCitizens(country);
+    renderCitizens(box, citizens);
+  }catch(e){
+    console.error(e);
+    box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
+  }
+}
 
   // --- Country coloring ---
   const countryLayers = new Map();
@@ -539,6 +614,7 @@ window.addEventListener('DOMContentLoaded', () => {
     el('modal-nickname').value = '';
     modal.setAttribute('open', '');
     document.body.classList.add('modal-open');
+    loadCitizensIntoModal(country);
   }
   function closeModal(){
     const modal = el('join-modal');
@@ -651,6 +727,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     showPassport(country, nick, serial);
     hideJoinForm();
+    hideCTAIfMinted();
   }
 
   function hideJoinForm(){
@@ -789,22 +866,43 @@ window.addEventListener('DOMContentLoaded', () => {
     el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
   }
 
-  function renderLeaderboard(){
-    const arr = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]).slice(0, 10);
-    const tbody = el('leaderboard');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    if(arr.length === 0){
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="rank">—</td><td class="muted">No countries yet</td><td class="count">0</td>`;
-      tbody.appendChild(tr); return;
-    }
-    arr.forEach(([name, count], i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="rank">${i+1}</td><td class="country-name">${name}</td><td class="count">${count}</td>`;
-      tbody.appendChild(tr);
-    });
+  async function renderLeaderboard(){
+  const container = document.getElementById('leaderboard');
+  if(!container) return;
+
+  const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
+  if(entries.length === 0){
+    container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
+    return;
   }
+
+  container.innerHTML = entries.map(([name, count], i) => `
+    <details data-country="${name}">
+      <summary>
+        <span>${i+1}. ${name}</span>
+        <span class="badge">${count}</span>
+      </summary>
+      <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
+    </details>
+  `).join('');
+
+  container.querySelectorAll('details').forEach((det, idx)=>{
+    det.addEventListener('toggle', async () => {
+      if(!det.open) return;
+      const name = det.getAttribute('data-country');
+      const pane = document.getElementById(`lb-${idx}`);
+      if(!pane) return;
+      pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
+      try{
+        const citizens = await fetchCitizens(name);
+        renderCitizens(pane, citizens);
+      }catch(e){
+        console.error(e);
+        pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+      }
+    }, { passive:true });
+  });
+}
 
   // recolor after counts change
   countryLayers.forEach((_, name) => updateCountryStyle(name));
