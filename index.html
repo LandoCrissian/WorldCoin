@@ -201,6 +201,30 @@
 
     .passport .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
     .passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
+
+    /* tiny country flag next to the country name */
+.flag-icon{
+  width:18px; height:12px;
+  border-radius:2px;
+  margin-left:6px;
+  object-fit:cover;
+  box-shadow:0 0 0 1px rgba(255,255,255,.15) inset;
+}
+
+/* subtle “document” finish */
+.passport{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03), transparent 38%),
+    #0d203a; /* keeps your base color */
+}
+
+/* quick activation glow when minted */
+@keyframes glowPulse {
+  0%   { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
+  50%  { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 24px rgba(59,130,246,.8); }
+  100% { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
+}
+.passport.activated{ animation: glowPulse 1.8s ease-in-out 1; }
   </style>
 </head>
 <body>
@@ -321,6 +345,13 @@
                 <span id="passport-nick">—</span> — <span id="passport-country">—</span>
                 <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
               </small>
+
+              <small>
+  <span id="passport-nick">—</span> — 
+  <span id="passport-country">—</span>
+  <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
+  <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+</small>
 
               <div class="actions">
                 <label class="btn" style="cursor:pointer;">
@@ -650,6 +681,22 @@
       layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
     }
 
+    function setPassportFlagIcon(country){
+  const icon = document.getElementById('passport-flag-icon');
+  if(!icon) return;
+  const iso2 = countryToISO2(country);
+  if (iso2){
+    // small crisp flag for the badge
+    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+    icon.style.display = 'inline-block';
+    icon.alt = country + ' flag';
+  } else {
+    icon.removeAttribute('src');
+    icon.style.display = 'none';
+    icon.alt = '';
+  }
+}
+
     /* === Passport rendering === */
     function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
     function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
@@ -664,7 +711,14 @@
       setText('passport-watermark', (country||'').toUpperCase());
       setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
 
-      setPassportFlag(country);
+      setPassportFlag(country);      // you already call this
+setPassportFlagIcon(country);  // add this line
+
+// flash the activation glow
+card.classList.remove('activated');
+requestAnimationFrame(()=>{    // ensure the reflow so the animation restarts
+  card.classList.add('activated');
+});
 
       card.style.display = 'grid';
       try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
