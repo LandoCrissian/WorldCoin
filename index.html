@@ -813,12 +813,12 @@ requestAnimationFrame(()=>{    // ensure the reflow so the animation restarts
 
     /**** Share to X ****/
     function shareToX({country, nick, serial}){
-      const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n`;
-      const url = LAUNCH.siteUrl;
-      const tags = 'Cronos,CROnation,CRON8,crofam';
-      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-      window.open(shareUrl, '_blank','noopener');
-    }
+  const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\ncc @cronation8`;
+  const url = LAUNCH.siteUrl;
+  const tags = 'Cronos,CROnation,CRON8,crofam';
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+  window.open(shareUrl, '_blank','noopener');
+}
 
     /**** Page boot ****/
     (function boot(){
