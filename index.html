@@ -399,438 +399,482 @@
   </footer>
 
   <script>
-  window.addEventListener('DOMContentLoaded', () => {
-    /**** Flags ****/
-    const FLAGS = {
-      TOKEN_GATE: true,
-      REQUIRE_WALLET: true,
-      AUTO_CONNECT: false,
-      PASSPORT_MINT_ENABLED: true,
-      NFT_MINT_ENABLED: false
-    };
+window.addEventListener('DOMContentLoaded', () => {
+  /**** Flags ****/
+  const FLAGS = {
+    TOKEN_GATE: true,
+    REQUIRE_WALLET: true,
+    AUTO_CONNECT: false,
+    PASSPORT_MINT_ENABLED: true,
+    NFT_MINT_ENABLED: false
+  };
 
-    const LAUNCH = {
-      xHandle: 'cronation8',
-      siteUrl: 'https://cronation.netlify.app',
-      token: {
-        address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
-        decimals: 18,
-        minBalance: '1',
-        chainIdHex: '0x19', // Cronos Mainnet (25)
-        rpc: 'https://evm.cronos.org',
-        abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
+  const LAUNCH = {
+    xHandle: 'cronation8',
+    siteUrl: 'https://cronation.netlify.app',
+    token: {
+      address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
+      decimals: 18,
+      minBalance: '1',
+      chainIdHex: '0x19', // Cronos Mainnet (25)
+      rpc: 'https://evm.cronos.org',
+      abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
+    }
+  };
+
+  /**** Firebase ****/
+  const firebaseConfig = {
+    apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+    authDomain: "cronation-6058b.firebaseapp.com",
+    projectId: "cronation-6058b",
+    storageBucket: "cronation-6058b.appspot.com",
+    messagingSenderId: "303748855698",
+    appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  /**** Helpers ****/
+  const el = (id)=>document.getElementById(id);
+
+  function scrollToMap(){
+    const header = document.querySelector('header');
+    const sec = document.getElementById('map-section');
+    if(!header || !sec) return;
+    const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
+    window.scrollTo({ top: y, behavior:'smooth' });
+  }
+  window.scrollToMap = scrollToMap;
+
+  // --- Country coloring ---
+  const countryLayers = new Map();
+  function colorFor(count){
+    if (count >= 25) return '#1d4ed8';
+    if (count >= 10) return '#3b82f6';
+    if (count >= 1)  return '#93c5fd';
+    return '#e5e7eb';
+  }
+  function updateCountryStyle(name){
+    const layer = countryLayers.get(name);
+    if (!layer) return;
+    const count = countryCounts.get(name) || 0;
+    layer.setStyle({ fillColor: colorFor(count) });
+  }
+
+  /**** Mobile menu ****/
+  (function mobileMenu(){
+    const btn = el('hamburger');
+    const menu = el('mobile-menu');
+    if(!btn || !menu) return;
+    const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+    const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
+    btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+    window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+    window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
+    window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
+  })();
+
+  /**** Map + Countries ****/
+  const countryCounts = new Map();
+  const countryList = [];
+  let totalCitizens = 0;
+  el('year').textContent = new Date().getFullYear();
+
+  const map = L.map('map', {
+    zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
+  }).setView([20, 0], 2);
+
+  const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+  fetch(GEOJSON_URL).then(r => r.json()).then(data => {
+    data.features.forEach(f => {
+      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+      countryList.push(name);
+    });
+    countryList.sort((a,b)=>a.localeCompare(b));
+    populateCountryDropdown(countryList);
+
+    const layer = L.geoJSON(data, {
+      style: (feature) => {
+        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+        const count = countryCounts.get(name) || 0;
+        return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+      },
+      onEachFeature: (feature, l) => {
+        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+        countryLayers.set(name, l);
+        l.on({
+          mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
+          mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
+          click:     () => openModal(name)
+        });
+        l.bindTooltip(name, { sticky: true });
       }
-    };
+    }).addTo(map);
 
-    /**** Firebase ****/
-    const firebaseConfig = {
-      apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
-      authDomain: "cronation-6058b.firebaseapp.com",
-      projectId: "cronation-6058b",
-      storageBucket: "cronation-6058b.appspot.com",
-      messagingSenderId: "303748855698",
-      appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
+    requestAnimationFrame(() => map.invalidateSize());
+    setTimeout(() => map.invalidateSize(), 300);
+    ['orientationchange','resize'].forEach(ev =>
+      window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
+    );
+  }).catch(err => {
+    console.error('Failed to load GeoJSON', err);
+    el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
+  });
 
-    /**** Helpers ****/
-    const el = (id)=>document.getElementById(id);
-    function scrollToMap(){
-      const header = document.querySelector('header');
-      const sec = document.getElementById('map-section');
-      if(!header || !sec) return;
-      const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
-      window.scrollTo({ top: y, behavior:'smooth' });
+  function populateCountryDropdown(list){
+    const sel = el('country');
+    if(!sel) return;
+    const frag = document.createDocumentFragment();
+    list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
+    sel.appendChild(frag);
+  }
+
+  /**** Modal ****/
+  function openModal(country){
+    const modal = el('join-modal');
+    if(!modal) return;
+    el('modal-country').value = country || '';
+    el('modal-nickname').value = '';
+    modal.setAttribute('open', '');
+    document.body.classList.add('modal-open');
+  }
+  function closeModal(){
+    const modal = el('join-modal');
+    if(!modal) return;
+    modal.removeAttribute('open');
+    document.body.classList.remove('modal-open');
+  }
+  window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+
+  /**** Wallet + gating ****/
+  const connectBtn = el('connectBtn');
+  let provider = null, signer = null, userAddress = null;
+
+  function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
+
+  async function connectWallet(){
+    if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
+    try{
+      const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+      userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+      window.userAddress = userAddress;
+      if(!userAddress) return;
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer   = provider.getSigner();
+
+      await ensureChain();
+
+      const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
+      const signature = await signer.signMessage(message);
+      localStorage.setItem('cronation_sig', signature);
+
+      connectBtn.textContent = shortAddr(userAddress);
+      restorePassportIfAny();
+      restorePfpIfAny(userAddress);
+    }catch(err){
+      console.error(err);
+      alert('Wallet connection was cancelled or failed.');
+    }
+  }
+
+  async function ensureChain(){
+    const desired = LAUNCH.token.chainIdHex;
+    const current = await provider.send('eth_chainId', []);
+    if(current?.toLowerCase() !== desired.toLowerCase()){
+      try{
+        await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
+      }catch(switchErr){
+        if(switchErr.code === 4902){
+          await provider.send('wallet_addEthereumChain', [{
+            chainId: desired,
+            chainName: 'Cronos Mainnet',
+            nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+            rpcUrls:[LAUNCH.token.rpc],
+            blockExplorerUrls:['https://cronoscan.com']
+          }]);
+        }else{ throw switchErr; }
+      }
+    }
+  }
+
+  async function hasRequiredTokens(address){
+    try{
+      const token = LAUNCH.token.address;
+      if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+      const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+      const bal = await erc20.balanceOf(address);
+      const min = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+      return bal.gte(min);
+    }catch(e){
+      console.error('Token-gate check failed:', e);
+      alert('Could not verify token balance. Check network and token address.');
+      return false;
+    }
+  }
+
+  if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+
+  /**** Firestore-backed mint ****/
+  async function attemptMint(country, nick){
+    if(!FLAGS.PASSPORT_MINT_ENABLED){ alert('Passport mint is temporarily paused.'); return; }
+    if(FLAGS.REQUIRE_WALLET && !userAddress){ alert('Please connect your wallet first.'); return; }
+
+    if(FLAGS.TOKEN_GATE){
+      await ensureChain();
+      const ok = await hasRequiredTokens(userAddress);
+      if(!ok){ alert('You need to hold the required token to mint.'); return; }
     }
 
-    // --- Country coloring ---
-    const countryLayers = new Map();
-    function colorFor(count){
-      if (count >= 25) return '#1d4ed8';
-      if (count >= 10) return '#3b82f6';
-      if (count >= 1)  return '#93c5fd';
-      return '#e5e7eb';
-    }
-    function updateCountryStyle(name){
-      const layer = countryLayers.get(name);
-      if (!layer) return;
-      const count = countryCounts.get(name) || 0;
-      layer.setStyle({ fillColor: colorFor(count) });
+    const addrKey = userAddress.toLowerCase();
+    const docRef = db.collection('passports').doc(addrKey);
+    const snap = await docRef.get();
+    if(snap.exists){
+      const p = snap.data();
+      showPassport(p.country, p.nick, p.serial);
+      hideJoinForm();
+      alert('You already have a passport. Showing it now.');
+      return;
     }
 
-    /**** Mobile menu ****/
-    (function mobileMenu(){
-      const btn = el('hamburger');
-      const menu = el('mobile-menu');
-      if(!btn || !menu) return;
-      const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
-      const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
-      btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
-      menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-      window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-      window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
-      window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
-    })();
-
-    /**** Map + Countries ****/
-    const countryCounts = new Map();
-    const countryList = [];
-    let totalCitizens = 0;
-    el('year').textContent = new Date().getFullYear();
-
-    const map = L.map('map', {
-      zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
-    }).setView([20, 0], 2);
-
-    const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
-    fetch(GEOJSON_URL).then(r => r.json()).then(data => {
-      data.features.forEach(f => {
-        const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-        countryList.push(name);
-      });
-      countryList.sort((a,b)=>a.localeCompare(b));
-      populateCountryDropdown(countryList);
-
-      const layer = L.geoJSON(data, {
-        style: (feature) => {
-          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-          const count = countryCounts.get(name) || 0;
-          return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
-        },
-        onEachFeature: (feature, l) => {
-          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-          countryLayers.set(name, l);
-          l.on({
-            mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
-            mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
-            click:     () => openModal(name)
-          });
-          l.bindTooltip(name, { sticky: true });
-        }
-      }).addTo(map);
-
-      try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
-      requestAnimationFrame(() => map.invalidateSize());
-      setTimeout(() => map.invalidateSize(), 300);
-      ['orientationchange','resize'].forEach(ev =>
-        window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
-      );
-    }).catch(err => {
-      console.error('Failed to load GeoJSON', err);
-      el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
+    const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
+    await docRef.set({
+      address: userAddress,
+      country, nick,
+      serial,
+      created: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    function populateCountryDropdown(list){
-      const sel = el('country');
-      if(!sel) return;
-      const frag = document.createDocumentFragment();
-      list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
-      sel.appendChild(frag);
+    showPassport(country, nick, serial);
+    hideJoinForm();
+  }
+
+  function hideJoinForm(){
+    const form = el('join-form');
+    if(form) form.style.display = 'none';
+  }
+
+  /* === Flag mapping (strict/common names only) === */
+  const ISO2 = {
+    "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
+    "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
+    "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
+    "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
+    "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
+    "Nigeria":"ng","Kenya":"ke"
+  };
+  const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
+
+  function setPassportFlag(country){
+    const layer = document.getElementById('passport-flag');
+    if(!layer) return;
+    const iso2 = countryToISO2(country);
+    layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
+  }
+
+  function setPassportFlagIcon(country){
+    const icon = document.getElementById('passport-flag-icon');
+    if(!icon) return;
+    const iso2 = countryToISO2(country);
+    if (iso2){
+      icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+      icon.style.display = 'inline-block';
+      icon.alt = country + ' flag';
+    } else {
+      icon.removeAttribute('src');
+      icon.style.display = 'none';
+      icon.alt = '';
     }
+  }
 
-    /**** Modal ****/
-    function openModal(country){
-      const modal = el('join-modal');
-      if(!modal) return;
-      el('modal-country').value = country || '';
-      el('modal-nickname').value = '';
-      modal.setAttribute('open', '');
-      document.body.classList.add('modal-open');
-    }
-    function closeModal(){
-      const modal = el('join-modal');
-      if(!modal) return;
-      modal.removeAttribute('open');
-      document.body.classList.remove('modal-open');
-    }
-    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-
-    /**** Wallet + gating ****/
-    const connectBtn = el('connectBtn');
-    let provider = null, signer = null, userAddress = null;
-
-    function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
-
-    async function connectWallet(){
-      if(!window.ethereum){ alert('No wallet detected. Please install a Cronos-compatible wallet.'); return; }
-      try{
-        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-        userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-        window.userAddress = userAddress;
-        if(!userAddress) return;
-
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer   = provider.getSigner();
-
-        await ensureChain();
-
-        const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
-        const signature = await signer.signMessage(message);
-        localStorage.setItem('cronation_sig', signature);
-
-        connectBtn.textContent = shortAddr(userAddress);
-        restorePassportIfAny();
-      }catch(err){
-        console.error(err);
-        alert('Wallet connection was cancelled or failed.');
+  // --- PFP persistence (per-wallet, local only) ---
+  function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
+  function restorePfpIfAny(addr){
+    try{
+      const key = pfpKey(addr);
+      if(!key) return;
+      const dataUrl = localStorage.getItem(key);
+      if(dataUrl){
+        const img = el('passport-pfp');
+        if(img) img.src = dataUrl;
       }
+    }catch(_e){}
+  }
+  async function fileToDataURLResized(file, max=360, quality=0.86){
+    const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    try{ URL.revokeObjectURL(img.src); }catch(_e){}
+    return dataUrl;
+  }
+
+  /* === Passport rendering === */
+  function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
+  function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
+
+  function showPassport(country, nick, serial){
+    const card = document.getElementById('passport');
+    if(!card) return;
+
+    setText('passport-nick', nick);
+    setText('passport-country', country);
+    setText('passport-serial', '#'+serial);
+    setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
+    setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
+
+    setPassportFlag(country);
+    setPassportFlagIcon(country);
+
+    // restore any saved pfp for this wallet
+    restorePfpIfAny(window.userAddress || userAddress);
+
+    // flash the activation glow
+    card.classList.remove('activated');
+    requestAnimationFrame(()=>{ card.classList.add('activated'); });
+
+    card.style.display = 'grid';
+    try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+
+    const shareBtn = document.getElementById('shareBtn');
+    if(shareBtn){
+      shareBtn.style.display = 'inline-flex';
+      shareBtn.onclick = () => shareToX({ country, nick, serial });
     }
 
-    async function ensureChain(){
-      const desired = LAUNCH.token.chainIdHex;
-      const current = await provider.send('eth_chainId', []);
-      if(current?.toLowerCase() !== desired.toLowerCase()){
-        try{
-          await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
-        }catch(switchErr){
-          if(switchErr.code === 4902){
-            await provider.send('wallet_addEthereumChain', [{
-              chainId: desired,
-              chainName: 'Cronos Mainnet',
-              nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
-              rpcUrls:[LAUNCH.token.rpc],
-              blockExplorerUrls:['https://cronoscan.com']
-            }]);
-          }else{ throw switchErr; }
-        }
-      }
-    }
-
-    async function hasRequiredTokens(address){
-      try{
-        const token = LAUNCH.token.address;
-        if(!token || token === '0x0000000000000000000000000000000000000000') return false;
-        const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
-        const bal = await erc20.balanceOf(address);
-        const min = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
-        return bal.gte(min);
-      }catch(e){
-        console.error('Token-gate check failed:', e);
-        alert('Could not verify token balance. Check network and token address.');
-        return false;
-      }
-    }
-
-    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
-
-    /**** Firestore-backed mint ****/
-    async function attemptMint(country, nick){
-      if(!FLAGS.PASSPORT_MINT_ENABLED){ alert('Passport mint is temporarily paused.'); return; }
-      if(FLAGS.REQUIRE_WALLET && !userAddress){ alert('Please connect your wallet first.'); return; }
-
-      if(FLAGS.TOKEN_GATE){
-        await ensureChain();
-        const ok = await hasRequiredTokens(userAddress);
-        if(!ok){ alert('You need to hold the required token to mint.'); return; }
-      }
-
-      const addrKey = userAddress.toLowerCase();
-      const docRef = db.collection('passports').doc(addrKey);
-      const snap = await docRef.get();
-      if(snap.exists){
-        const p = snap.data();
-        showPassport(p.country, p.nick, p.serial);
-        hideJoinForm();
-        alert('You already have a passport. Showing it now.');
-        return;
-      }
-
-      const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
-      await docRef.set({
-        address: userAddress,
-        country, nick,
-        serial,
-        created: firebase.firestore.FieldValue.serverTimestamp()
+    const pfpInput = document.getElementById('pfpInput');
+    if (pfpInput && !pfpInput._wired){
+      pfpInput._wired = true;
+      let lastObjectUrl = null;
+      const imgEl = document.getElementById('passport-pfp');
+      pfpInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+        // immediate preview
+        if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+        lastObjectUrl = URL.createObjectURL(file);
+        if (imgEl) imgEl.src = lastObjectUrl;
+        // persist compressed copy
+        (async ()=>{
+          try{
+            const dataUrl = await fileToDataURLResized(file, 360, 0.86);
+            const key = pfpKey(window.userAddress || userAddress);
+            if(key) localStorage.setItem(key, dataUrl);
+          }catch(_e){}
+        })();
       });
+      const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+      window.addEventListener('pagehide', cleanup, { once:true });
+      window.addEventListener('beforeunload', cleanup, { once:true });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'unloaded') cleanup(); });
+    }
+  }
 
-      showPassport(country, nick, serial);
+  // Stats + leaderboard
+  function renderStats(){
+    el('stat-countries').textContent = countryCounts.size;
+    el('stat-citizens').textContent  = totalCitizens;
+    let top = '—', max = -1;
+    countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
+    el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
+  }
+
+  function renderLeaderboard(){
+    const arr = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]).slice(0, 10);
+    const tbody = el('leaderboard');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    if(arr.length === 0){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="rank">—</td><td class="muted">No countries yet</td><td class="count">0</td>`;
+      tbody.appendChild(tr); return;
+    }
+    arr.forEach(([name, count], i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="rank">${i+1}</td><td class="country-name">${name}</td><td class="count">${count}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // recolor after counts change
+  countryLayers.forEach((_, name) => updateCountryStyle(name));
+
+  async function restorePassportIfAny(){
+    if(!userAddress) return;
+    const snap = await db.collection('passports').doc(userAddress.toLowerCase()).get();
+    if(snap.exists){
+      const p = snap.data();
+      showPassport(p.country, p.nick, p.serial);
       hideJoinForm();
     }
+  }
 
-    function hideJoinForm(){
-      const form = el('join-form');
-      if(form) form.style.display = 'none';
-    }
-
-    /* === Flag mapping (strict/common names only) === */
-    const ISO2 = {
-      "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
-      "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
-      "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
-      "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
-      "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
-      "Nigeria":"ng","Kenya":"ke"
-    };
-    const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
-
-    function setPassportFlag(country){
-      const layer = document.getElementById('passport-flag');
-      if(!layer) return;
-      const iso2 = countryToISO2(country);
-      layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
-    }
-
-    function setPassportFlagIcon(country){
-      const icon = document.getElementById('passport-flag-icon');
-      if(!icon) return;
-      const iso2 = countryToISO2(country);
-      if (iso2){
-        icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-        icon.style.display = 'inline-block';
-        icon.alt = country + ' flag';
-      } else {
-        icon.removeAttribute('src');
-        icon.style.display = 'none';
-        icon.alt = '';
-      }
-    }
-
-    /* === Passport rendering === */
-    function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
-    function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
-
-    function showPassport(country, nick, serial){
-      const card = document.getElementById('passport');
-      if(!card) return;
-
-      setText('passport-nick', nick);
-      setText('passport-country', country);
-      setText('passport-serial', '#'+serial);
-      setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
-      setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
-
-      setPassportFlag(country);
-      setPassportFlagIcon(country);
-
-      // flash the activation glow
-      card.classList.remove('activated');
-      requestAnimationFrame(()=>{ card.classList.add('activated'); });
-
-      card.style.display = 'grid';
-      try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
-
-      const shareBtn = document.getElementById('shareBtn');
-      if(shareBtn){
-        shareBtn.style.display = 'inline-flex';
-        shareBtn.onclick = () => shareToX({ country, nick, serial });
-      }
-
-      const pfpInput = document.getElementById('pfpInput');
-      if (pfpInput && !pfpInput._wired){
-        pfpInput._wired = true;
-        let lastObjectUrl = null;
-        const imgEl = document.getElementById('passport-pfp');
-        pfpInput.addEventListener('change', (e) => {
-          const file = e.target.files && e.target.files[0];
-          if(!file) return;
-          if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
-          if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
-          if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
-          lastObjectUrl = URL.createObjectURL(file);
-          if (imgEl) imgEl.src = lastObjectUrl;
-        });
-        const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
-        window.addEventListener('pagehide', cleanup, { once:true });
-        window.addEventListener('beforeunload', cleanup, { once:true });
-        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'unloaded') cleanup(); });
-      }
-    }
-
-    // Stats + leaderboard
-    function renderStats(){
-      el('stat-countries').textContent = countryCounts.size;
-      el('stat-citizens').textContent  = totalCitizens;
-      let top = '—', max = -1;
-      countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
-      el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
-    }
-
-    function renderLeaderboard(){
-      const arr = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]).slice(0, 10);
-      const tbody = el('leaderboard');
-      if(!tbody) return;
-      tbody.innerHTML = '';
-      if(arr.length === 0){
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="rank">—</td><td class="muted">No countries yet</td><td class="count">0</td>`;
-        tbody.appendChild(tr); return;
-      }
-      arr.forEach(([name, count], i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="rank">${i+1}</td><td class="country-name">${name}</td><td class="count">${count}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // recolor after counts change
+  // Real-time listener for stats/leaderboard
+  db.collection('passports').onSnapshot((qs)=>{
+    countryCounts.clear();
+    totalCitizens = 0;
+    qs.forEach(doc=>{
+      const d = doc.data();
+      if(!d || !d.country) return;
+      countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+      totalCitizens += 1;
+    });
+    renderStats();
+    renderLeaderboard();
     countryLayers.forEach((_, name) => updateCountryStyle(name));
+  });
 
-    async function restorePassportIfAny(){
-      if(!userAddress) return;
-      const snap = await db.collection('passports').doc(userAddress.toLowerCase()).get();
-      if(snap.exists){
-        const p = snap.data();
-        showPassport(p.country, p.nick, p.serial);
-        hideJoinForm();
-      }
+  // Form submit
+  el('join-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const country = el('country').value;
+    if(!country){ alert('Please select your country'); return; }
+    const nick = el('nickname').value || 'Anonymous';
+    await attemptMint(country, nick);
+  });
+
+  // Modal -> mint
+  function mintFromModal(){
+    const country = el('modal-country').value;
+    const nick = el('modal-nickname').value || 'Anonymous';
+    attemptMint(country, nick);
+    closeModal();
+  }
+  window.mintFromModal = mintFromModal;
+
+  /**** Share to X ****/
+  function shareToX({country, nick, serial}){
+    const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\ncc @${LAUNCH.xHandle}`;
+    const url = LAUNCH.siteUrl;
+    const tags = 'Cronos,CROnation,CRON8,crofam';
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+    window.open(shareUrl, '_blank','noopener');
+  }
+
+  /**** Page boot ****/
+  (function boot(){
+    const mintBtn = el('mintBtn');
+    const modalMintBtn = el('modalMintBtn');
+    if(!FLAGS.PASSPORT_MINT_ENABLED){
+      if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
+      if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
+    }else{
+      if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
+      if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
     }
-
-    // Real-time listener for stats/leaderboard
-    db.collection('passports').onSnapshot((qs)=>{
-      countryCounts.clear();
-      totalCitizens = 0;
-      qs.forEach(doc=>{
-        const d = doc.data();
-        if(!d || !d.country) return;
-        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-        totalCitizens += 1;
-      });
-      renderStats();
-      renderLeaderboard();
-      countryLayers.forEach((_, name) => updateCountryStyle(name));
-    });
-
-    // Form submit
-    el('join-form').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const country = el('country').value;
-      if(!country){ alert('Please select your country'); return; }
-      const nick = el('nickname').value || 'Anonymous';
-      await attemptMint(country, nick);
-    });
-
-    // Modal -> mint
-    function mintFromModal(){
-      const country = el('modal-country').value;
-      const nick = el('modal-nickname').value || 'Anonymous';
-      attemptMint(country, nick);
-      closeModal();
-    }
-
-    /**** Share to X ****/
-    function shareToX({country, nick, serial}){
-      const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\ncc @${LAUNCH.xHandle}`;
-      const url = LAUNCH.siteUrl;
-      const tags = 'Cronos,CROnation,CRON8,crofam';
-      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-      window.open(shareUrl, '_blank','noopener');
-    }
-
-        /**** Page boot ****/
-    (function boot(){
-      const mintBtn = el('mintBtn');
-      const modalMintBtn = el('modalMintBtn');
-      if(!FLAGS.PASSPORT_MINT_ENABLED){
-        if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
-        if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
-      }else{
-        if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
-        if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
-      }
-      el('year').textContent = new Date().getFullYear();
-    })(); // end boot IIFE
-  });   // end DOMContentLoaded
-  </script>
+    el('year').textContent = new Date().getFullYear();
+  })(); // end boot IIFE
+});   // end DOMContentLoaded
+</script>
 </body>
 </html>
