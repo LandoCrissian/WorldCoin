@@ -232,6 +232,19 @@
 .citizens-list .avatar { width:24px; height:24px; border-radius:50%; background:#0f1219; display:grid; place-items:center; font-size:12px; font-weight:700; }
 .citizens-list .meta { display:flex; gap:8px; align-items:center; }
 .citizens-list small { color:var(--muted); }
+
+    .passport-controls{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.btn.block{
+  flex:1 1 180px;
+  text-align:center;
+}
+@media (max-width:560px){
+  .btn.block{ flex:1 1 100%; }
+}
   </style>
 </head>
 <body>
@@ -351,14 +364,14 @@
                 <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
               </small>
 
-              <div class="actions">
-                <label class="btn" style="cursor:pointer;">
-                  <input id="pfpInput" type="file" accept="image/*" style="display:none;">
-                  Upload PFP
-                </label>
-                <button id="shareBtn" type="button" class="btn" style="display:none;">Share to 𝕏</button>
-              </div>
-            </div>
+              <!-- Passport controls (outside the passport card) -->
+<div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
+  <label class="btn block" style="cursor:pointer;">
+    <input id="pfpInput" type="file" accept="image/*" style="display:none;">
+    Upload PFP
+  </label>
+  <button id="shareBtn" type="button" class="btn block">Share to 𝕏</button>
+</div>
 
             <div id="passport-watermark" aria-hidden="true"></div>
           </div>
@@ -821,41 +834,51 @@ async function loadCitizensIntoModal(country){
     card.style.display = 'grid';
     try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
 
-    const shareBtn = document.getElementById('shareBtn');
-    if(shareBtn){
-      shareBtn.style.display = 'inline-flex';
-      shareBtn.onclick = () => shareToX({ country, nick, serial });
-    }
+    // show external controls + wire buttons (outside the passport card)
+const controls = document.getElementById('passport-controls');
+if (controls) controls.style.display = 'flex';
 
-    const pfpInput = document.getElementById('pfpInput');
-    if (pfpInput && !pfpInput._wired){
-      pfpInput._wired = true;
-      let lastObjectUrl = null;
-      const imgEl = document.getElementById('passport-pfp');
-      pfpInput.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if(!file) return;
-        if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
-        if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
-        // immediate preview
-        if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
-        lastObjectUrl = URL.createObjectURL(file);
-        if (imgEl) imgEl.src = lastObjectUrl;
-        // persist compressed copy
-        (async ()=>{
-          try{
-            const dataUrl = await fileToDataURLResized(file, 360, 0.86);
-            const key = pfpKey(window.userAddress || userAddress);
-            if(key) localStorage.setItem(key, dataUrl);
-          }catch(_e){}
-        })();
-      });
-      const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
-      window.addEventListener('pagehide', cleanup, { once:true });
-      window.addEventListener('beforeunload', cleanup, { once:true });
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'unloaded') cleanup(); });
-    }
-  }
+const shareBtn = document.getElementById('shareBtn');
+if (shareBtn){
+  shareBtn.onclick = () => shareToX({ country, nick, serial });
+}
+
+const pfpInput = document.getElementById('pfpInput');
+if (pfpInput && !pfpInput._wired){
+  pfpInput._wired = true;
+  let lastObjectUrl = null;
+  const imgEl = document.getElementById('passport-pfp');
+
+  pfpInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+
+    // instant preview
+    if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+    lastObjectUrl = URL.createObjectURL(file);
+    if (imgEl) imgEl.src = lastObjectUrl;
+
+    // persist compressed copy
+    (async ()=>{
+      try{
+        const dataUrl = await fileToDataURLResized(file, 360, 0.86);
+        const key = (window.userAddress || userAddress)
+          ? `cronation_pfp:${(window.userAddress || userAddress).toLowerCase()}`
+          : null;
+        if(key) localStorage.setItem(key, dataUrl);
+      }catch(_e){}
+    })();
+  });
+
+  const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+  window.addEventListener('pagehide', cleanup, { once:true });
+  window.addEventListener('beforeunload', cleanup, { once:true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'unloaded') cleanup();
+  });
+}
 
   // Stats + leaderboard
   function renderStats(){
