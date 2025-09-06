@@ -399,6 +399,7 @@
   </footer>
 
   <script>
+  window.addEventListener('DOMContentLoaded', () => {
     /**** Flags ****/
     const FLAGS = {
       TOKEN_GATE: true,
@@ -827,8 +828,8 @@
         if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
         if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
       }
-      el('year').textContent = new Date().getFullYear();
-    })();
-  </script>
+      el('year').textContent = new Date().})();
+   }); // end DOMContentLoaded
+   </script>
 </body>
 </html>
