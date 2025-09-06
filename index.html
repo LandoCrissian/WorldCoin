@@ -245,6 +245,8 @@
 @media (max-width:560px){
   .btn.block{ flex:1 1 100%; }
 }
+
+    #passport + #passport-controls { margin-top:12px; }
   </style>
 </head>
 <body>
@@ -346,30 +348,31 @@
           </form>
 
           <!-- Passport card -->
-          <div id="passport" class="passport" style="display:none; margin-top:12px;">
-            <div id="passport-flag" aria-hidden="true"></div>
+          <!-- Passport card -->
+<div id="passport" class="passport" style="display:none; margin-top:12px;">
+  <div id="passport-flag" aria-hidden="true"></div>
 
-            <div class="emblem">
-              <img id="passport-pfp"
-                   src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
-                   alt="CROnation logo">
-            </div>
+  <div class="emblem">
+    <img id="passport-pfp"
+         src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
+         alt="CROnation logo">
+  </div>
 
-            <div class="info">
-              <b>CROnation Passport <span id="passport-serial">#000000</span></b>
-              <small>
-                <span id="passport-nick">—</span> —
-                <span id="passport-country">—</span>
-                <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
-                <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
-              </small>
+  <div class="info">
+    <b>CROnation Passport <span id="passport-serial">#000000</span></b>
+    <small>
+      <span id="passport-nick">—</span> —
+      <span id="passport-country">—</span>
+      <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
+      <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+    </small>
+  </div> <!-- ✅ CLOSE .info -->
 
-              <!-- Passport controls (outside the passport card) -->
+  <div id="passport-watermark" aria-hidden="true"></div>
+</div>
 
-            <div id="passport-watermark" aria-hidden="true"></div>
-          </div>
-
-            <div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
+<!-- Controls OUTSIDE the passport -->
+<div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
   <label class="btn block" style="cursor:pointer;">
     <input id="pfpInput" type="file" accept="image/*" style="display:none;">
     Upload PFP
