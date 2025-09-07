@@ -653,18 +653,47 @@
     let setPassportFlag = () => {};
     let setPassportFlagIcon = () => {};
 
-    // ======== FLAG FETCH + DATA-URL PIPELINE (canvas-safe) ========
+    // ======== FLAG FETCH + DATA-URL PIPELINE (PNG-only, canvas-safe) ========
     const FLAG_CDN_PNG = (iso)=>`https://flagcdn.com/w320/${iso}.png`;
-    const FLAG_CDN_PNG_SMALL = (iso)=>`https://flagcdn.com/80x60/${iso}.png`;
-    const FLAG_CDN_SVG = (iso)=>`https://cdn.jsdelivr.net/npm/flag-icons/flags/4x3/${iso}.svg`;
-    // Always-available inline SVGs for key countries (last-resort fallback)
-const INLINE_FLAG_SVGS = {
-  us: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900"><rect width="7410" height="3900" fill="%23b22234"/><g fill="%23fff"><rect y="300" width="7410" height="300"/><rect y="900" width="7410" height="300"/><rect y="1500" width="7410" height="300"/><rect y="2100" width="7410" height="300"/><rect y="2700" width="7410" height="300"/><rect y="3300" width="7410" height="300"/></g><rect width="2964" height="2100" fill="%23003f87"/></svg>',
-  gb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30"><clipPath id="c"><path d="M0,0H60V30H0z"/></clipPath><g clip-path="url(%23c)"><path d="M0,0H60V30H0z" fill="%2301215b"/><path d="M0,0 60,30M60,0 0,30" stroke="%23fff" stroke-width="6"/><path d="M0,0 60,30M60,0 0,30" stroke="%23c8102e" stroke-width="4"/><path d="M30,0v30M0,15h60" stroke="%23fff" stroke-width="10"/><path d="M30,0v30M0,15h60" stroke="%23c8102e" stroke-width="6"/></g></svg>',
-  es: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="3" height="2" fill="%23AA151B"/><rect y="0.5" width="3" height="1" fill="%23F1BF00"/></svg>',
-  tr: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="3" height="2" fill="%23e30a17"/><g transform="translate(1.1,1)"><circle r="0.5" fill="%23fff"/><circle cx="0.1" r="0.4" fill="%23e30a17"/></g><path d="M1.55 0.65l0.45 0.35-0.17-0.52 0.45-0.32-0.56 0-0.17-0.52-0.17 0.52-0.56 0 0.45 0.32-0.17 0.52z" fill="%23fff" transform="scale(0.6) translate(1.3,1)" /></svg>',
-  ci: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="1" height="2" fill="%23F77F00"/><rect x="1" width="1" height="2" fill="%23fff"/><rect x="2" width="1" height="2" fill="%23009646"/></svg>'
-};
+    const FLAG_CDN_PNG_SMALL = (iso)=>`https://flagcdn.com/160x120/${iso}.png`;
+
+    // Inline PNG fallbacks (generated at runtime; cached)
+    const INLINE_FLAG_PNGS = new Map();
+    function getInlineFlagPng(iso){
+      const s = (iso||'').toLowerCase();
+      if (INLINE_FLAG_PNGS.has(s)) return INLINE_FLAG_PNGS.get(s);
+      // draw simple recognizable flags as last-resort PNGs
+      const c = document.createElement('canvas'); c.width = 320; c.height = 240;
+      const ctx = c.getContext('2d');
+      if (s === 'us'){
+        // 13 stripes
+        for (let i=0;i<13;i++){
+          ctx.fillStyle = i%2===0 ? '#b22234' : '#ffffff';
+          ctx.fillRect(0, i*(240/13), 320, (240/13));
+        }
+        // canton
+        ctx.fillStyle = '#3c3b6e';
+        ctx.fillRect(0,0, 140, 108);
+      } else if (s === 'gb'){
+        ctx.fillStyle = '#012169'; ctx.fillRect(0,0,320,240);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(140,0,40,240); ctx.fillRect(0,100,320,40);
+        ctx.rotate(Math.PI/180*35); ctx.fillRect(110,-200,36,520);
+        ctx.rotate(-Math.PI/180*70); ctx.fillRect(150,-200,36,520);
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.fillStyle = '#C8102E';
+        ctx.fillRect(152,0,16,240); ctx.fillRect(0,112,320,16);
+      } else if (s === 'es'){
+        ctx.fillStyle = '#AA151B'; ctx.fillRect(0,0,320,240);
+        ctx.fillStyle = '#F1BF00'; ctx.fillRect(0,80,320,80);
+      } else {
+        // neutral fallback
+        ctx.fillStyle = '#888'; ctx.fillRect(0,0,320,240);
+      }
+      const url = c.toDataURL('image/png', 0.92);
+      INLINE_FLAG_PNGS.set(s, url);
+      return url;
+    }
 
     async function fetchAsDataUrl(url){
       const res = await fetch(url, { mode:'cors', cache:'force-cache' });
@@ -678,38 +707,32 @@ const INLINE_FLAG_SVGS = {
     }
 
     async function fetchFlagAsDataUrl(iso){
-  const s = (iso||'').toLowerCase();
-  const tries = [FLAG_CDN_PNG(s), FLAG_CDN_SVG(s), FLAG_CDN_PNG_SMALL(s)];
-  let lastErr;
-  for (const u of tries){
-    try{
-      const res = await fetch(u, { mode:'cors', cache:'force-cache' });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const blob = await res.blob();
-      const dataUrl = await new Promise((resolve)=>{
-        const r = new FileReader(); r.onload = ()=>resolve(r.result); r.readAsDataURL(blob);
-      });
-      return dataUrl; // canvas-safe
-    }catch(e){ lastErr = e; }
-  }
-  if (INLINE_FLAG_SVGS[s]) return INLINE_FLAG_SVGS[s]; // last-resort, always works
-  throw lastErr || new Error('All flag sources failed');
-}
+      const s = (iso||'').toLowerCase();
+      const tries = [FLAG_CDN_PNG(s), FLAG_CDN_PNG_SMALL(s)];
+      let lastErr;
+      for (const u of tries){
+        try{
+          return await fetchAsDataUrl(u); // PNG -> data URL
+        }catch(e){ lastErr = e; }
+      }
+      // Last-resort inline PNG generator
+      return getInlineFlagPng(s);
+    }
 
     async function ensureCanvasSafePFP(){
-  const img = document.getElementById('passport-pfp');
-  if(!img) return;
-  if (img.src.startsWith('data:')) return;  // already safe
-  try{
-    const res = await fetch(img.src, { mode:'cors', cache:'force-cache' });
-    if(!res.ok) return;
-    const blob = await res.blob();
-    const dataUrl = await new Promise((resolve)=>{
-      const r = new FileReader(); r.onload=()=>resolve(r.result); r.readAsDataURL(blob);
-    });
-    img.src = dataUrl; // switch to data URL to avoid canvas taint
-  }catch(_e){}
-}
+      const img = document.getElementById('passport-pfp');
+      if(!img) return;
+      if (img.src && img.src.startsWith('data:')) return;  // already safe
+      try{
+        const res = await fetch(img.src, { mode:'cors', cache:'force-cache' });
+        if(!res.ok) return;
+        const blob = await res.blob();
+        const dataUrl = await new Promise((resolve)=>{
+          const r = new FileReader(); r.onload=()=>resolve(r.result); r.readAsDataURL(blob);
+        });
+        img.src = dataUrl; // switch to data URL to avoid canvas taint
+      }catch(_e){}
+    }
 
     // ======== After GeoJSON loads we define the real resolvers ========
     const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
@@ -766,7 +789,7 @@ const INLINE_FLAG_SVGS = {
         ['romania','ro'], ['românia','ro'],
         ['uk','gb'], ['u k','gb'], ['united kingdom','gb'],
         ['england','gb'], ['scotland','gb'], ['wales','gb'], ['northern ireland','gb'],
-        ['usa','us'], ['u s a','us'], ['united states','us'],
+        ['usa','us'], ['u s a','us'], ['united states','us'], ['united states of america','us'],
         ['south korea','kr'], ['republic of korea','kr'],
         ['north korea','kp'], ['dprk','kp'],
         ['dr congo','cd'], ['democratic republic of congo','cd'], ['congo kinshasa','cd'],
@@ -1266,150 +1289,155 @@ const INLINE_FLAG_SVGS = {
     });
 
     // --------- PASSPOINT: Canvas fallback renderer (no DOM snapshot needed) ----------
-async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
-  // Sizes picked for crisp share card
-  const DPR = Math.min(2, window.devicePixelRatio || 1.5);
-  const W = 1200, H = 480;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(W * DPR);
-  canvas.height = Math.round(H * DPR);
-  const ctx = canvas.getContext('2d');
-  ctx.scale(DPR, DPR);
+    async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
+      // Sizes picked for crisp share card
+      const DPR = Math.min(2, window.devicePixelRatio || 1.5);
+      const W = 1200, H = 480;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(W * DPR);
+      canvas.height = Math.round(H * DPR);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
 
-  // Colors
-  const bg = '#0d203a', text = '#ffffff', muted = 'rgba(229,231,235,.85)';
-  // Rounded card
-  const radius = 24;
-  ctx.fillStyle = bg;
-  roundRect(ctx, 0, 0, W, H, radius);
-  ctx.fill();
+      // Colors
+      const bg = '#0d203a', text = '#ffffff', muted = 'rgba(229,231,235,.85)';
+      // Rounded card
+      const radius = 24;
+      ctx.fillStyle = bg;
+      roundRect(ctx, 0, 0, W, H, radius);
+      ctx.fill();
 
-  // Flag background (data URL from our existing pipeline)
-  const iso2 = (window.iso2FromCountry ? window.iso2FromCountry(country) : null);
-  let flagUrl = null;
-  if (iso2) {
-    try { flagUrl = await fetchFlagAsDataUrl(iso2); } catch(_e){}
-  }
-  if (flagUrl) {
-    const flag = await loadImg(flagUrl);
-    // slight blur/saturate if supported
-    const oldFilter = ctx.filter;
-    try { ctx.filter = 'blur(2px) saturate(1.2)'; } catch(_e){}
-    ctx.globalAlpha = 0.32;
-    ctx.drawImage(flag, 0, 0, W, H);
-    ctx.globalAlpha = 1;
-    ctx.filter = oldFilter;
-  }
+      // Flag background (PNG data URL from our pipeline)
+      const iso2 = (window.iso2FromCountry ? window.iso2FromCountry(country) : null);
+      let flagUrl = null;
+      if (iso2) {
+        try { flagUrl = await fetchFlagAsDataUrl(iso2); } catch(_e){}
+      }
+      if (flagUrl) {
+        const flag = await loadImg(flagUrl);
+        const oldFilter = ctx.filter;
+        try { ctx.filter = 'blur(1.5px) saturate(1.15)'; } catch(_e){}
+        ctx.globalAlpha = 0.45;
+        drawCover(flag);
+        ctx.globalAlpha = 1;
+        ctx.filter = oldFilter;
+      }
 
-  // Subtle diagonal sheen
-  const grad = ctx.createLinearGradient(0,0, W, H);
-  grad.addColorStop(0, 'rgba(255,255,255,.05)');
-  grad.addColorStop(.3,'rgba(255,255,255,0)');
-  grad.addColorStop(.6,'rgba(255,255,255,.04)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = grad;
-  roundRect(ctx, 0, 0, W, H, radius);
-  ctx.fill();
+      // Subtle diagonal sheen
+      const grad = ctx.createLinearGradient(0,0, W, H);
+      grad.addColorStop(0, 'rgba(255,255,255,.05)');
+      grad.addColorStop(.3,'rgba(255,255,255,0)');
+      grad.addColorStop(.6,'rgba(255,255,255,.04)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      roundRect(ctx, 0, 0, W, H, radius);
+      ctx.fill();
 
-  // Emblem/PFP (use current <img> — convert to data URL if needed)
-  const pfpEl = document.getElementById('passport-pfp');
-  let pfpSrc = pfpEl && pfpEl.src || '';
-  if (!pfpSrc.startsWith('data:')) {
-    try {
-      const res = await fetch(pfpSrc, { mode:'cors', cache:'force-cache' });
-      const blob = await res.blob();
-      pfpSrc = await blobToDataUrl(blob);
-    } catch(_e){ pfpSrc = null; }
-  }
-  // emblem container
-  const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
-  ctx.fillStyle = 'rgba(15,18,25,.7)';
-  roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r);
-  ctx.fill();
-  if (pfpSrc) {
-    const pfp = await loadImg(pfpSrc);
-    roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r);
-    ctx.save();
-    ctx.clip();
-    ctx.drawImage(pfp, EMB.x, EMB.y, EMB.w, EMB.h);
-    ctx.restore();
-    ctx.strokeStyle = 'rgba(148,163,184,.25)';
-    ctx.lineWidth = 2;
-    roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r);
-    ctx.stroke();
-  }
+      // Emblem/PFP (use current <img> — convert to data URL if needed)
+      const pfpEl = document.getElementById('passport-pfp');
+      let pfpSrc = pfpEl && pfpEl.src || '';
+      if (!pfpSrc.startsWith('data:')) {
+        try {
+          const res = await fetch(pfpSrc, { mode:'cors', cache:'force-cache' });
+          const blob = await res.blob();
+          pfpSrc = await blobToDataUrl(blob);
+        } catch(_e){ pfpSrc = null; }
+      }
+      // emblem container
+      const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
+      ctx.fillStyle = 'rgba(15,18,25,.7)';
+      roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r);
+      ctx.fill();
+      if (pfpSrc) {
+        const pfp = await loadImg(pfpSrc);
+        roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r);
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(pfp, EMB.x, EMB.y, EMB.w, EMB.h);
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(148,163,184,.25)';
+        ctx.lineWidth = 2;
+        roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r);
+        ctx.stroke();
+      }
 
-  // Title + serial
-  ctx.fillStyle = text;
-  ctx.font = '700 52px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-  ctx.textBaseline = 'top';
-  ctx.fillText('CROnation Passport', 36+128+24, 40);
-  ctx.font = '800 58px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-  ctx.fillText('#' + String(serial).padStart(6,'0'), 36+128+24, 100);
+      // Title + serial
+      ctx.fillStyle = text;
+      ctx.font = '700 52px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.textBaseline = 'top';
+      ctx.fillText('CROnation Passport', 36+128+24, 40);
+      ctx.font = '800 58px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.fillText('#' + String(serial).padStart(6,'0'), 36+128+24, 100);
 
-  // Subtitle line
-  ctx.font = '600 30px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-  ctx.fillStyle = muted;
-  const nickSafe = (nick||'Anonymous');
-  const countrySafe = (country||'—');
-  const line = `CROnation — ${countrySafe}`;
-  ctx.fillText(line, 36+128+24, 170);
+      // Subtitle line
+      ctx.font = '600 30px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.fillStyle = muted;
+      const countrySafe = (country||'—');
+      const line = `CROnation — ${countrySafe}`;
+      ctx.fillText(line, 36+128+24, 170);
 
-  // Address chip
-  const addr = address ? (address.slice(0,6)+'…'+address.slice(-4)) : '';
-  if (addr) {
-    const chipX = 36+128+24, chipY = 220;
-    const padX = 16, padY = 8;
-    ctx.font = '700 24px Inter, system-ui, -apple-system';
-    const chipW = Math.ceil(ctx.measureText(addr).width) + padX*2;
-    const chipH = 40;
-    ctx.fillStyle = 'rgba(2,6,23,.35)';
-    roundRect(ctx, chipX, chipY, chipW, chipH, 18);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(148,163,184,.28)';
-    ctx.lineWidth = 2;
-    roundRect(ctx, chipX, chipY, chipW, chipH, 18);
-    ctx.stroke();
-    ctx.fillStyle = '#e5e7eb';
-    ctx.fillText(addr, chipX+padX, chipY+padY-2);
-  }
+      // Address chip
+      const addr = address ? (address.slice(0,6)+'…'+address.slice(-4)) : '';
+      if (addr) {
+        const chipX = 36+128+24, chipY = 220;
+        const padX = 16, padY = 8;
+        ctx.font = '700 24px Inter, system-ui, -apple-system';
+        const chipW = Math.ceil(ctx.measureText(addr).width) + padX*2;
+        const chipH = 40;
+        ctx.fillStyle = 'rgba(2,6,23,.35)';
+        roundRect(ctx, chipX, chipY, chipW, chipH, 18);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(148,163,184,.28)';
+        ctx.lineWidth = 2;
+        roundRect(ctx, chipX, chipY, chipW, chipH, 18);
+        ctx.stroke();
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(addr, chipX+padX, chipY+padY-2);
+      }
 
-  // Watermark
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = '#fff';
-  ctx.font = '800 96px Inter, system-ui, -apple-system';
-  wrapBigUpper(ctx, (country||'').toUpperCase(), 36, H-140, W-72, 100, 1.05);
-  ctx.restore();
+      // Watermark
+      ctx.save();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 96px Inter, system-ui, -apple-system';
+      wrapBigUpper(ctx, (country||'').toUpperCase(), 36, H-140, W-72, 100, 1.05);
+      ctx.restore();
 
-  return canvas.toDataURL('image/png', 0.95);
+      return canvas.toDataURL('image/png', 0.95);
 
-  // ---- helpers ----
-  function roundRect(c, x, y, w, h, r){
-    const rr = Math.min(r, w/2, h/2);
-    c.beginPath();
-    c.moveTo(x+rr, y);
-    c.arcTo(x+w, y,   x+w, y+h, rr);
-    c.arcTo(x+w, y+h, x,   y+h, rr);
-    c.arcTo(x,   y+h, x,   y,   rr);
-    c.arcTo(x,   y,   x+w, y,   rr);
-    c.closePath();
-  }
-  function loadImg(src){ return new Promise((res, rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
-  function blobToDataUrl(b){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); }); }
-  function wrapBigUpper(c, text, x, y, maxW, size, lh){
-    const words = (text||'').split(/\s+/);
-    let line = '', yy = y, lineH = 84 * (lh||1.05);
-    for (let w of words){
-      const test = (line?line+' ':'')+w;
-      if (c.measureText(test).width > maxW && line){
-        c.fillText(line, x, yy);
-        line = w; yy += lineH;
-      }else line = test;
+      // ---- helpers ----
+      function roundRect(c, x, y, w, h, r){
+        const rr = Math.min(r, w/2, h/2);
+        c.beginPath();
+        c.moveTo(x+rr, y);
+        c.arcTo(x+w, y,   x+w, y+h, rr);
+        c.arcTo(x+w, y+h, x,   y+h, rr);
+        c.arcTo(x,   y+h, x,   y,   rr);
+        c.arcTo(x,   y,   x+w, y,   rr);
+        c.closePath();
+      }
+      function loadImg(src){ return new Promise((res, rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+      function blobToDataUrl(b){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); }); }
+      function wrapBigUpper(c, text, x, y, maxW, size, lh){
+        const words = (text||'').split(/\s+/);
+        let line = '', yy = y, lineH = 84 * (lh||1.05);
+        for (let w of words){
+          const test = (line?line+' ':'')+w;
+          if (c.measureText(test).width > maxW && line){
+            c.fillText(line, x, yy);
+            line = w; yy += lineH;
+          }else line = test;
+        }
+        if (line) c.fillText(line, x, yy);
+      }
+      function drawCover(img){
+        const wr = W / img.width, hr = H / img.height;
+        const r = Math.max(wr, hr);
+        const dw = img.width * r, dh = img.height * r;
+        const dx = (W - dw) / 2, dy = (H - dh) / 2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+      }
     }
-    if (line) c.fillText(line, x, yy);
-  }
-}
 
     // Form submit
     el('join-form').addEventListener('submit', async (e)=>{
@@ -1434,66 +1462,66 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
       const node = el('passport');
       if(!node){ return; }
       try{
-  setBusy(true);
+        setBusy(true);
 
-  // Make emblem/PFP canvas-safe & guard DPR for iOS
-  const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-  await ensureCanvasSafePFP();
+        // Make emblem/PFP canvas-safe & guard DPR for iOS
+        const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+        await ensureCanvasSafePFP();
 
-  const node = document.getElementById('passport');
-  let dataUrl = null;
+        let dataUrl = null;
 
-  // 1) Try DOM snapshot first (nicer if it works)
-  try{
-    dataUrl = await htmlToImage.toPng(node, {
-      pixelRatio: Math.min(isiOS ? 1.5 : 2, window.devicePixelRatio || 1.5),
-      cacheBust: true,
-      backgroundColor: '#0d203a',
-      filter: (n) => {
-        if (n.id === 'passport-flag' || n.id === 'passport-flag-img') return true;
-        const hidden = n.getAttribute && n.getAttribute('aria-hidden') === 'true';
-        return !hidden;
+        // 1) Try DOM snapshot first (nicer if it works)
+        try{
+          dataUrl = await htmlToImage.toPng(node, {
+            pixelRatio: Math.min(isiOS ? 1.5 : 2, window.devicePixelRatio || 1.5),
+            cacheBust: true,
+            backgroundColor: '#0d203a',
+            filter: (n) => {
+              if (n.id === 'passport-flag' || n.id === 'passport-flag-img') return true;
+              const hidden = n.getAttribute && n.getAttribute('aria-hidden') === 'true';
+              return !hidden;
+            }
+          });
+        }catch(domErr){
+          console.warn('DOM → PNG failed, falling back to canvas', domErr);
+        }
+
+        // 2) If DOM failed, paint a fresh image on <canvas>
+        if (!dataUrl){
+          dataUrl = await renderPassportPNGViaCanvas({
+            country, nick, serial, address: (window.userAddress || '')
+          });
+        }
+
+        // 3) Offer download (only now show the button)
+        const dl = document.getElementById('downloadLink');
+        if (dl){ dl.href = dataUrl; dl.style.display = 'inline-flex'; }
+
+        // 4) Try native share with file
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], 'cronation-passport.png', { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })){
+          await navigator.share({
+            files: [file],
+            title: 'My CROnation Passport',
+            text: `🌍 I just joined CROnation! Passport #${serial} — ${nick} from ${country}`
+          });
+        } else {
+          const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
+          const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
+          const tags = 'Cronos,CROnation,CRON8,crofam';
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+          window.open(shareUrl, '_blank','noopener');
+          toast('PNG ready — attach it in the composer or use Download PNG.');
+        }
+      }catch(e){
+        console.error(e);
+        alert('Could not generate the image. Try again.');
+        toast('Image generation failed.');
+      }finally{
+        setBusy(false);
       }
-    });
-  }catch(domErr){
-    console.warn('DOM → PNG failed, falling back to canvas', domErr);
-  }
-
-  // 2) If DOM failed, paint a fresh image on <canvas>
-  if (!dataUrl){
-    dataUrl = await renderPassportPNGViaCanvas({
-      country, nick, serial, address: (window.userAddress || '')
-    });
-  }
-
-  // Offer download
-  const dl = document.getElementById('downloadLink');
-  if (dl){ dl.href = dataUrl; dl.style.display = 'inline-flex'; }
-
-  // Try native share with file
-  const blob = await (await fetch(dataUrl)).blob();
-  const file = new File([blob], 'cronation-passport.png', { type: 'image/png' });
-
-  if (navigator.canShare && navigator.canShare({ files: [file] })){
-    await navigator.share({
-      files: [file],
-      title: 'My CROnation Passport',
-      text: `🌍 I just joined CROnation! Passport #${serial} — ${nick} from ${country}`
-    });
-  } else {
-    const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
-    const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
-    const tags = 'Cronos,CROnation,CRON8,crofam';
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-    window.open(shareUrl, '_blank','noopener');
-    toast('PNG ready — attach it in the composer or use Download PNG.');
-  }
-}catch(e){
-  console.error(e);
-  alert('Could not generate the image. Try again.');
-}finally{
-  setBusy(false);
-}
     }
     window.sharePassportFlow = sharePassportFlow;
 
@@ -1533,6 +1561,7 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
     // _cronation.preflightFlag('gb').then(u=>console.log(u.slice(0,32)))
     // _cronation.repaint()
   });
-  </script>
+</script>
+
 </body>
 </html>
