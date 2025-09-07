@@ -26,6 +26,14 @@
   <meta name="twitter:description" content="Join the map. Mint your passport. One CROnation." />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
   <link rel="icon" href="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="//unpkg.com">
+<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+<style>
+  img[loading="lazy"]{content-visibility:auto; contain-intrinsic-size: 64px 64px;}
+</style>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -305,18 +313,6 @@
         <b>CROnation</b>
       </a>
 
-      <!-- put these near the top of <head> -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="dns-prefetch" href="//unpkg.com">
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-
-<!-- make OG/inline images lazy by default -->
-<style>
-  img[loading="lazy"]{content-visibility:auto; contain-intrinsic-size: 64px 64px;}
-</style>
-
       <div class="links">
   <a class="link" href="#map-section">Map</a>
   <a class="link" href="#leaderboard-card">Leaderboard</a>
@@ -542,74 +538,73 @@ window.addEventListener('DOMContentLoaded', () => {
   window.scrollToMap = scrollToMap;
 
   function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.classList.add('show');
-  clearTimeout(t._h);
-  t._h=setTimeout(()=>t.classList.remove('show'),2600);
-}
-
-function setBusy(on){
-  const l=document.getElementById('loader');
-  l.setAttribute('aria-busy',on?'true':'false');
-  l.setAttribute('aria-hidden',on?'false':'true');
-}
-
-  /* UI helpers + privacy */
-function hideCTAIfMinted(){
-  const btn = document.getElementById('markBtn');
-  if (btn) btn.style.display = 'none';
-}
-function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
-function initialsFromNick(n){
-  n = (n||'').trim();
-  if(!n) return '👤';
-  const parts = n.split(/\s+/).slice(0,2);
-  return parts.map(p=>p[0]).join('').toUpperCase();
-}
-
-/* Firestore: get citizens for a country */
-async function fetchCitizens(country){
-  const qs = await db.collection('passports').where('country','==',country).get();
-  const rows = [];
-  qs.forEach(doc=>{
-    const d = doc.data();
-    if(!d) return;
-    rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
-  });
-  rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
-  return rows;
-}
-
-/* Render citizens into a container */
-function renderCitizens(container, citizens){
-  if(!container) return;
-  if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
-  container.innerHTML = citizens.map(c=>`
-    <div class="citizen">
-      <div class="avatar">${initialsFromNick(c.nick)}</div>
-      <div class="meta">
-        <b>${c.nick || 'Anonymous'}</b>
-        <small>${shortAddrFull(c.address)}</small>
-      </div>
-    </div>
-  `).join('');
-}
-
-/* Load citizens into the modal */
-async function loadCitizensIntoModal(country){
-  const box = document.getElementById('citizens-list');
-  if(!box) return;
-  box.innerHTML = `<small class="muted">Loading citizens…</small>`;
-  try{
-    const citizens = await fetchCitizens(country);
-    renderCitizens(box, citizens);
-    toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
-  }catch(e){
-    console.error(e);
-    box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
+    const t=document.getElementById('toast');
+    t.textContent=msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h=setTimeout(()=>t.classList.remove('show'),2600);
   }
-}
+
+  function setBusy(on){
+    const l=document.getElementById('loader');
+    l.setAttribute('aria-busy',on?'true':'false');
+    l.setAttribute('aria-hidden',on?'false':'true');
+  }
+
+  function hideCTAIfMinted(){
+    const btn = document.getElementById('markBtn');
+    if (btn) btn.style.display = 'none';
+  }
+  function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+  function initialsFromNick(n){
+    n = (n||'').trim();
+    if(!n) return '👤';
+    const parts = n.split(/\s+/).slice(0,2);
+    return parts.map(p=>p[0]).join('').toUpperCase();
+  }
+
+  /* Firestore: get citizens for a country */
+  async function fetchCitizens(country){
+    const qs = await db.collection('passports').where('country','==',country).get();
+    const rows = [];
+    qs.forEach(doc=>{
+      const d = doc.data();
+      if(!d) return;
+      rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
+    });
+    rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
+    return rows;
+  }
+
+  /* Render citizens into a container */
+  function renderCitizens(container, citizens){
+    if(!container) return;
+    if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
+    container.innerHTML = citizens.map(c=>`
+      <div class="citizen">
+        <div class="avatar">${initialsFromNick(c.nick)}</div>
+        <div class="meta">
+          <b>${c.nick || 'Anonymous'}</b>
+          <small>${shortAddrFull(c.address)}</small>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /* Load citizens into the modal */
+  async function loadCitizensIntoModal(country){
+    const box = document.getElementById('citizens-list');
+    if(!box) return;
+    box.innerHTML = `<small class="muted">Loading citizens…</small>`;
+    try{
+      const citizens = await fetchCitizens(country);
+      renderCitizens(box, citizens);
+      toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
+    }catch(e){
+      console.error(e);
+      box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
+    }
+  }
 
   // --- Country coloring ---
   const countryLayers = new Map();
@@ -650,8 +645,13 @@ async function loadCitizensIntoModal(country){
     zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
   }).setView([20, 0], 2);
 
+  // Safe no-op flag helpers until GeoJSON loads
+  let setPassportFlag = () => {};
+  let setPassportFlagIcon = () => {};
+
   const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
   fetch(GEOJSON_URL).then(r => r.json()).then(data => {
+    // Build country list
     data.features.forEach(f => {
       const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
       countryList.push(name);
@@ -659,6 +659,36 @@ async function loadCitizensIntoModal(country){
     countryList.sort((a,b)=>a.localeCompare(b));
     populateCountryDropdown(countryList);
 
+    // Build name -> ISO2 map from the same dataset
+    const NAME_TO_ISO2 = new Map();
+    data.features.forEach(f=>{
+      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+      const iso2 = (f.properties.ISO_A2 || f.properties.iso_a2 || '').toLowerCase();
+      if(name && iso2 && iso2 !== '-99'){ NAME_TO_ISO2.set(name, iso2); }
+    });
+
+    // Upgrade helpers now that we have the ISO map
+    setPassportFlag = function(country){
+      const layer = document.getElementById('passport-flag');
+      if(!layer) return;
+      const iso2 = NAME_TO_ISO2.get(country) || null;
+      layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
+    };
+
+    setPassportFlagIcon = function(country){
+      const icon = document.getElementById('passport-flag-icon');
+      if(!icon) return;
+      const iso2 = NAME_TO_ISO2.get(country) || null;
+      if (iso2){
+        icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+        icon.style.display = 'inline-block';
+        icon.alt = `${country} flag`;
+      } else {
+        icon.removeAttribute('src'); icon.style.display = 'none'; icon.alt = '';
+      }
+    };
+
+    // Draw map layer
     const layer = L.geoJSON(data, {
       style: (feature) => {
         const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
@@ -686,42 +716,9 @@ async function loadCitizensIntoModal(country){
   }).catch(err => {
     console.error('Failed to load GeoJSON', err);
     el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
-  Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
-</div>`;
-});
-
-  // build a name -> iso2 map directly from geojson
-const NAME_TO_ISO2 = new Map();
-data.features.forEach(f=>{
-  const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-  const iso2 = (f.properties.ISO_A2 || f.properties.iso_a2 || '').toLowerCase();
-  if(name && iso2 && iso2 !== '-99'){ NAME_TO_ISO2.set(name, iso2); }
-});
-
-// helpers now use the dynamic map
-function iso2For(name){
-  return NAME_TO_ISO2.get(name) || null;
-}
-
-function setPassportFlag(country){
-  const layer = document.getElementById('passport-flag');
-  if(!layer) return;
-  const iso2 = iso2For(country);
-  layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
-}
-
-function setPassportFlagIcon(country){
-  const icon = document.getElementById('passport-flag-icon');
-  if(!icon) return;
-  const iso2 = iso2For(country);
-  if (iso2){
-    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-    icon.style.display = 'inline-block';
-    icon.alt = `${country} flag`;
-  } else {
-    icon.removeAttribute('src'); icon.style.display = 'none'; icon.alt = '';
-  }
-}
+      Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+    </div>`;
+  });
 
   function populateCountryDropdown(list){
     const sel = el('country');
@@ -758,40 +755,39 @@ function setPassportFlagIcon(country){
   function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
   async function connectWallet(){
-  if(!window.ethereum){
-    alert('No wallet detected. Please install a Cronos-compatible wallet.');
-    toast('No wallet detected');                      // 👈 toast
-    return;
+    if(!window.ethereum){
+      alert('No wallet detected. Please install a Cronos-compatible wallet.');
+      toast('No wallet detected');
+      return;
+    }
+    try{
+      setBusy(true);
+      const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+      userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+      window.userAddress = userAddress;
+      if(!userAddress){ setBusy(false); return; }
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer   = provider.getSigner();
+
+      await ensureChain();
+
+      const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
+      const signature = await signer.signMessage(message);
+      localStorage.setItem('cronation_sig', signature);
+
+      connectBtn.textContent = shortAddr(userAddress);
+      toast('Wallet connected');
+      restorePassportIfAny();
+      restorePfpIfAny(userAddress);
+    }catch(err){
+      console.error(err);
+      alert('Wallet connection was cancelled or failed.');
+      toast('Connection cancelled');
+    }finally{
+      setBusy(false);
+    }
   }
-  try{
-    setBusy(true);                                    // 👈 start loader
-
-    const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-    userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-    window.userAddress = userAddress;
-    if(!userAddress){ setBusy(false); return; }
-
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    signer   = provider.getSigner();
-
-    await ensureChain();
-
-    const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
-    const signature = await signer.signMessage(message);
-    localStorage.setItem('cronation_sig', signature);
-
-    connectBtn.textContent = shortAddr(userAddress);
-    toast('Wallet connected');                         // 👈 toast
-    restorePassportIfAny();
-    restorePfpIfAny(userAddress);
-  }catch(err){
-    console.error(err);
-    alert('Wallet connection was cancelled or failed.');
-    toast('Connection cancelled');                     // 👈 toast
-  }finally{
-    setBusy(false);                                    // 👈 stop loader
-  }
-}
 
   async function ensureChain(){
     const desired = LAUNCH.token.chainIdHex;
@@ -814,93 +810,77 @@ function setPassportFlagIcon(country){
   }
 
   async function hasRequiredTokens(address){
-  try{
-    const token = LAUNCH.token.address;
-    if(!token || token === '0x0000000000000000000000000000000000000000') return false;
-
-    const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
-    const bal   = await erc20.balanceOf(address);
-    const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
-
-    const ok = bal.gte(min);
-    if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
-    return ok;
-  }catch(e){
-    console.error('Token-gate check failed:', e);
-    toast('Token check failed');
-    alert('Could not verify token balance. Check network and token address.');
-    return false;
+    try{
+      const token = LAUNCH.token.address;
+      if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+      const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+      const bal   = await erc20.balanceOf(address);
+      const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+      const ok = bal.gte(min);
+      if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
+      return ok;
+    }catch(e){
+      console.error('Token-gate check failed:', e);
+      toast('Token check failed');
+      alert('Could not verify token balance. Check network and token address.');
+      return false;
+    }
   }
-}
 
   if (connectBtn) connectBtn.addEventListener('click', connectWallet);
 
   /**** Firestore-backed mint ****/
   async function attemptMint(country, nick){
-  if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
-  if(FLAGS.REQUIRE_WALLET && !userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
+    if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
+    if(FLAGS.REQUIRE_WALLET && !userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
 
-  try{
-    setBusy(true);                                     // 👈 start loader
+    try{
+      setBusy(true);
 
-    if(FLAGS.TOKEN_GATE){
-      await ensureChain();
-      const ok = await hasRequiredTokens(userAddress);
-      if(!ok){ return; }                               // toast already shown in hasRequiredTokens
-    }
+      if(FLAGS.TOKEN_GATE){
+        await ensureChain();
+        const ok = await hasRequiredTokens(userAddress);
+        if(!ok){ return; }
+      }
 
-    const addrKey = userAddress.toLowerCase();
-    const docRef = db.collection('passports').doc(addrKey);
-    const snap = await docRef.get();
+      const addrKey = userAddress.toLowerCase();
+      const docRef = db.collection('passports').doc(addrKey);
+      const snap = await docRef.get();
 
-    if(snap.exists){
-      const p = snap.data();
-      showPassport(p.country, p.nick, p.serial);
+      if(snap.exists){
+        const p = snap.data();
+        showPassport(p.country, p.nick, p.serial);
+        hideJoinForm();
+        toast('You already minted — showing passport');
+        alert('You already have a passport. Showing it now.');
+        return;
+      }
+
+      const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
+      await docRef.set({
+        address: userAddress,
+        country, nick, serial,
+        created: firebase.firestore.FieldValue.serverTimestamp(),
+        createdClient: new Date().toISOString()
+      });
+
+      showPassport(country, nick, serial);
       hideJoinForm();
-      toast('You already minted — showing passport');  // 👈 toast
-      alert('You already have a passport. Showing it now.');
-      return;
+      hideCTAIfMinted();
+      toast(`Minted! Passport #${serial}`);
+    }catch(err){
+      console.error(err);
+      toast('Mint failed — try again');
+      alert('Mint failed. Please try again.');
+    }finally{
+      setBusy(false);
     }
-
-    const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
-    await docRef.set({
-  address: userAddress,
-  country, nick, serial,
-  created: firebase.firestore.FieldValue.serverTimestamp(),
-  createdClient: new Date().toISOString()
-});
-
-// in the snapshot loop, fallback if needed
-const t = d.created?.toDate?.() || (d.createdClient ? new Date(d.createdClient) : null);
-
-    showPassport(country, nick, serial);
-    hideJoinForm();
-    hideCTAIfMinted();
-    toast(`Minted! Passport #${serial}`);              // 👈 success
-  }catch(err){
-    console.error(err);
-    toast('Mint failed — try again');                  // 👈 error toast
-    alert('Mint failed. Please try again.');
-  }finally{
-    setBusy(false);                                    // 👈 stop loader
   }
-}
 
   function hideJoinForm(){
     const form = el('join-form');
     if(form) form.style.display = 'none';
   }
-
-  /* === Flag mapping (strict/common names only) === */
-  const ISO2 = {
-    "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
-    "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
-    "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
-    "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
-    "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
-    "Nigeria":"ng","Kenya":"ke"
-  };
-  
 
   // --- PFP persistence (per-wallet, local only) ---
   function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
@@ -940,7 +920,7 @@ const t = d.created?.toDate?.() || (d.createdClient ? new Date(d.createdClient) 
     setText('passport-country', country);
     setText('passport-serial', '#'+serial);
     setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
-    setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
+    setText('passport-address-chip', shortAddrFull(window.userAddress||userAddress||''));
 
     setPassportFlag(country);
     setPassportFlagIcon(country);
@@ -955,106 +935,102 @@ const t = d.created?.toDate?.() || (d.createdClient ? new Date(d.createdClient) 
     card.style.display = 'grid';
     try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
 
-    // show external controls + wire buttons (outside the passport card)
-const controls = document.getElementById('passport-controls');
-if (controls) controls.style.display = 'flex';
+    // show external controls + wire buttons
+    const controls = document.getElementById('passport-controls');
+    if (controls) controls.style.display = 'flex';
 
-const shareBtn = document.getElementById('shareBtn');
-if (shareBtn){
-  shareBtn.onclick = () => shareToX({ country, nick, serial });
-}
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn){
+      shareBtn.onclick = () => shareToX({ country, nick, serial });
+    }
 
-const pfpInput = document.getElementById('pfpInput');
-if (pfpInput && !pfpInput._wired){
-  pfpInput._wired = true;
-  let lastObjectUrl = null;
-  const imgEl = document.getElementById('passport-pfp');
+    const pfpInput = document.getElementById('pfpInput');
+    if (pfpInput && !pfpInput._wired){
+      pfpInput._wired = true;
+      let lastObjectUrl = null;
+      const imgEl = document.getElementById('passport-pfp');
 
-  pfpInput.addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
-    if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+      pfpInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
 
-    // instant preview
-    if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
-    lastObjectUrl = URL.createObjectURL(file);
-    if (imgEl) imgEl.src = lastObjectUrl;
+        // instant preview
+        if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+        lastObjectUrl = URL.createObjectURL(file);
+        if (imgEl) imgEl.src = lastObjectUrl;
 
-    // persist compressed copy
-    (async ()=>{
-      try{
-        const dataUrl = await fileToDataURLResized(file, 360, 0.86);
-        const key = (window.userAddress || userAddress)
-          ? `cronation_pfp:${(window.userAddress || userAddress).toLowerCase()}`
-          : null;
-        if(key) localStorage.setItem(key, dataUrl);
-      }catch(_e){}
-    })();
-  });
+        // persist compressed copy
+        (async ()=>{
+          try{
+            const dataUrl = await fileToDataURLResized(file, 360, 0.86);
+            const key = (window.userAddress || userAddress)
+              ? `cronation_pfp:${(window.userAddress || userAddress).toLowerCase()}`
+              : null;
+            if(key) localStorage.setItem(key, dataUrl);
+          }catch(_e){}
+        })();
+      });
 
-  const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
-  window.addEventListener('pagehide', cleanup, { once:true });
-  window.addEventListener('beforeunload', cleanup, { once:true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'unloaded') cleanup();
-  });
-}
-}
+      const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+      window.addEventListener('pagehide', cleanup, { once:true });
+      window.addEventListener('beforeunload', cleanup, { once:true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'unloaded') cleanup();
+      });
+    }
+  }
 
   // Stats + leaderboard
   function renderStats({ allCounts, totalAll, todayCounts }) {
-  // totals
-  el('stat-countries').textContent = allCounts.size;
-  el('stat-citizens').textContent  = totalAll;
+    el('stat-countries').textContent = allCounts.size;
+    el('stat-citizens').textContent  = totalAll;
 
-  // most active TODAY
-  let top = '—', max = 0;
-  todayCounts.forEach((count, name) => {
-    if (count > max || (count === max && name < top)) { // alphabet tie-break
-      max = count; top = name;
-    }
-  });
-  el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
-}
-
-  async function renderLeaderboard(){
-  const container = document.getElementById('leaderboard');
-  if(!container) return;
-
-  const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
-  if(entries.length === 0){
-    container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
-    return;
+    let top = '—', max = 0;
+    todayCounts.forEach((count, name) => {
+      if (count > max || (count === max && name < top)) { max = count; top = name; }
+    });
+    el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
   }
 
-  container.innerHTML = entries.map(([name, count], i) => `
-    <details data-country="${name}">
-      <summary>
-        <span>${i+1}. ${name}</span>
-        <span class="badge">${count}</span>
-      </summary>
-      <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
-    </details>
-  `).join('');
+  async function renderLeaderboard(){
+    const container = document.getElementById('leaderboard');
+    if(!container) return;
 
-  container.querySelectorAll('details').forEach((det, idx)=>{
-    det.addEventListener('toggle', async () => {
-      if(!det.open) return;
-      const name = det.getAttribute('data-country');
-      const pane = document.getElementById(`lb-${idx}`);
-      if(!pane) return;
-      pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
-      try{
-        const citizens = await fetchCitizens(name);
-        renderCitizens(pane, citizens);
-      }catch(e){
-        console.error(e);
-        pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
-      }
-    }, { passive:true });
-  });
-}
+    const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
+    if(entries.length === 0){
+      container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
+      return;
+    }
+
+    container.innerHTML = entries.map(([name, count], i) => `
+      <details data-country="${name}">
+        <summary>
+          <span>${i+1}. ${name}</span>
+          <span class="badge">${count}</span>
+        </summary>
+        <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
+      </details>
+    `).join('');
+
+    container.querySelectorAll('details').forEach((det, idx)=>{
+      det.addEventListener('toggle', async () => {
+        if(!det.open) return;
+        const name = det.getAttribute('data-country');
+        const pane = document.getElementById(`lb-${idx}`);
+        if(!pane) return;
+        pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
+        try{
+          const citizens = await fetchCitizens(name);
+          renderCitizens(pane, citizens);
+        }catch(e){
+          console.error(e);
+          pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+        }
+      }, { passive:true });
+    });
+  }
 
   // recolor after counts change
   countryLayers.forEach((_, name) => updateCountryStyle(name));
@@ -1072,46 +1048,44 @@ if (pfpInput && !pfpInput._wired){
 
   // Real-time listener for stats/leaderboard
   db.collection('passports').onSnapshot((qs)=>{
-  countryCounts.clear();
-  const todayCounts = new Map();
-  totalCitizens = 0;
+    countryCounts.clear();
+    const todayCounts = new Map();
+    totalCitizens = 0;
 
-  const start = new Date(); start.setHours(0,0,0,0);
-let top='—', max=0;
-todayCounts.forEach((c,n)=>{ if(c>max || (c===max && n<top)){ max=c; top=n; }});
+    const start = new Date(); start.setHours(0,0,0,0);
 
-  qs.forEach(doc=>{
-    const d = doc.data();
-    if(!d || !d.country) return;
+    qs.forEach(doc=>{
+      const d = doc.data();
+      if(!d || !d.country) return;
 
-    // overall
-    countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-    totalCitizens += 1;
+      // overall
+      countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+      totalCitizens += 1;
 
-    // today
-    const t = d.created && d.created.toDate ? d.created.toDate() : null;
-    if (t && t >= start) {
-      todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
-    }
+      // today (robust timestamp handling)
+      const t =
+        (d.created && typeof d.created.toDate === 'function')
+          ? d.created.toDate()
+          : (d.createdClient ? new Date(d.createdClient) : null);
+
+      if (t && t >= start) {
+        todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
+      }
+    });
+
+    renderStats({ allCounts: countryCounts, totalAll: totalCitizens, todayCounts });
+    renderLeaderboard();
+    countryLayers.forEach((_, name) => updateCountryStyle(name));
   });
 
-  renderStats({ allCounts: countryCounts, totalAll: totalCitizens, todayCounts });
-  renderLeaderboard();
-  countryLayers.forEach((_, name) => updateCountryStyle(name));
-});
-
   // Form submit
-  // Form submit
-el('join-form').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const country = el('country').value;
-  if(!country){ 
-    toast('Choose your country');
-    return; 
-  }
-  const nick = el('nickname').value || 'Anonymous';
-  await attemptMint(country, nick);
-});
+  el('join-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const country = el('country').value;
+    if(!country){ toast('Choose your country'); return; }
+    const nick = el('nickname').value || 'Anonymous';
+    await attemptMint(country, nick);
+  });
 
   // Modal -> mint
   function mintFromModal(){
@@ -1122,7 +1096,7 @@ el('join-form').addEventListener('submit', async (e)=>{
   }
   window.mintFromModal = mintFromModal;
 
-  /**** Share to X ****/
+  /**** Share to 𝕏 ****/
   function shareToX({country, nick, serial}){
     const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
     const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
@@ -1144,7 +1118,7 @@ el('join-form').addEventListener('submit', async (e)=>{
       if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
     }
     el('year').textContent = new Date().getFullYear();
-  })(); // end boot IIFE
+  })();
 });   // end DOMContentLoaded
 </script>
 </body>
