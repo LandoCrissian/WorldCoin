@@ -27,20 +27,21 @@
   <meta name="twitter:image" content="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
   <link rel="icon" href="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="dns-prefetch" href="//unpkg.com">
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-<style>
-  img[loading="lazy"]{content-visibility:auto; contain-intrinsic-size: 64px 64px;}
-</style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="//unpkg.com">
+  <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+  <style>
+    /* Ensure lazy images don't cause jumps */
+    img[loading="lazy"]{content-visibility:auto; contain-intrinsic-size: 64px 64px;}
+  </style>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 
   <!-- Ethers -->
   <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -48,6 +49,9 @@
   <!-- Firebase (compat builds) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
+
+  <!-- html-to-image for client-side PNG export (no server needed) -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" integrity="sha512-P0I1uI1k8ZrQeWcJmvlm6jD9qB5xWk7M4Y0qT9lq9vL9Y2lJ9w9u8nW9l1jV7b1iFf1mJmV1x0rCH0Jm1xWkPA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
     :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
@@ -145,7 +149,7 @@
     .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
     .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
 
-    /* ===== Passport (with flag background) ===== */
+    /* ===== Passport ===== */
     .passport {
       position: relative;
       display: grid !important;
@@ -158,39 +162,41 @@
       background: #0d203a;
       overflow: hidden;
       box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      will-change: transform;
     }
-    .passport > * { position:relative; z-index:1; }
+    .passport > * { position:relative; z-index:2; }
 
-    /* Flag layer */
-#passport-flag{
-  position:absolute; inset:0;
-  background-size:cover; background-position:center;
-  filter:saturate(120%) blur(1.5px);
-  opacity:.32;               /* was .18 — make it more visible */
-  pointer-events:none;
-  z-index:0;                 /* sits under content, over base background */
-}
+    /* Decorative diagonal sheen (kept subtle) */
+    .passport::before{
+      content:"";
+      position:absolute; inset:0;
+      background: repeating-linear-gradient(
+        -30deg,
+        rgba(255,255,255,.04) 0px,
+        rgba(255,255,255,.04) 18px,
+        rgba(255,255,255,0)   18px,
+        rgba(255,255,255,0)   42px
+      );
+      pointer-events:none;
+      z-index:1;
+    }
 
-/* Keep the diagonal sheen, but ensure it doesn't completely overtake the flag */
-.passport::before{
-  content:"";
-  position:absolute; inset:0;
-  background: repeating-linear-gradient(
-    -30deg,
-    rgba(255,255,255,.04) 0px,    /* slightly lighter than .06 */
-    rgba(255,255,255,.04) 18px,
-    rgba(255,255,255,0)   18px,
-    rgba(255,255,255,0)   42px
-  );
-  pointer-events:none;
-  z-index:1;                 /* above flag, below content */
-}
-
-/* Keep all real content above decorative layers */
-.passport > * { position:relative; z-index:2; }
+    /* Flag layer — now uses an IMG for Safari/canvas reliability */
+    #passport-flag {
+      position:absolute; inset:0; z-index:0; pointer-events:none;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), transparent 38%),
+        #0d203a;
+    }
+    #passport-flag-img {
+      position:absolute; inset:0; object-fit:cover; width:100%; height:100%;
+      filter:saturate(120%) blur(1.5px);
+      opacity:.32;
+      pointer-events:none;
+    }
 
     .passport .emblem { width:96px; height:96px; border-radius:14px; overflow:hidden; background:color-mix(in srgb, var(--soft) 70%, #000 30%); border:1px solid rgba(148,163,184,.25); display:grid; place-items:center; }
-    .passport .emblem img{ width:100%; height:100%; object-fit:cover; background:#fff; }
+    .passport .emblem img{ width:100%; height:100%; object-fit:cover; background:#fff; image-rendering:auto; }
 
     .passport .info b{ display:block; font-size:18px; letter-spacing:.01em; }
     .passport .info small{ color:var(--muted); }
@@ -222,88 +228,77 @@
       box-shadow:0 0 0 1px rgba(255,255,255,.15) inset;
     }
 
-    .passport{
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), transparent 38%),
-        #0d203a;
-    }
-
     @keyframes glowPulse {
       0%   { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
       50%  { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 24px rgba(59,130,246,.8); }
       100% { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
     }
-    .passport.activated{ animation: glowPulse 1.8s ease-in-out 1; }
+    .passport.activated{ animation: glowPulse 1.2s ease-in-out 1; }
+    @media (prefers-reduced-motion: reduce){
+      .passport.activated{ animation:none; }
+      .passport:hover{ box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+    }
 
     /* Leaderboard accordions */
-#leaderboard details { border:1px solid var(--line); border-radius:10px; background:var(--soft); margin-bottom:10px; }
-#leaderboard summary { list-style:none; cursor:pointer; padding:10px 12px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
-#leaderboard summary::-webkit-details-marker{ display:none; }
-#leaderboard .badge { background:rgba(148,163,184,.18); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; margin-left:10px; }
-#leaderboard .panel { padding:10px 12px; border-top:1px solid var(--line); }
+    #leaderboard details { border:1px solid var(--line); border-radius:10px; background:var(--soft); margin-bottom:10px; }
+    #leaderboard summary { list-style:none; cursor:pointer; padding:10px 12px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
+    #leaderboard summary::-webkit-details-marker{ display:none; }
+    #leaderboard .badge { background:rgba(148,163,184,.18); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; margin-left:10px; }
+    #leaderboard .panel { padding:10px 12px; border-top:1px solid var(--line); }
 
-/* Citizens list (modal + leaderboard) */
-.citizens-list .citizen { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); }
-.citizens-list .citizen:last-child{ border-bottom:none; }
-.citizens-list .avatar { width:24px; height:24px; border-radius:50%; background:#0f1219; display:grid; place-items:center; font-size:12px; font-weight:700; }
-.citizens-list .meta { display:flex; gap:8px; align-items:center; }
-.citizens-list small { color:var(--muted); }
+    /* Citizens list */
+    .citizens-list .citizen { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); }
+    .citizens-list .citizen:last-child{ border-bottom:none; }
+    .citizens-list .avatar { width:24px; height:24px; border-radius:50%; background:#0f1219; display:grid; place-items:center; font-size:12px; font-weight:700; }
+    .citizens-list .meta { display:flex; gap:8px; align-items:center; }
+    .citizens-list small { color:var(--muted); }
 
-    .passport-controls{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.btn.block{
-  flex:1 1 180px;
-  text-align:center;
-}
-@media (max-width:560px){
-  .btn.block{ flex:1 1 100%; }
-}
+    .passport-controls{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn.block{ flex:1 1 180px; text-align:center; }
+    @media (max-width:560px){ .btn.block{ flex:1 1 100%; } }
 
     #passport + #passport-controls { margin-top:12px; }
 
     /* --- Toast + Loader --- */
-.toast {
-  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
-  background:#0f1219;border:1px solid var(--line);color:var(--text);
-  padding:10px 12px;border-radius:10px;
-  box-shadow:0 8px 30px rgba(0,0,0,.35);
-  z-index:6000;opacity:0;pointer-events:none;transition:.2s;
-}
-.toast.show { opacity:1;pointer-events:auto; }
+    .toast {
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      background:#0f1219;border:1px solid var(--line);color:var(--text);
+      padding:10px 12px;border-radius:10px;
+      box-shadow:0 8px 30px rgba(0,0,0,.35);
+      z-index:6000;opacity:0;pointer-events:none;transition:.2s;
+    }
+    .toast.show { opacity:1;pointer-events:auto; }
 
-.loader {
-  position:fixed;inset:0;background:rgba(0,0,0,.45);
-  display:none;align-items:center;justify-content:center;
-  z-index:5500;
-}
-.loader[aria-busy="true"] { display:flex; }
+    .loader {
+      position:fixed;inset:0;background:rgba(0,0,0,.45);
+      display:none;align-items:center;justify-content:center;
+      z-index:5500;
+    }
+    .loader[aria-busy="true"] { display:flex; }
 
-.loader .dot {
-  width:8px;height:8px;border-radius:50%;background:#fff;
-  margin:0 4px;animation:ld 1s infinite;
-}
-.loader .dot:nth-child(2){animation-delay:.15s;}
-.loader .dot:nth-child(3){animation-delay:.3s;}
+    .loader .dot {
+      width:8px;height:8px;border-radius:50%;background:#fff;
+      margin:0 4px;animation:ld 1s infinite;
+    }
+    .loader .dot:nth-child(2){animation-delay:.15s;}
+    .loader .dot:nth-child(3){animation-delay:.3s;}
 
-@keyframes ld {
-  0%,80%,100%{opacity:.2;transform:scale(.8);}
-  40%{opacity:1;transform:scale(1);}
-}
+    @keyframes ld {
+      0%,80%,100%{opacity:.2;transform:scale(.8);}
+      40%{opacity:1;transform:scale(1);}
+    }
 
     .nav a.link:hover{ color:#fff; }
-    
   </style>
 </head>
 <body>
 
   <!-- Global toast + loader -->
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<div id="loader" class="loader" aria-hidden="true">
-  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-</div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="loader" class="loader" aria-hidden="true">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+
   <!-- Status notice -->
   <div class="notice" role="status" aria-live="polite">
     <div class="wrap">
@@ -315,18 +310,18 @@
   <header>
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="#top" aria-label="CROnation home">
-        <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" style="width:32px;height:32px;border-radius:50%;" />
+        <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" width="32" height="32" style="border-radius:50%; image-rendering:auto;" loading="lazy" decoding="async" />
         <b>CROnation</b>
       </a>
 
       <div class="links">
-  <a class="link" href="#map-section">Map</a>
-  <a class="link" href="#leaderboard-card">Leaderboard</a>
-  <a class="link" href="#about">About</a>
-  <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
-  <a class="link" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
-  <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-</div>
+        <a class="link" href="#map-section">Map</a>
+        <a class="link" href="#leaderboard-card">Leaderboard</a>
+        <a class="link" href="#about">About</a>
+        <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
+        <a class="link" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
+        <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+      </div>
 
       <div class="actions">
         <button id="connectBtn" class="btn ghost">Connect Wallet</button>
@@ -337,13 +332,13 @@
       </div>
 
       <div class="mobile-menu" id="mobile-menu" role="menu">
-  <a class="link" role="menuitem" href="#map-section">Map</a>
-  <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
-  <a class="link" role="menuitem" href="#about">About</a>
-  <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
-  <a class="link" role="menuitem" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Join on Telegram</a>
-  <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-</div>
+        <a class="link" role="menuitem" href="#map-section">Map</a>
+        <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
+        <a class="link" role="menuitem" href="#about">About</a>
+        <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
+        <a class="link" role="menuitem" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Join on Telegram</a>
+        <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+      </div>
     </nav>
   </header>
 
@@ -352,10 +347,10 @@
       <h1>One World. One CROnation.</h1>
       <p class="lead">A clean, global map of our community on Cronos. Mark your country, mint a simple passport, and watch the world light up.</p>
       <div class="cta">
-  <button id="markBtn" class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
-  <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
-  <a href="https://t.me/CRONationOfficial" class="btn" aria-label="Join CROnation on Telegram">Join on Telegram</a>
-</div>
+        <button id="markBtn" class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
+        <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
+        <a href="https://t.me/CRONationOfficial" class="btn" aria-label="Join CROnation on Telegram">Join on Telegram</a>
+      </div>
 
       <div class="stats" role="status" aria-live="polite">
         <div class="stat"><div><small>Countries represented</small><span id="stat-countries">0</span></div></div>
@@ -375,11 +370,11 @@
       </div>
 
       <aside class="card" id="leaderboard-card">
-  <div class="body">
-    <h3>Leaderboard</h3>
-    <div id="leaderboard"></div>
-  </div>
-</aside>
+        <div class="body">
+          <h3>Leaderboard</h3>
+          <div id="leaderboard"></div>
+        </div>
+      </aside>
 
       <!-- JOIN -->
       <div class="card" id="join-card">
@@ -396,7 +391,7 @@
 
             <div class="field">
               <label for="nickname">Nickname (optional)</label>
-              <input id="nickname" placeholder="e.g. WillyBilly" />
+              <input id="nickname" placeholder="e.g. WillyBilly" inputmode="text" autocomplete="nickname" />
             </div>
 
             <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -405,40 +400,43 @@
           </form>
 
           <!-- Passport card -->
-          <!-- Passport card -->
-<div id="passport" class="passport" style="display:none; margin-top:12px;">
-  <div id="passport-flag" aria-hidden="true"></div>
+          <div id="passport" class="passport" style="display:none; margin-top:12px;" role="group" aria-label="Your Passport">
+            <div id="passport-flag" aria-hidden="true">
+              <!-- Reliable flag image element -->
+              <img id="passport-flag-img" alt="" decoding="async" loading="lazy" />
+            </div>
 
-  <div class="emblem">
-    <img id="passport-pfp"
-         src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
-         alt="CROnation logo">
-  </div>
+            <div class="emblem" aria-hidden="true">
+              <img id="passport-pfp"
+                   src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
+                   alt="Profile emblem" decoding="async" loading="lazy">
+            </div>
 
-  <div class="info">
-    <b>CROnation Passport <span id="passport-serial">#000000</span></b>
-    <small>
-      <span id="passport-nick">—</span> —
-      <span id="passport-country">—</span>
-      <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
-      <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
-    </small>
-  </div> <!-- ✅ CLOSE .info -->
+            <div class="info">
+              <b>CROnation Passport <span id="passport-serial">#000000</span></b>
+              <small>
+                <span id="passport-nick">—</span> —
+                <span id="passport-country">—</span>
+                <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" decoding="async" loading="lazy" />
+                <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+              </small>
+            </div>
 
-  <div id="passport-watermark" aria-hidden="true"></div>
-</div>
+            <div id="passport-watermark" aria-hidden="true"></div>
+          </div>
 
-<!-- Controls OUTSIDE the passport -->
-<div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
-  <label class="btn block" style="cursor:pointer;">
-    <input id="pfpInput" type="file" accept="image/*" style="display:none;">
-    Upload PFP
-  </label>
-  <button id="shareBtn" type="button" class="btn block">Share to 𝕏</button>
-</div>
+          <!-- Controls OUTSIDE the passport -->
+          <div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
+            <label class="btn block" style="cursor:pointer;">
+              <input id="pfpInput" type="file" accept="image/*" style="display:none;">
+              Upload PFP
+            </label>
+            <button id="shareBtn" type="button" class="btn block" aria-label="Share Passport to X (Twitter)">Share to 𝕏</button>
+            <a id="downloadLink" class="btn block" download="cronation-passport.png" style="display:none;">Download PNG</a>
+          </div>
 
           <!-- ABOUT -->
-          <div class="card" id="about">
+          <div class="card" id="about" style="margin-top:16px;">
             <div class="body">
               <h3>About</h3>
               <p class="muted">CROnation is a simple, global participation map for the Cronos community. It’s not a complicated game or an overpromised utility — just a clean way to visualize where we all are, and a minimal passport to flex your origin.</p>
@@ -451,29 +449,29 @@
 
     <!-- Modal (map click) -->
     <div class="modal" id="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
-  <div class="panel">
-    <div class="header">
-      <b id="join-title">Join CROnation</b>
-      <button class="btn" onclick="closeModal()">Close</button>
-    </div>
-    <div class="content">
-      <div class="field">
-        <label for="modal-country">Country</label>
-        <input id="modal-country" disabled>
+      <div class="panel">
+        <div class="header">
+          <b id="join-title">Join CROnation</b>
+          <button class="btn" onclick="closeModal()">Close</button>
+        </div>
+        <div class="content">
+          <div class="field">
+            <label for="modal-country">Country</label>
+            <input id="modal-country" disabled>
+          </div>
+          <div class="field">
+            <label for="modal-nickname">Nickname (optional)</label>
+            <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
+          </div>
+          <div class="field full">
+            <div id="citizens-list" class="citizens-list"></div>
+          </div>
+        </div>
+        <div class="footer">
+          <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
+        </div>
       </div>
-      <div class="field">
-        <label for="modal-nickname">Nickname (optional)</label>
-        <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
-      </div>
-      <div class="field full">
-        <div id="citizens-list" class="citizens-list"></div>
-      </div>
     </div>
-    <div class="footer">
-      <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
-    </div>
-  </div>
-</div>
   </main>
 
   <footer class="footer">
@@ -486,787 +484,863 @@
   </footer>
 
   <script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"WebSite",
-  "name":"CROnation",
-  "url":"https://cronation.netlify.app",
-  "sameAs":["https://x.com/cronation8","https://t.me/CRONationOfficial"]
-}
-</script>
+  {
+    "@context":"https://schema.org",
+    "@type":"WebSite",
+    "name":"CROnation",
+    "url":"https://cronation.netlify.app",
+    "sameAs":["https://x.com/cronation8","https://t.me/CRONationOfficial"]
+  }
+  </script>
 
   <script>
-window.addEventListener('DOMContentLoaded', () => {
-  /**** Flags ****/
-  const FLAGS = {
-    TOKEN_GATE: true,
-    REQUIRE_WALLET: true,
-    AUTO_CONNECT: false,
-    PASSPORT_MINT_ENABLED: true,
-    NFT_MINT_ENABLED: false
-  };
+  window.addEventListener('DOMContentLoaded', () => {
+    /**** Flags / feature switches ****/
+    const FLAGS = {
+      TOKEN_GATE: true,
+      REQUIRE_WALLET: true,
+      AUTO_CONNECT: false,
+      PASSPORT_MINT_ENABLED: true,
+      NFT_MINT_ENABLED: false
+    };
 
-  const LAUNCH = {
-    xHandle: 'cronation8',
-    siteUrl: 'https://cronation.netlify.app',
-    token: {
-      address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
-      decimals: 18,
-      minBalance: '1',
-      chainIdHex: '0x19', // Cronos Mainnet (25)
-      rpc: 'https://evm.cronos.org',
-      abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
+    const LAUNCH = {
+      xHandle: 'cronation8',
+      siteUrl: 'https://cronation.netlify.app',
+      token: {
+        address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
+        decimals: 18,
+        minBalance: '1',
+        chainIdHex: '0x19', // Cronos Mainnet (25)
+        rpc: 'https://evm.cronos.org',
+        abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
+      }
+    };
+
+    /**** Firebase ****/
+    const firebaseConfig = {
+      apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+      authDomain: "cronation-6058b.firebaseapp.com",
+      projectId: "cronation-6058b",
+      storageBucket: "cronation-6058b.appspot.com",
+      messagingSenderId: "303748855698",
+      appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    /**** Helpers ****/
+    const el = (id)=>document.getElementById(id);
+    let LAST_PASSPORT_COUNTRY = null;
+    let RESOLVER_READY = false;
+
+    function scrollToMap(){
+      const header = document.querySelector('header');
+      const sec = document.getElementById('map-section');
+      if(!header || !sec) return;
+      const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
+      window.scrollTo({ top: y, behavior:'smooth' });
     }
-  };
+    window.scrollToMap = scrollToMap;
 
-  /**** Firebase ****/
-  const firebaseConfig = {
-    apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
-    authDomain: "cronation-6058b.firebaseapp.com",
-    projectId: "cronation-6058b",
-    storageBucket: "cronation-6058b.appspot.com",
-    messagingSenderId: "303748855698",
-    appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+    function toast(msg){
+      const t=document.getElementById('toast');
+      t.textContent=msg;
+      t.classList.add('show');
+      clearTimeout(t._h);
+      t._h=setTimeout(()=>t.classList.remove('show'),2600);
+    }
 
-  /**** Helpers ****/
-  const el = (id)=>document.getElementById(id);
-  // Remember last shown passport so we can paint flags when helpers are ready
-  let LAST_PASSPORT_COUNTRY = null;
+    function setBusy(on){
+      const l=document.getElementById('loader');
+      l.setAttribute('aria-busy',on?'true':'false');
+      l.setAttribute('aria-hidden',on?'false':'true');
+    }
 
-  function scrollToMap(){
-    const header = document.querySelector('header');
-    const sec = document.getElementById('map-section');
-    if(!header || !sec) return;
-    const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
-    window.scrollTo({ top: y, behavior:'smooth' });
-  }
-  window.scrollToMap = scrollToMap;
+    function hideCTAIfMinted(){
+      const btn = document.getElementById('markBtn');
+      if (btn) btn.style.display = 'none';
+    }
+    function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+    function initialsFromNick(n){
+      n = (n||'').trim();
+      if(!n) return '👤';
+      const parts = n.split(/\s+/).slice(0,2);
+      return parts.map(p=>p[0]).join('').toUpperCase();
+    }
 
-  function toast(msg){
-    const t=document.getElementById('toast');
-    t.textContent=msg;
-    t.classList.add('show');
-    clearTimeout(t._h);
-    t._h=setTimeout(()=>t.classList.remove('show'),2600);
-  }
+    /* Firestore: get citizens for a country */
+    async function fetchCitizens(country){
+      const qs = await db.collection('passports').where('country','==',country).get();
+      const rows = [];
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d) return;
+        rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
+      });
+      rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
+      return rows;
+    }
 
-  function setBusy(on){
-    const l=document.getElementById('loader');
-    l.setAttribute('aria-busy',on?'true':'false');
-    l.setAttribute('aria-hidden',on?'false':'true');
-  }
-
-  function hideCTAIfMinted(){
-    const btn = document.getElementById('markBtn');
-    if (btn) btn.style.display = 'none';
-  }
-  function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
-  function initialsFromNick(n){
-    n = (n||'').trim();
-    if(!n) return '👤';
-    const parts = n.split(/\s+/).slice(0,2);
-    return parts.map(p=>p[0]).join('').toUpperCase();
-  }
-
-  /* Firestore: get citizens for a country */
-  async function fetchCitizens(country){
-    const qs = await db.collection('passports').where('country','==',country).get();
-    const rows = [];
-    qs.forEach(doc=>{
-      const d = doc.data();
-      if(!d) return;
-      rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
-    });
-    rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
-    return rows;
-  }
-
-  /* Render citizens into a container */
-  function renderCitizens(container, citizens){
-    if(!container) return;
-    if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
-    container.innerHTML = citizens.map(c=>`
-      <div class="citizen">
-        <div class="avatar">${initialsFromNick(c.nick)}</div>
-        <div class="meta">
-          <b>${c.nick || 'Anonymous'}</b>
-          <small>${shortAddrFull(c.address)}</small>
+    function renderCitizens(container, citizens){
+      if(!container) return;
+      if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
+      container.innerHTML = citizens.map(c=>`
+        <div class="citizen">
+          <div class="avatar">${initialsFromNick(c.nick)}</div>
+          <div class="meta">
+            <b>${c.nick || 'Anonymous'}</b>
+            <small>${shortAddrFull(c.address)}</small>
+          </div>
         </div>
-      </div>
-    `).join('');
-  }
-
-  /* Load citizens into the modal */
-  async function loadCitizensIntoModal(country){
-    const box = document.getElementById('citizens-list');
-    if(!box) return;
-    box.innerHTML = `<small class="muted">Loading citizens…</small>`;
-    try{
-      const citizens = await fetchCitizens(country);
-      renderCitizens(box, citizens);
-      toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
-    }catch(e){
-      console.error(e);
-      box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
+      `).join('');
     }
-  }
 
-  // --- Country coloring ---
-  const countryLayers = new Map();
-  function colorFor(count){
-    if (count >= 25) return '#1d4ed8';
-    if (count >= 10) return '#3b82f6';
-    if (count >= 1)  return '#93c5fd';
-    return '#e5e7eb';
-  }
-  function updateCountryStyle(name){
-    const layer = countryLayers.get(name);
-    if (!layer) return;
-    const count = countryCounts.get(name) || 0;
-    layer.setStyle({ fillColor: colorFor(count) });
-  }
-
-  /**** Mobile menu ****/
-  (function mobileMenu(){
-    const btn = el('hamburger');
-    const menu = el('mobile-menu');
-    if(!btn || !menu) return;
-    const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
-    const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
-    btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
-    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-    window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-    window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
-    window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
-  })();
-
-  /**** Map + Countries ****/
-  const countryCounts = new Map();
-  const countryList = [];
-  let totalCitizens = 0;
-  el('year').textContent = new Date().getFullYear();
-
-  const map = L.map('map', {
-    zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
-  }).setView([20, 0], 2);
-
-  // Safe no-op flag helpers until GeoJSON loads
-  let setPassportFlag = () => {};
-  let setPassportFlagIcon = () => {};
-
-  const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
-  fetch(GEOJSON_URL).then(r => r.json()).then(data => {
-    // Build country list
-    data.features.forEach(f => {
-      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-      countryList.push(name);
-    });
-    countryList.sort((a,b)=>a.localeCompare(b));
-    populateCountryDropdown(countryList);
-
-    // Build name -> ISO2 map from the same dataset
-    // ------------ Robust ISO2 resolver ------------
-const NAME_TO_ISO2 = new Map();
-data.features.forEach(f=>{
-  const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-  const iso2 = (f.properties.ISO_A2 || f.properties.iso_a2 || '').toLowerCase();
-  if(name && iso2 && iso2 !== '-99'){ NAME_TO_ISO2.set(name, iso2); }
-});
-
-// Normalize: lowercase, strip diacritics, punctuation, common prefixes
-function normalizeCountry(s){
-  return (s||'')
-    .trim()
-    .normalize('NFD').replace(/\p{Diacritic}+/gu,'')      // remove accents
-    .toLowerCase()
-    .replace(/[-_.’'`]/g,' ')                             // unify punctuation
-    .replace(/\b(the|of|and)\b/g,' ')                     // filler words
-    .replace(/\b(republic|kingdom|state|federation|united|arab|emirates|democratic|people|socialist)\b/g,' ')
-    .replace(/\s+/g,' ')
-    .trim();
-}
-
-// Map all dataset names by their normalized form
-const NORMAL_NAME_TO_ISO2 = new Map();
-for (const [name, iso] of NAME_TO_ISO2.entries()){
-  NORMAL_NAME_TO_ISO2.set(normalizeCountry(name), iso);
-}
-
-// Extra aliases (local names, short forms, sub-nation names => parent ISO)
-const ALIAS_TO_ISO2 = new Map([
-  // Common variants & locals
-  ['espana','es'], ['spain','es'], ['españa','es'],
-  ['deutschland','de'], ['germany','de'],
-  ['brasil','br'], ['brazil','br'],
-  ['cote d ivoire','ci'], ['cote d’ivoire','ci'], ['ivory coast','ci'],
-  ['tuerkiye','tr'], ['turkiye','tr'], ['turkey','tr'],
-  ['viet nam','vn'], ['vietnam','vn'],
-  ['sverige','se'], ['sweden','se'],
-  ['danmark','dk'], ['denmark','dk'],
-  ['norge','no'], ['noreg','no'], ['norway','no'],
-  ['suisse','ch'], ['schweiz','ch'], ['svizzera','ch'], ['switzerland','ch'],
-  ['suomi','fi'], ['finland','fi'],
-  ['ellada','gr'], ['hellas','gr'], ['greece','gr'],
-  ['magyarorszag','hu'], ['hungary','hu'],
-  ['ceska republika','cz'], ['czech republic','cz'], ['czechia','cz'],
-  ['polska','pl'], ['poland','pl'],
-  ['romania','ro'], ['românia','ro'],
-  ['espirito santo','br'], // harmless; will fall back to BR if someone typed state
-  // UK + parts
-  ['uk','gb'], ['u k','gb'], ['united kingdom','gb'],
-  ['england','gb'], ['scotland','gb'], ['wales','gb'], ['northern ireland','gb'],
-  // US short forms
-  ['usa','us'], ['u s a','us'], ['united states','us'],
-  // Korea / Congo disambiguations
-  ['south korea','kr'], ['republic of korea','kr'],
-  ['north korea','kp'], ['dprk','kp'],
-  ['dr congo','cd'], ['democratic republic of congo','cd'], ['congo kinshasa','cd'],
-  ['republic of congo','cg'], ['congo brazzaville','cg'],
-  // Middle East
-  ['uae','ae'], ['united arab emirates','ae'],
-  ['iran','ir'], ['islamic republic of iran','ir'],
-  ['syria','sy'], ['syrian arab republic','sy'],
-  // China regions (FYI: dataset treats separately)
-  ['hong kong','hk'], ['macau','mo'], ['macao','mo'],
-  // Other frequent ones
-  ['taiwan','tw'], ['myanmar','mm'], ['burma','mm'],
-  ['cape verde','cv'], ['laos','la'], ['brunei','bn'],
-  ['tanzania','tz'], ['united republic of tanzania','tz'],
-  ['moldova','md'], ['bolivia','bo'], ['venezuela','ve']
-]);
-
-// Emoji 🇦🇺🇺🇸 etc. -> 'au', 'us'
-function iso2FromEmojiFlag(s){
-  if(!s) return null;
-  const m = s.match(/\p{Regional_Indicator}{2}/u);
-  if(!m) return null;
-  const [a,b] = [...m[0]];
-  const toA = ch => String.fromCharCode(ch.codePointAt(0) - 0x1F1E6 + 0x41);
-  return (toA(a)+toA(b)).toLowerCase();
-}
-
-function iso2FromCountry(input){
-  if(!input) return null;
-
-  // 1) Emoji flag
-  const emoji = iso2FromEmojiFlag(input);
-  if (emoji) return emoji;
-
-  // 2) Direct dataset name
-  const direct = NAME_TO_ISO2.get(input);
-  if (direct) return direct;
-
-  // 3) Alias table (normalized)
-  const norm = normalizeCountry(input);
-  const alias = ALIAS_TO_ISO2.get(norm);
-  if (alias) return alias;
-
-  // 4) Normalized dataset match
-  const normMatch = NORMAL_NAME_TO_ISO2.get(norm);
-  if (normMatch) return normMatch;
-
-  // 5) Last-chance: case-insensitive exact
-  const lower = input.toLowerCase();
-  for (const [name, code] of NAME_TO_ISO2.entries()){
-    if (name.toLowerCase() === lower) return code;
-  }
-  return null;
-}
-
-// Use the unified resolver everywhere
-
-setPassportFlagIcon = function(country){
-  const icon = document.getElementById('passport-flag-icon');
-  if(!icon) return;
-  const iso2 = iso2FromCountry(country);
-  if (iso2){
-    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-    icon.style.display = 'inline-block';
-    icon.alt = `${country} flag`;
-    icon.style.outline = '';                 // clear any fallback outline
-  } else {
-    icon.removeAttribute('src');
-    icon.style.display = 'none';
-    icon.alt = '';
-    // optional: uncomment next line to *show* a placeholder box
-    // icon.style.display = 'inline-block'; icon.style.outline = '1px dashed #9ca3af';
-  }
-};
-
-function flagUrlPng(iso){ return `https://flagcdn.com/w320/${iso}.png`; }
-function flagUrlSvg(iso){ return `https://cdn.jsdelivr.net/npm/flag-icons/flags/4x3/${iso}.svg`; }
-
-async function loadFlagInto(el, iso){
-  const tryUrl = async (url) => new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = () => res(url);
-    img.onerror = rej;
-    img.src = url;
-  });
-
-  try {
-    const url = await tryUrl(flagUrlPng(iso));
-    el.style.backgroundImage = `url(${url})`;
-  } catch {
-    try {
-      const url2 = await tryUrl(flagUrlSvg(iso));
-      el.style.backgroundImage = `url(${url2})`;
-    } catch {
-      el.style.backgroundImage = '';
-    }
-  }
-}
-
-setPassportFlag = function(country){
-  const layer = document.getElementById('passport-flag');
-  if(!layer) return;
-  const iso2 = iso2FromCountry(country);
-  if (!iso2) { layer.style.backgroundImage = ''; return; }
-  loadFlagInto(layer, iso2);
-};
-
-    // Repaint if passport was shown earlier
-if (LAST_PASSPORT_COUNTRY) {
-  setPassportFlag(LAST_PASSPORT_COUNTRY);
-  setPassportFlagIcon(LAST_PASSPORT_COUNTRY);
-}
-
-    // Draw map layer
-    const layer = L.geoJSON(data, {
-      style: (feature) => {
-        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-        const count = countryCounts.get(name) || 0;
-        return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
-      },
-      onEachFeature: (feature, l) => {
-        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-        countryLayers.set(name, l);
-        l.on({
-          mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
-          mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
-          click:     () => openModal(name)
-        });
-        l.bindTooltip(name, { sticky: true });
-      }
-    }).addTo(map);
-
-    try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
-    requestAnimationFrame(() => map.invalidateSize());
-    setTimeout(() => map.invalidateSize(), 300);
-    ['orientationchange','resize'].forEach(ev =>
-      window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
-    );
-  }).catch(err => {
-    console.error('Failed to load GeoJSON', err);
-    el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
-      Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
-    </div>`;
-  });
-
-  function populateCountryDropdown(list){
-    const sel = el('country');
-    if(!sel) return;
-    const frag = document.createDocumentFragment();
-    list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
-    sel.appendChild(frag);
-  }
-
-  /**** Modal ****/
-  function openModal(country){
-    const modal = el('join-modal');
-    if(!modal) return;
-    el('modal-country').value = country || '';
-    el('modal-nickname').value = '';
-    modal.setAttribute('open', '');
-    document.body.classList.add('modal-open');
-    loadCitizensIntoModal(country);
-  }
-  function closeModal(){
-    const modal = el('join-modal');
-    if(!modal) return;
-    modal.removeAttribute('open');
-    document.body.classList.remove('modal-open');
-  }
-  window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-  window.openModal = openModal;
-  window.closeModal = closeModal;
-
-  /**** Wallet + gating ****/
-  const connectBtn = el('connectBtn');
-  let provider = null, signer = null, userAddress = null;
-
-  function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
-
-  async function connectWallet(){
-    if(!window.ethereum){
-      alert('No wallet detected. Please install a Cronos-compatible wallet.');
-      toast('No wallet detected');
-      return;
-    }
-    try{
-      setBusy(true);
-      const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-      userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-      window.userAddress = userAddress;
-      if(!userAddress){ setBusy(false); return; }
-
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer   = provider.getSigner();
-
-      await ensureChain();
-
-      const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
-      const signature = await signer.signMessage(message);
-      localStorage.setItem('cronation_sig', signature);
-
-      connectBtn.textContent = shortAddr(userAddress);
-      toast('Wallet connected');
-      restorePassportIfAny();
-      restorePfpIfAny(userAddress);
-    }catch(err){
-      console.error(err);
-      alert('Wallet connection was cancelled or failed.');
-      toast('Connection cancelled');
-    }finally{
-      setBusy(false);
-    }
-  }
-
-  async function ensureChain(){
-    const desired = LAUNCH.token.chainIdHex;
-    const current = await provider.send('eth_chainId', []);
-    if(current?.toLowerCase() !== desired.toLowerCase()){
+    async function loadCitizensIntoModal(country){
+      const box = document.getElementById('citizens-list');
+      if(!box) return;
+      box.innerHTML = `<small class="muted">Loading citizens…</small>`;
       try{
-        await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
-      }catch(switchErr){
-        if(switchErr.code === 4902){
-          await provider.send('wallet_addEthereumChain', [{
-            chainId: desired,
-            chainName: 'Cronos Mainnet',
-            nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
-            rpcUrls:[LAUNCH.token.rpc],
-            blockExplorerUrls:['https://cronoscan.com']
-          }]);
-        }else{ throw switchErr; }
+        const citizens = await fetchCitizens(country);
+        renderCitizens(box, citizens);
+        toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
+      }catch(e){
+        console.error(e);
+        box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
       }
     }
-  }
 
-  async function hasRequiredTokens(address){
-    try{
-      const token = LAUNCH.token.address;
-      if(!token || token === '0x0000000000000000000000000000000000000000') return false;
-      const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
-      const bal   = await erc20.balanceOf(address);
-      const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
-      const ok = bal.gte(min);
-      if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
-      return ok;
-    }catch(e){
-      console.error('Token-gate check failed:', e);
-      toast('Token check failed');
-      alert('Could not verify token balance. Check network and token address.');
-      return false;
+    /**** Country coloring ****/
+    const countryLayers = new Map();
+    function colorFor(count){
+      if (count >= 25) return '#1d4ed8';
+      if (count >= 10) return '#3b82f6';
+      if (count >= 1)  return '#93c5fd';
+      return '#e5e7eb';
     }
-  }
+    function updateCountryStyle(name){
+      const layer = countryLayers.get(name);
+      if (!layer) return;
+      const count = countryCounts.get(name) || 0;
+      layer.setStyle({ fillColor: colorFor(count) });
+    }
 
-  if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+    /**** Mobile menu ****/
+    (function mobileMenu(){
+      const btn = el('hamburger');
+      const menu = el('mobile-menu');
+      if(!btn || !menu) return;
+      const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+      const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
+      btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
+      menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+      window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+      window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
+      window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
+    })();
 
-  /**** Firestore-backed mint ****/
-  async function attemptMint(country, nick){
-    if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
-    if(FLAGS.REQUIRE_WALLET && !userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
+    /**** Map + Countries ****/
+    const countryCounts = new Map();
+    const countryList = [];
+    let totalCitizens = 0;
+    el('year').textContent = new Date().getFullYear();
 
-    try{
-      setBusy(true);
+    const map = L.map('map', {
+      zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
+    }).setView([20, 0], 2);
 
-      if(FLAGS.TOKEN_GATE){
+    // Safe no-op flag helpers until GeoJSON loads
+    let setPassportFlag = () => {};
+    let setPassportFlagIcon = () => {};
+
+    // ======== FLAG FETCH + DATA-URL PIPELINE (canvas-safe) ========
+    const FLAG_CDN_PNG = (iso)=>`https://flagcdn.com/w320/${iso}.png`;
+    const FLAG_CDN_PNG_SMALL = (iso)=>`https://flagcdn.com/80x60/${iso}.png`;
+    const FLAG_CDN_SVG = (iso)=>`https://cdn.jsdelivr.net/npm/flag-icons/flags/4x3/${iso}.svg`;
+
+    async function fetchAsDataUrl(url){
+      const res = await fetch(url, { mode:'cors', cache:'force-cache' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const blob = await res.blob();
+      return await new Promise((resolve)=>{
+        const reader = new FileReader();
+        reader.onload = ()=>resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function fetchFlagAsDataUrl(iso){
+      const tries = [FLAG_CDN_PNG(iso), FLAG_CDN_SVG(iso), FLAG_CDN_PNG_SMALL(iso)];
+      let lastErr;
+      for (const u of tries){
+        try { return await fetchAsDataUrl(u); }
+        catch(e){ lastErr = e; }
+      }
+      throw lastErr || new Error('All flag sources failed');
+    }
+
+    // ======== After GeoJSON loads we define the real resolvers ========
+    const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+    fetch(GEOJSON_URL).then(r => r.json()).then(data => {
+      // Build country list
+      data.features.forEach(f => {
+        const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+        countryList.push(name);
+      });
+      countryList.sort((a,b)=>a.localeCompare(b));
+      populateCountryDropdown(countryList);
+
+      // Build name -> ISO2 map from the dataset
+      const NAME_TO_ISO2 = new Map();
+      data.features.forEach(f=>{
+        const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+        const iso2 = (f.properties.ISO_A2 || f.properties.iso_a2 || '').toLowerCase();
+        if(name && iso2 && iso2 !== '-99'){ NAME_TO_ISO2.set(name, iso2); }
+      });
+
+      function normalizeCountry(s){
+        return (s||'')
+          .trim()
+          .normalize('NFD').replace(/\p{Diacritic}+/gu,'')
+          .toLowerCase()
+          .replace(/[-_.’'`]/g,' ')
+          .replace(/\b(the|of|and)\b/g,' ')
+          .replace(/\b(republic|kingdom|state|federation|united|arab|emirates|democratic|people|socialist)\b/g,' ')
+          .replace(/\s+/g,' ')
+          .trim();
+      }
+
+      const NORMAL_NAME_TO_ISO2 = new Map();
+      for (const [name, iso] of NAME_TO_ISO2.entries()){
+        NORMAL_NAME_TO_ISO2.set(normalizeCountry(name), iso);
+      }
+
+      const ALIAS_TO_ISO2 = new Map([
+        ['espana','es'], ['spain','es'], ['españa','es'],
+        ['deutschland','de'], ['germany','de'],
+        ['brasil','br'], ['brazil','br'],
+        ['cote d ivoire','ci'], ['cote d’ivoire','ci'], ['ivory coast','ci'],
+        ['tuerkiye','tr'], ['turkiye','tr'], ['turkey','tr'],
+        ['viet nam','vn'], ['vietnam','vn'],
+        ['sverige','se'], ['sweden','se'],
+        ['danmark','dk'], ['denmark','dk'],
+        ['norge','no'], ['noreg','no'], ['norway','no'],
+        ['suisse','ch'], ['schweiz','ch'], ['svizzera','ch'], ['switzerland','ch'],
+        ['suomi','fi'], ['finland','fi'],
+        ['ellada','gr'], ['hellas','gr'], ['greece','gr'],
+        ['magyarorszag','hu'], ['hungary','hu'],
+        ['ceska republika','cz'], ['czech republic','cz'], ['czechia','cz'],
+        ['polska','pl'], ['poland','pl'],
+        ['romania','ro'], ['românia','ro'],
+        ['uk','gb'], ['u k','gb'], ['united kingdom','gb'],
+        ['england','gb'], ['scotland','gb'], ['wales','gb'], ['northern ireland','gb'],
+        ['usa','us'], ['u s a','us'], ['united states','us'],
+        ['south korea','kr'], ['republic of korea','kr'],
+        ['north korea','kp'], ['dprk','kp'],
+        ['dr congo','cd'], ['democratic republic of congo','cd'], ['congo kinshasa','cd'],
+        ['republic of congo','cg'], ['congo brazzaville','cg'],
+        ['uae','ae'], ['united arab emirates','ae'],
+        ['iran','ir'], ['islamic republic of iran','ir'],
+        ['syria','sy'], ['syrian arab republic','sy'],
+        ['hong kong','hk'], ['macau','mo'], ['macao','mo'],
+        ['taiwan','tw'], ['myanmar','mm'], ['burma','mm'],
+        ['cape verde','cv'], ['laos','la'], ['brunei','bn'],
+        ['tanzania','tz'], ['united republic of tanzania','tz'],
+        ['moldova','md'], ['bolivia','bo'], ['venezuela','ve']
+      ]);
+
+      function iso2FromEmojiFlag(s){
+        if(!s) return null;
+        const m = s.match(/\p{Regional_Indicator}{2}/u);
+        if(!m) return null;
+        const [a,b] = [...m[0]];
+        const toA = ch => String.fromCharCode(ch.codePointAt(0) - 0x1F1E6 + 0x41);
+        return (toA(a)+toA(b)).toLowerCase();
+      }
+
+      function iso2FromCountry(input){
+        if(!input) return null;
+
+        const emoji = iso2FromEmojiFlag(input);
+        if (emoji) return emoji;
+
+        const direct = NAME_TO_ISO2.get(input);
+        if (direct) return direct;
+
+        const norm = normalizeCountry(input);
+        const alias = ALIAS_TO_ISO2.get(norm);
+        if (alias) return alias;
+
+        const normMatch = NORMAL_NAME_TO_ISO2.get(norm);
+        if (normMatch) return normMatch;
+
+        const lower = input.toLowerCase();
+        for (const [name, code] of NAME_TO_ISO2.entries()){
+          if (name.toLowerCase() === lower) return code;
+        }
+        return null;
+      }
+
+      // Expose resolver for smoke tests
+      window.iso2FromCountry = iso2FromCountry;
+
+      // === Robust, canvas-safe painters ===
+      setPassportFlagIcon = async function(country){
+        const icon = document.getElementById('passport-flag-icon');
+        if(!icon) return;
+        const iso2 = iso2FromCountry(country);
+        if (!iso2){ icon.removeAttribute('src'); icon.style.display='none'; icon.alt=''; return; }
+        try{
+          const dataUrl = await fetchFlagAsDataUrl(iso2);
+          icon.src = dataUrl;
+          icon.style.display = 'inline-block';
+          icon.alt = `${country} flag`;
+          icon.decoding = 'async';
+        }catch(_){
+          icon.removeAttribute('src');
+          icon.style.display = 'none';
+          icon.alt = '';
+        }
+      };
+
+      setPassportFlag = async function(country){
+        const iso2 = iso2FromCountry(country);
+        const layer = document.getElementById('passport-flag');
+        const imgEl = document.getElementById('passport-flag-img');
+        if(!layer || !imgEl){ return; }
+        if (!iso2){ imgEl.removeAttribute('src'); layer.style.backgroundImage=''; return; }
+        try{
+          const dataUrl = await fetchFlagAsDataUrl(iso2);
+          // Prefer <img> source (Safari-friendly, canvas-safe)
+          imgEl.src = dataUrl;
+          // Keep CSS background as a subtle backup (no harm)
+          layer.style.backgroundImage = `url(${dataUrl})`;
+        }catch(_){
+          imgEl.removeAttribute('src');
+          layer.style.backgroundImage = '';
+        }
+      };
+
+      RESOLVER_READY = true;
+
+      // Repaint if passport was requested earlier
+      if (LAST_PASSPORT_COUNTRY) {
+        setPassportFlag(LAST_PASSPORT_COUNTRY);
+        setPassportFlagIcon(LAST_PASSPORT_COUNTRY);
+      }
+
+      // Draw map layer
+      const layerG = L.geoJSON(data, {
+        style: (feature) => {
+          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+          const count = countryCounts.get(name) || 0;
+          return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+        },
+        onEachFeature: (feature, l) => {
+          const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+          countryLayers.set(name, l);
+          l.on({
+            mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
+            mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
+            click:     () => openModal(name)
+          });
+          l.bindTooltip(name, { sticky: true });
+        }
+      }).addTo(map);
+
+      try { map.fitBounds(layerG.getBounds(), {padding:[10,10]}); } catch(e){}
+      requestAnimationFrame(() => map.invalidateSize());
+      setTimeout(() => map.invalidateSize(), 300);
+      ['orientationchange','resize'].forEach(ev =>
+        window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
+      );
+    }).catch(err => {
+      console.error('Failed to load GeoJSON', err);
+      el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+        Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+      </div>`;
+    });
+
+    function populateCountryDropdown(list){
+      const sel = el('country');
+      if(!sel) return;
+      const frag = document.createDocumentFragment();
+      list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
+      sel.appendChild(frag);
+    }
+
+    /**** Modal ****/
+    function openModal(country){
+      const modal = el('join-modal');
+      if(!modal) return;
+      el('modal-country').value = country || '';
+      el('modal-nickname').value = '';
+      modal.setAttribute('open', '');
+      document.body.classList.add('modal-open');
+      loadCitizensIntoModal(country);
+    }
+    function closeModal(){
+      const modal = el('join-modal');
+      if(!modal) return;
+      modal.removeAttribute('open');
+      document.body.classList.remove('modal-open');
+    }
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+
+    /**** Wallet + gating ****/
+    const connectBtn = el('connectBtn');
+    let provider = null, signer = null, userAddress = null;
+
+    function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
+
+    async function connectWallet(){
+      if(!window.ethereum){
+        alert('No wallet detected. Please install a Cronos-compatible wallet.');
+        toast('No wallet detected');
+        return;
+      }
+      try{
+        setBusy(true);
+        const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+        userAddress = (accounts && accounts[0]) ? accounts[0] : null;
+        window.userAddress = userAddress;
+        if(!userAddress){ setBusy(false); return; }
+
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer   = provider.getSigner();
+
         await ensureChain();
-        const ok = await hasRequiredTokens(userAddress);
-        if(!ok){ return; }
+
+        // Safer signed message (no arbitrary data)
+        const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
+        const signature = await signer.signMessage(message);
+        localStorage.setItem('cronation_sig', signature);
+
+        connectBtn.textContent = shortAddr(userAddress);
+        toast('Wallet connected');
+        restorePassportIfAny();
+        restorePfpIfAny(userAddress);
+      }catch(err){
+        console.error(err);
+        alert('Wallet connection was cancelled or failed.');
+        toast('Connection cancelled');
+      }finally{
+        setBusy(false);
+      }
+    }
+
+    async function ensureChain(){
+      const desired = LAUNCH.token.chainIdHex;
+      const current = await provider.send('eth_chainId', []);
+      if(current?.toLowerCase() !== desired.toLowerCase()){
+        try{
+          await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
+        }catch(switchErr){
+          if(switchErr.code === 4902){
+            await provider.send('wallet_addEthereumChain', [{
+              chainId: desired,
+              chainName: 'Cronos Mainnet',
+              nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+              rpcUrls:[LAUNCH.token.rpc],
+              blockExplorerUrls:['https://cronoscan.com']
+            }]);
+          }else{ throw switchErr; }
+        }
+      }
+    }
+
+    async function hasRequiredTokens(address){
+      try{
+        const token = LAUNCH.token.address;
+        if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+        const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+        const bal   = await erc20.balanceOf(address);
+        const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+        const ok = bal.gte(min);
+        if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
+        return ok;
+      }catch(e){
+        console.error('Token-gate check failed:', e);
+        toast('Token check failed');
+        alert('Could not verify token balance. Check network and token address.');
+        return false;
+      }
+    }
+
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+
+    /**** Firestore-backed mint ****/
+    async function attemptMint(country, nick){
+      if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
+      if(FLAGS.REQUIRE_WALLET && !userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
+
+      try{
+        setBusy(true);
+
+        if(FLAGS.TOKEN_GATE){
+          await ensureChain();
+          const ok = await hasRequiredTokens(userAddress);
+          if(!ok){ return; }
+        }
+
+        const addrKey = userAddress.toLowerCase();
+        const docRef = db.collection('passports').doc(addrKey);
+        const snap = await docRef.get();
+
+        if(snap.exists){
+          const p = snap.data();
+          showPassport(p.country, p.nick, p.serial);
+          hideJoinForm();
+          toast('You already minted — showing passport');
+          alert('You already have a passport. Showing it now.');
+          return;
+        }
+
+        const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
+        await docRef.set({
+          address: userAddress,
+          country, nick, serial,
+          created: firebase.firestore.FieldValue.serverTimestamp(),
+          createdClient: new Date().toISOString()
+        });
+
+        showPassport(country, nick, serial);
+        hideJoinForm();
+        hideCTAIfMinted();
+        toast(`Minted! Passport #${serial}`);
+      }catch(err){
+        console.error(err);
+        toast('Mint failed — try again');
+        alert('Mint failed. Please try again.');
+      }finally{
+        setBusy(false);
+      }
+    }
+
+    function hideJoinForm(){
+      const form = el('join-form');
+      if(form) form.style.display = 'none';
+    }
+
+    // --- PFP persistence (per-wallet, local only) ---
+    function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
+    function restorePfpIfAny(addr){
+      try{
+        const key = pfpKey(addr);
+        if(!key) return;
+        const dataUrl = localStorage.getItem(key);
+        if(dataUrl){
+          const img = el('passport-pfp');
+          if(img) img.src = dataUrl;
+        }
+      }catch(_e){}
+    }
+    async function fileToDataURLResized(file, max=360, quality=0.86){
+      const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      try{ URL.revokeObjectURL(img.src); }catch(_e){}
+      return dataUrl;
+    }
+
+    /* === Passport rendering === */
+    function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
+
+    function showPassport(country, nick, serial){
+      const card = document.getElementById('passport');
+      if(!card) return;
+
+      // Security: textContent only (prevents DOM injection)
+      setText('passport-nick', nick || 'Anonymous');
+      setText('passport-country', country || '—');
+      setText('passport-serial', '#'+(serial||'000000'));
+      setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
+      setText('passport-address-chip', shortAddrFull(window.userAddress||userAddress||''));
+
+      LAST_PASSPORT_COUNTRY = country;
+
+      // Paint flags (works even if resolver not ready — will replay after ready)
+      if (RESOLVER_READY){
+        setPassportFlag(country);
+        setPassportFlagIcon(country);
       }
 
-      const addrKey = userAddress.toLowerCase();
-      const docRef = db.collection('passports').doc(addrKey);
-      const snap = await docRef.get();
+      // restore any saved pfp for this wallet
+      restorePfpIfAny(window.userAddress || userAddress);
 
-      if(snap.exists){
-        const p = snap.data();
-        showPassport(p.country, p.nick, p.serial);
-        hideJoinForm();
-        toast('You already minted — showing passport');
-        alert('You already have a passport. Showing it now.');
+      // flash the activation glow
+      card.classList.remove('activated');
+      requestAnimationFrame(()=>{ card.classList.add('activated'); });
+
+      card.style.display = 'grid';
+      try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+
+      // show external controls + wire buttons
+      const controls = document.getElementById('passport-controls');
+      if (controls) controls.style.display = 'flex';
+
+      const shareBtn = document.getElementById('shareBtn');
+      if (shareBtn){
+        shareBtn.onclick = () => sharePassportFlow({ country, nick, serial });
+      }
+
+      const pfpInput = document.getElementById('pfpInput');
+      const dl = document.getElementById('downloadLink');
+      if (dl) dl.style.display = 'none';
+
+      if (pfpInput && !pfpInput._wired){
+        pfpInput._wired = true;
+        let lastObjectUrl = null;
+        const imgEl = document.getElementById('passport-pfp');
+
+        pfpInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if(!file) return;
+          if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+          if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+
+          // instant preview
+          if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+          lastObjectUrl = URL.createObjectURL(file);
+          if (imgEl) imgEl.src = lastObjectUrl;
+
+          // persist compressed copy
+          (async ()=>{
+            try{
+              const dataUrl = await fileToDataURLResized(file, 360, 0.86);
+              const key = (window.userAddress || userAddress)
+                ? `cronation_pfp:${(window.userAddress || userAddress).toLowerCase()}`
+                : null;
+              if(key) localStorage.setItem(key, dataUrl);
+            }catch(_e){}
+          })();
+        });
+
+        const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+        window.addEventListener('pagehide', cleanup, { once:true });
+        window.addEventListener('beforeunload', cleanup, { once:true });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'unloaded') cleanup();
+        });
+      }
+    }
+
+    // Stats + leaderboard
+    function renderStats({ allCounts, totalAll, todayCounts }) {
+      el('stat-countries').textContent = allCounts.size;
+      el('stat-citizens').textContent  = totalAll;
+
+      let top = '—', max = 0;
+      todayCounts.forEach((count, name) => {
+        if (count > max || (count === max && name < top)) { max = count; top = name; }
+      });
+      el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
+    }
+
+    async function renderLeaderboard(){
+      const container = document.getElementById('leaderboard');
+      if(!container) return;
+
+      const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
+      if(entries.length === 0){
+        container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
         return;
       }
 
-      const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
-      await docRef.set({
-        address: userAddress,
-        country, nick, serial,
-        created: firebase.firestore.FieldValue.serverTimestamp(),
-        createdClient: new Date().toISOString()
-      });
+      container.innerHTML = entries.map(([name, count], i) => `
+        <details data-country="${name}">
+          <summary>
+            <span>${i+1}. ${name}</span>
+            <span class="badge">${count}</span>
+          </summary>
+          <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
+        </details>
+      `).join('');
 
-      showPassport(country, nick, serial);
-      hideJoinForm();
-      hideCTAIfMinted();
-      toast(`Minted! Passport #${serial}`);
-    }catch(err){
-      console.error(err);
-      toast('Mint failed — try again');
-      alert('Mint failed. Please try again.');
-    }finally{
-      setBusy(false);
-    }
-  }
-
-  function hideJoinForm(){
-    const form = el('join-form');
-    if(form) form.style.display = 'none';
-  }
-
-  // --- PFP persistence (per-wallet, local only) ---
-  function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
-  function restorePfpIfAny(addr){
-    try{
-      const key = pfpKey(addr);
-      if(!key) return;
-      const dataUrl = localStorage.getItem(key);
-      if(dataUrl){
-        const img = el('passport-pfp');
-        if(img) img.src = dataUrl;
-      }
-    }catch(_e){}
-  }
-  async function fileToDataURLResized(file, max=360, quality=0.86){
-    const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
-    const scale = Math.min(1, max / Math.max(img.width, img.height));
-    const w = Math.max(1, Math.round(img.width * scale));
-    const h = Math.max(1, Math.round(img.height * scale));
-    const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-    try{ URL.revokeObjectURL(img.src); }catch(_e){}
-    return dataUrl;
-  }
-
-  /* === Passport rendering === */
-  function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
-  function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
-
-  function showPassport(country, nick, serial){
-    const card = document.getElementById('passport');
-    if(!card) return;
-
-    setText('passport-nick', nick);
-    setText('passport-country', country);
-    setText('passport-serial', '#'+serial);
-    setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
-    setText('passport-address-chip', shortAddrFull(window.userAddress||userAddress||''));
-
-    LAST_PASSPORT_COUNTRY = country;
-    setPassportFlag(country);
-    setPassportFlagIcon(country);
-
-    // restore any saved pfp for this wallet
-    restorePfpIfAny(window.userAddress || userAddress);
-
-    // flash the activation glow
-    card.classList.remove('activated');
-    requestAnimationFrame(()=>{ card.classList.add('activated'); });
-
-    card.style.display = 'grid';
-    try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
-
-    // show external controls + wire buttons
-    const controls = document.getElementById('passport-controls');
-    if (controls) controls.style.display = 'flex';
-
-    const shareBtn = document.getElementById('shareBtn');
-    if (shareBtn){
-      shareBtn.onclick = () => shareToX({ country, nick, serial });
-    }
-
-    const pfpInput = document.getElementById('pfpInput');
-    if (pfpInput && !pfpInput._wired){
-      pfpInput._wired = true;
-      let lastObjectUrl = null;
-      const imgEl = document.getElementById('passport-pfp');
-
-      pfpInput.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if(!file) return;
-        if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
-        if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
-
-        // instant preview
-        if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
-        lastObjectUrl = URL.createObjectURL(file);
-        if (imgEl) imgEl.src = lastObjectUrl;
-
-        // persist compressed copy
-        (async ()=>{
+      container.querySelectorAll('details').forEach((det, idx)=>{
+        det.addEventListener('toggle', async () => {
+          if(!det.open) return;
+          const name = det.getAttribute('data-country');
+          const pane = document.getElementById(`lb-${idx}`);
+          if(!pane) return;
+          pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
           try{
-            const dataUrl = await fileToDataURLResized(file, 360, 0.86);
-            const key = (window.userAddress || userAddress)
-              ? `cronation_pfp:${(window.userAddress || userAddress).toLowerCase()}`
-              : null;
-            if(key) localStorage.setItem(key, dataUrl);
-          }catch(_e){}
-        })();
-      });
-
-      const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
-      window.addEventListener('pagehide', cleanup, { once:true });
-      window.addEventListener('beforeunload', cleanup, { once:true });
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'unloaded') cleanup();
+            const citizens = await fetchCitizens(name);
+            renderCitizens(pane, citizens);
+          }catch(e){
+            console.error(e);
+            pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+          }
+        }, { passive:true });
       });
     }
-  }
 
-  // Stats + leaderboard
-  function renderStats({ allCounts, totalAll, todayCounts }) {
-    el('stat-countries').textContent = allCounts.size;
-    el('stat-citizens').textContent  = totalAll;
-
-    let top = '—', max = 0;
-    todayCounts.forEach((count, name) => {
-      if (count > max || (count === max && name < top)) { max = count; top = name; }
-    });
-    el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
-  }
-
-  async function renderLeaderboard(){
-    const container = document.getElementById('leaderboard');
-    if(!container) return;
-
-    const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
-    if(entries.length === 0){
-      container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
-      return;
-    }
-
-    container.innerHTML = entries.map(([name, count], i) => `
-      <details data-country="${name}">
-        <summary>
-          <span>${i+1}. ${name}</span>
-          <span class="badge">${count}</span>
-        </summary>
-        <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
-      </details>
-    `).join('');
-
-    container.querySelectorAll('details').forEach((det, idx)=>{
-      det.addEventListener('toggle', async () => {
-        if(!det.open) return;
-        const name = det.getAttribute('data-country');
-        const pane = document.getElementById(`lb-${idx}`);
-        if(!pane) return;
-        pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
-        try{
-          const citizens = await fetchCitizens(name);
-          renderCitizens(pane, citizens);
-        }catch(e){
-          console.error(e);
-          pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
-        }
-      }, { passive:true });
-    });
-  }
-
-  // recolor after counts change
-  countryLayers.forEach((_, name) => updateCountryStyle(name));
-
-  async function restorePassportIfAny(){
-    if(!userAddress) return;
-    const snap = await db.collection('passports').doc(userAddress.toLowerCase()).get();
-    if(snap.exists){
-      const p = snap.data();
-      showPassport(p.country, p.nick, p.serial);
-      toast('Welcome back — passport restored');
-      hideJoinForm();
-    }
-  }
-
-  // Real-time listener for stats/leaderboard
-  db.collection('passports').onSnapshot((qs)=>{
-    countryCounts.clear();
-    const todayCounts = new Map();
-    totalCitizens = 0;
-
-    const start = new Date(); start.setHours(0,0,0,0);
-
-    qs.forEach(doc=>{
-      const d = doc.data();
-      if(!d || !d.country) return;
-
-      // overall
-      countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-      totalCitizens += 1;
-
-      // today (robust timestamp handling)
-      const t =
-        (d.created && typeof d.created.toDate === 'function')
-          ? d.created.toDate()
-          : (d.createdClient ? new Date(d.createdClient) : null);
-
-      if (t && t >= start) {
-        todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
-      }
-    });
-
-    renderStats({ allCounts: countryCounts, totalAll: totalCitizens, todayCounts });
-    renderLeaderboard();
+    // recolor after counts change
     countryLayers.forEach((_, name) => updateCountryStyle(name));
-  });
 
-  // Form submit
-  el('join-form').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const country = el('country').value;
-    if(!country){ toast('Choose your country'); return; }
-    const nick = el('nickname').value || 'Anonymous';
-    await attemptMint(country, nick);
-  });
-
-  // Modal -> mint
-  function mintFromModal(){
-    const country = el('modal-country').value;
-    const nick = el('modal-nickname').value || 'Anonymous';
-    attemptMint(country, nick);
-    closeModal();
-  }
-  window.mintFromModal = mintFromModal;
-
-  /**** Share to 𝕏 ****/
-  function shareToX({country, nick, serial}){
-    const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
-    const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
-    const tags = 'Cronos,CROnation,CRON8,crofam';
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-    toast('Opening 𝕏 to share…');
-    window.open(shareUrl, '_blank','noopener');
-  }
-
-  /**** Page boot ****/
-  (function boot(){
-    const mintBtn = el('mintBtn');
-    const modalMintBtn = el('modalMintBtn');
-    if(!FLAGS.PASSPORT_MINT_ENABLED){
-      if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
-      if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
-    }else{
-      if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
-      if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
+    async function restorePassportIfAny(){
+      if(!userAddress) return;
+      const snap = await db.collection('passports').doc(userAddress.toLowerCase()).get();
+      if(snap.exists){
+        const p = snap.data();
+        showPassport(p.country, p.nick, p.serial);
+        toast('Welcome back — passport restored');
+        hideJoinForm();
+        // Ensure flags render if resolver becomes ready later
+        if (RESOLVER_READY){
+          setPassportFlag(p.country);
+          setPassportFlagIcon(p.country);
+        }
+      }
     }
-    el('year').textContent = new Date().getFullYear();
-  })();
-});   // end DOMContentLoaded
-</script>
+
+    // Real-time listener for stats/leaderboard
+    db.collection('passports').onSnapshot((qs)=>{
+      countryCounts.clear();
+      const todayCounts = new Map();
+      totalCitizens = 0;
+
+      const start = new Date(); start.setHours(0,0,0,0);
+
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d || !d.country) return;
+
+        // overall
+        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+        totalCitizens += 1;
+
+        // today
+        const t =
+          (d.created && typeof d.created.toDate === 'function')
+            ? d.created.toDate()
+            : (d.createdClient ? new Date(d.createdClient) : null);
+
+        if (t && t >= start) {
+          todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
+        }
+      });
+
+      renderStats({ allCounts: countryCounts, totalAll: totalCitizens, todayCounts });
+      renderLeaderboard();
+      countryLayers.forEach((_, name) => updateCountryStyle(name));
+    });
+
+    // Form submit
+    el('join-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const country = el('country').value;
+      if(!country){ toast('Choose your country'); return; }
+      const nick = el('nickname').value || 'Anonymous';
+      await attemptMint(country, nick);
+    });
+
+    // Modal -> mint
+    function mintFromModal(){
+      const country = el('modal-country').value;
+      const nick = el('modal-nickname').value || 'Anonymous';
+      attemptMint(country, nick);
+      closeModal();
+    }
+    window.mintFromModal = mintFromModal;
+
+    /**** Share flow — generate a PNG + open X intent ****/
+    async function sharePassportFlow({country, nick, serial}){
+      const node = el('passport');
+      if(!node){ return; }
+      try{
+        setBusy(true);
+        // Filter out map tooltips / anything off-card
+        const dataUrl = await htmlToImage.toPng(node, {
+          pixelRatio: Math.min(2, window.devicePixelRatio || 1.5),
+          cacheBust: true,
+          backgroundColor: '#0d203a',
+          filter: (domNode) => {
+            // Exclude Leaflet tooltips or anything aria-hidden=true unless it's our flag layer
+            if (domNode.id === 'passport-flag' || domNode.id === 'passport-flag-img') return true;
+            const hidden = domNode.getAttribute && domNode.getAttribute('aria-hidden') === 'true';
+            return !hidden;
+          }
+        });
+
+        // Offer a download link (always)
+        const dl = el('downloadLink');
+        if (dl){
+          dl.href = dataUrl;
+          dl.style.display = 'inline-flex';
+        }
+
+        // Try native share with the image on mobile
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], 'cronation-passport.png', { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })){
+          await navigator.share({
+            files: [file],
+            title: 'My CROnation Passport',
+            text: `🌍 I just joined CROnation! Passport #${serial} — ${nick} from ${country}`
+          });
+        } else {
+          // Open X intent with site URL; user can attach the PNG (downloaded) if needed
+          const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
+          const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
+          const tags = 'Cronos,CROnation,CRON8,crofam';
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+          window.open(shareUrl, '_blank','noopener');
+          toast('PNG ready — attach it in the composer or use Download PNG.');
+        }
+      }catch(e){
+        console.error(e);
+        alert('Could not generate the image. Try again.');
+      }finally{
+        setBusy(false);
+      }
+    }
+    window.sharePassportFlow = sharePassportFlow;
+
+    /**** Page boot ****/
+    (function boot(){
+      const mintBtn = el('mintBtn');
+      const modalMintBtn = el('modalMintBtn');
+      if(!FLAGS.PASSPORT_MINT_ENABLED){
+        if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
+        if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
+      }else{
+        if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
+        if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
+      }
+      el('year').textContent = new Date().getFullYear();
+    })();
+
+    /**** Accessibility: focus order and keyboard ****/
+    // Move focus to passport when it appears
+    const obs = new MutationObserver(() => {
+      const pass = el('passport');
+      if (pass && pass.style.display !== 'none') { pass.setAttribute('tabindex','-1'); pass.focus({preventScroll:true}); }
+    });
+    obs.observe(document.body, { subtree:true, attributes:true, attributeFilter:['style'] });
+
+    /**** Console smoke tests ****/
+    window._cronation = {
+      // Resolve ISO2 from free-form/emoji input
+      iso2: (s)=> (window.iso2FromCountry ? window.iso2FromCountry(s) : null),
+      // Preflight a flag (returns a promise with data URL or throws)
+      preflightFlag: (iso)=> fetchFlagAsDataUrl(iso),
+      // Test: repaint current passport if a country is set
+      repaint: ()=> LAST_PASSPORT_COUNTRY && RESOLVER_READY && (setPassportFlag(LAST_PASSPORT_COUNTRY), setPassportFlagIcon(LAST_PASSPORT_COUNTRY))
+    };
+    // Usage in console:
+    // _cronation.iso2('España')  -> "es"
+    // _cronation.preflightFlag('gb').then(u=>console.log(u.slice(0,32)))
+    // _cronation.repaint()
+  });
+  </script>
 </body>
 </html>
