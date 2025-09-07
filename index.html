@@ -662,35 +662,136 @@ window.addEventListener('DOMContentLoaded', () => {
     populateCountryDropdown(countryList);
 
     // Build name -> ISO2 map from the same dataset
-    const NAME_TO_ISO2 = new Map();
-    data.features.forEach(f=>{
-      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-      const iso2 = (f.properties.ISO_A2 || f.properties.iso_a2 || '').toLowerCase();
-      if(name && iso2 && iso2 !== '-99'){ NAME_TO_ISO2.set(name, iso2); }
-    });
+    // ------------ Robust ISO2 resolver ------------
+const NAME_TO_ISO2 = new Map();
+data.features.forEach(f=>{
+  const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+  const iso2 = (f.properties.ISO_A2 || f.properties.iso_a2 || '').toLowerCase();
+  if(name && iso2 && iso2 !== '-99'){ NAME_TO_ISO2.set(name, iso2); }
+});
 
-    // Upgrade helpers now that we have the ISO map
-    setPassportFlag = function(country){
-      const layer = document.getElementById('passport-flag');
-      if(!layer) return;
-      const iso2 = NAME_TO_ISO2.get(country) || null;
-      layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
-    };
+// Normalize: lowercase, strip diacritics, punctuation, common prefixes
+function normalizeCountry(s){
+  return (s||'')
+    .trim()
+    .normalize('NFD').replace(/\p{Diacritic}+/gu,'')      // remove accents
+    .toLowerCase()
+    .replace(/[-_.’'`]/g,' ')                             // unify punctuation
+    .replace(/\b(the|of|and)\b/g,' ')                     // filler words
+    .replace(/\b(republic|kingdom|state|federation|united|arab|emirates|democratic|people|socialist)\b/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 
-    setPassportFlagIcon = function(country){
-      const icon = document.getElementById('passport-flag-icon');
-      if(!icon) return;
-      const iso2 = NAME_TO_ISO2.get(country) || null;
-      if (iso2){
-        icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-        icon.style.display = 'inline-block';
-        icon.alt = `${country} flag`;
-      } else {
-        icon.removeAttribute('src'); icon.style.display = 'none'; icon.alt = '';
-      }
-    };
+// Map all dataset names by their normalized form
+const NORMAL_NAME_TO_ISO2 = new Map();
+for (const [name, iso] of NAME_TO_ISO2.entries()){
+  NORMAL_NAME_TO_ISO2.set(normalizeCountry(name), iso);
+}
 
-    // If a passport was already shown before helpers were ready, paint its flags now
+// Extra aliases (local names, short forms, sub-nation names => parent ISO)
+const ALIAS_TO_ISO2 = new Map([
+  // Common variants & locals
+  ['espana','es'], ['spain','es'], ['españa','es'],
+  ['deutschland','de'], ['germany','de'],
+  ['brasil','br'], ['brazil','br'],
+  ['cote d ivoire','ci'], ['cote d’ivoire','ci'], ['ivory coast','ci'],
+  ['tuerkiye','tr'], ['turkiye','tr'], ['turkey','tr'],
+  ['viet nam','vn'], ['vietnam','vn'],
+  ['sverige','se'], ['sweden','se'],
+  ['danmark','dk'], ['denmark','dk'],
+  ['norge','no'], ['noreg','no'], ['norway','no'],
+  ['suisse','ch'], ['schweiz','ch'], ['svizzera','ch'], ['switzerland','ch'],
+  ['suomi','fi'], ['finland','fi'],
+  ['ellada','gr'], ['hellas','gr'], ['greece','gr'],
+  ['magyarorszag','hu'], ['hungary','hu'],
+  ['ceska republika','cz'], ['czech republic','cz'], ['czechia','cz'],
+  ['polska','pl'], ['poland','pl'],
+  ['romania','ro'], ['românia','ro'],
+  ['espirito santo','br'], // harmless; will fall back to BR if someone typed state
+  // UK + parts
+  ['uk','gb'], ['u k','gb'], ['united kingdom','gb'],
+  ['england','gb'], ['scotland','gb'], ['wales','gb'], ['northern ireland','gb'],
+  // US short forms
+  ['usa','us'], ['u s a','us'], ['united states','us'],
+  // Korea / Congo disambiguations
+  ['south korea','kr'], ['republic of korea','kr'],
+  ['north korea','kp'], ['dprk','kp'],
+  ['dr congo','cd'], ['democratic republic of congo','cd'], ['congo kinshasa','cd'],
+  ['republic of congo','cg'], ['congo brazzaville','cg'],
+  // Middle East
+  ['uae','ae'], ['united arab emirates','ae'],
+  ['iran','ir'], ['islamic republic of iran','ir'],
+  ['syria','sy'], ['syrian arab republic','sy'],
+  // China regions (FYI: dataset treats separately)
+  ['hong kong','hk'], ['macau','mo'], ['macao','mo'],
+  // Other frequent ones
+  ['taiwan','tw'], ['myanmar','mm'], ['burma','mm'],
+  ['cape verde','cv'], ['laos','la'], ['brunei','bn'],
+  ['tanzania','tz'], ['united republic of tanzania','tz'],
+  ['moldova','md'], ['bolivia','bo'], ['venezuela','ve']
+]);
+
+// Emoji 🇦🇺🇺🇸 etc. -> 'au', 'us'
+function iso2FromEmojiFlag(s){
+  if(!s) return null;
+  const m = s.match(/\p{Regional_Indicator}{2}/u);
+  if(!m) return null;
+  const [a,b] = [...m[0]];
+  const toA = ch => String.fromCharCode(ch.codePointAt(0) - 0x1F1E6 + 0x41);
+  return (toA(a)+toA(b)).toLowerCase();
+}
+
+function iso2FromCountry(input){
+  if(!input) return null;
+
+  // 1) Emoji flag
+  const emoji = iso2FromEmojiFlag(input);
+  if (emoji) return emoji;
+
+  // 2) Direct dataset name
+  const direct = NAME_TO_ISO2.get(input);
+  if (direct) return direct;
+
+  // 3) Alias table (normalized)
+  const norm = normalizeCountry(input);
+  const alias = ALIAS_TO_ISO2.get(norm);
+  if (alias) return alias;
+
+  // 4) Normalized dataset match
+  const normMatch = NORMAL_NAME_TO_ISO2.get(norm);
+  if (normMatch) return normMatch;
+
+  // 5) Last-chance: case-insensitive exact
+  const lower = input.toLowerCase();
+  for (const [name, code] of NAME_TO_ISO2.entries()){
+    if (name.toLowerCase() === lower) return code;
+  }
+  return null;
+}
+
+// Use the unified resolver everywhere
+setPassportFlag = function(country){
+  const layer = document.getElementById('passport-flag');
+  if(!layer) return;
+  const iso2 = iso2FromCountry(country);
+  layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
+};
+
+setPassportFlagIcon = function(country){
+  const icon = document.getElementById('passport-flag-icon');
+  if(!icon) return;
+  const iso2 = iso2FromCountry(country);
+  if (iso2){
+    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+    icon.style.display = 'inline-block';
+    icon.alt = `${country} flag`;
+  } else {
+    icon.removeAttribute('src'); icon.style.display = 'none'; icon.alt = '';
+  }
+};
+
+// Repaint if passport was shown earlier
 if (LAST_PASSPORT_COUNTRY) {
   setPassportFlag(LAST_PASSPORT_COUNTRY);
   setPassportFlagIcon(LAST_PASSPORT_COUNTRY);
