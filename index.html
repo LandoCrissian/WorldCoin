@@ -959,13 +959,20 @@ if (pfpInput && !pfpInput._wired){
 }
 
   // Stats + leaderboard
-  function renderStats(){
-    el('stat-countries').textContent = countryCounts.size;
-    el('stat-citizens').textContent  = totalCitizens;
-    let top = '—', max = -1;
-    countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
-    el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
-  }
+  function renderStats({ allCounts, totalAll, todayCounts }) {
+  // totals
+  el('stat-countries').textContent = allCounts.size;
+  el('stat-citizens').textContent  = totalAll;
+
+  // most active TODAY
+  let top = '—', max = 0;
+  todayCounts.forEach((count, name) => {
+    if (count > max || (count === max && name < top)) { // alphabet tie-break
+      max = count; top = name;
+    }
+  });
+  el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
+}
 
   async function renderLeaderboard(){
   const container = document.getElementById('leaderboard');
@@ -1021,18 +1028,31 @@ if (pfpInput && !pfpInput._wired){
 
   // Real-time listener for stats/leaderboard
   db.collection('passports').onSnapshot((qs)=>{
-    countryCounts.clear();
-    totalCitizens = 0;
-    qs.forEach(doc=>{
-      const d = doc.data();
-      if(!d || !d.country) return;
-      countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-      totalCitizens += 1;
-    });
-    renderStats();
-    renderLeaderboard();
-    countryLayers.forEach((_, name) => updateCountryStyle(name));
+  countryCounts.clear();
+  const todayCounts = new Map();
+  totalCitizens = 0;
+
+  const start = new Date(); start.setHours(0,0,0,0);
+
+  qs.forEach(doc=>{
+    const d = doc.data();
+    if(!d || !d.country) return;
+
+    // overall
+    countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+    totalCitizens += 1;
+
+    // today
+    const t = d.created && d.created.toDate ? d.created.toDate() : null;
+    if (t && t >= start) {
+      todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
+    }
   });
+
+  renderStats({ allCounts: countryCounts, totalAll: totalCitizens, todayCounts });
+  renderLeaderboard();
+  countryLayers.forEach((_, name) => updateCountryStyle(name));
+});
 
   // Form submit
   // Form submit
