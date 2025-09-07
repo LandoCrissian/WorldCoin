@@ -657,6 +657,14 @@
     const FLAG_CDN_PNG = (iso)=>`https://flagcdn.com/w320/${iso}.png`;
     const FLAG_CDN_PNG_SMALL = (iso)=>`https://flagcdn.com/80x60/${iso}.png`;
     const FLAG_CDN_SVG = (iso)=>`https://cdn.jsdelivr.net/npm/flag-icons/flags/4x3/${iso}.svg`;
+    // Always-available inline SVGs for key countries (last-resort fallback)
+const INLINE_FLAG_SVGS = {
+  us: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900"><rect width="7410" height="3900" fill="%23b22234"/><g fill="%23fff"><rect y="300" width="7410" height="300"/><rect y="900" width="7410" height="300"/><rect y="1500" width="7410" height="300"/><rect y="2100" width="7410" height="300"/><rect y="2700" width="7410" height="300"/><rect y="3300" width="7410" height="300"/></g><rect width="2964" height="2100" fill="%23003f87"/></svg>',
+  gb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30"><clipPath id="c"><path d="M0,0H60V30H0z"/></clipPath><g clip-path="url(%23c)"><path d="M0,0H60V30H0z" fill="%2301215b"/><path d="M0,0 60,30M60,0 0,30" stroke="%23fff" stroke-width="6"/><path d="M0,0 60,30M60,0 0,30" stroke="%23c8102e" stroke-width="4"/><path d="M30,0v30M0,15h60" stroke="%23fff" stroke-width="10"/><path d="M30,0v30M0,15h60" stroke="%23c8102e" stroke-width="6"/></g></svg>',
+  es: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="3" height="2" fill="%23AA151B"/><rect y="0.5" width="3" height="1" fill="%23F1BF00"/></svg>',
+  tr: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="3" height="2" fill="%23e30a17"/><g transform="translate(1.1,1)"><circle r="0.5" fill="%23fff"/><circle cx="0.1" r="0.4" fill="%23e30a17"/></g><path d="M1.55 0.65l0.45 0.35-0.17-0.52 0.45-0.32-0.56 0-0.17-0.52-0.17 0.52-0.56 0 0.45 0.32-0.17 0.52z" fill="%23fff" transform="scale(0.6) translate(1.3,1)" /></svg>',
+  ci: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"><rect width="1" height="2" fill="%23F77F00"/><rect x="1" width="1" height="2" fill="%23fff"/><rect x="2" width="1" height="2" fill="%23009646"/></svg>'
+};
 
     async function fetchAsDataUrl(url){
       const res = await fetch(url, { mode:'cors', cache:'force-cache' });
@@ -670,14 +678,38 @@
     }
 
     async function fetchFlagAsDataUrl(iso){
-      const tries = [FLAG_CDN_PNG(iso), FLAG_CDN_SVG(iso), FLAG_CDN_PNG_SMALL(iso)];
-      let lastErr;
-      for (const u of tries){
-        try { return await fetchAsDataUrl(u); }
-        catch(e){ lastErr = e; }
-      }
-      throw lastErr || new Error('All flag sources failed');
-    }
+  const s = (iso||'').toLowerCase();
+  const tries = [FLAG_CDN_PNG(s), FLAG_CDN_SVG(s), FLAG_CDN_PNG_SMALL(s)];
+  let lastErr;
+  for (const u of tries){
+    try{
+      const res = await fetch(u, { mode:'cors', cache:'force-cache' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const blob = await res.blob();
+      const dataUrl = await new Promise((resolve)=>{
+        const r = new FileReader(); r.onload = ()=>resolve(r.result); r.readAsDataURL(blob);
+      });
+      return dataUrl; // canvas-safe
+    }catch(e){ lastErr = e; }
+  }
+  if (INLINE_FLAG_SVGS[s]) return INLINE_FLAG_SVGS[s]; // last-resort, always works
+  throw lastErr || new Error('All flag sources failed');
+}
+
+    async function ensureCanvasSafePFP(){
+  const img = document.getElementById('passport-pfp');
+  if(!img) return;
+  if (img.src.startsWith('data:')) return;  // already safe
+  try{
+    const res = await fetch(img.src, { mode:'cors', cache:'force-cache' });
+    if(!res.ok) return;
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve)=>{
+      const r = new FileReader(); r.onload=()=>resolve(r.result); r.readAsDataURL(blob);
+    });
+    img.src = dataUrl; // switch to data URL to avoid canvas taint
+  }catch(_e){}
+}
 
     // ======== After GeoJSON loads we define the real resolvers ========
     const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
@@ -1257,9 +1289,12 @@
       if(!node){ return; }
       try{
         setBusy(true);
+        // iOS memory guard + make emblem/PFP canvas-safe
+        const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+        await ensureCanvasSafePFP();
         // Filter out map tooltips / anything off-card
         const dataUrl = await htmlToImage.toPng(node, {
-          pixelRatio: Math.min(2, window.devicePixelRatio || 1.5),
+          pixelRatio: Math.min(isiOS ? 1.5 : 2, window.devicePixelRatio || 1.5),
           cacheBust: true,
           backgroundColor: '#0d203a',
           filter: (domNode) => {
