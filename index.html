@@ -1265,6 +1265,152 @@ const INLINE_FLAG_SVGS = {
       countryLayers.forEach((_, name) => updateCountryStyle(name));
     });
 
+    // --------- PASSPOINT: Canvas fallback renderer (no DOM snapshot needed) ----------
+async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
+  // Sizes picked for crisp share card
+  const DPR = Math.min(2, window.devicePixelRatio || 1.5);
+  const W = 1200, H = 480;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  // Colors
+  const bg = '#0d203a', text = '#ffffff', muted = 'rgba(229,231,235,.85)';
+  // Rounded card
+  const radius = 24;
+  ctx.fillStyle = bg;
+  roundRect(ctx, 0, 0, W, H, radius);
+  ctx.fill();
+
+  // Flag background (data URL from our existing pipeline)
+  const iso2 = (window.iso2FromCountry ? window.iso2FromCountry(country) : null);
+  let flagUrl = null;
+  if (iso2) {
+    try { flagUrl = await fetchFlagAsDataUrl(iso2); } catch(_e){}
+  }
+  if (flagUrl) {
+    const flag = await loadImg(flagUrl);
+    // slight blur/saturate if supported
+    const oldFilter = ctx.filter;
+    try { ctx.filter = 'blur(2px) saturate(1.2)'; } catch(_e){}
+    ctx.globalAlpha = 0.32;
+    ctx.drawImage(flag, 0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.filter = oldFilter;
+  }
+
+  // Subtle diagonal sheen
+  const grad = ctx.createLinearGradient(0,0, W, H);
+  grad.addColorStop(0, 'rgba(255,255,255,.05)');
+  grad.addColorStop(.3,'rgba(255,255,255,0)');
+  grad.addColorStop(.6,'rgba(255,255,255,.04)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  roundRect(ctx, 0, 0, W, H, radius);
+  ctx.fill();
+
+  // Emblem/PFP (use current <img> — convert to data URL if needed)
+  const pfpEl = document.getElementById('passport-pfp');
+  let pfpSrc = pfpEl && pfpEl.src || '';
+  if (!pfpSrc.startsWith('data:')) {
+    try {
+      const res = await fetch(pfpSrc, { mode:'cors', cache:'force-cache' });
+      const blob = await res.blob();
+      pfpSrc = await blobToDataUrl(blob);
+    } catch(_e){ pfpSrc = null; }
+  }
+  // emblem container
+  const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
+  ctx.fillStyle = 'rgba(15,18,25,.7)';
+  roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r);
+  ctx.fill();
+  if (pfpSrc) {
+    const pfp = await loadImg(pfpSrc);
+    roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r);
+    ctx.save();
+    ctx.clip();
+    ctx.drawImage(pfp, EMB.x, EMB.y, EMB.w, EMB.h);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(148,163,184,.25)';
+    ctx.lineWidth = 2;
+    roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r);
+    ctx.stroke();
+  }
+
+  // Title + serial
+  ctx.fillStyle = text;
+  ctx.font = '700 52px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+  ctx.textBaseline = 'top';
+  ctx.fillText('CROnation Passport', 36+128+24, 40);
+  ctx.font = '800 58px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+  ctx.fillText('#' + String(serial).padStart(6,'0'), 36+128+24, 100);
+
+  // Subtitle line
+  ctx.font = '600 30px Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+  ctx.fillStyle = muted;
+  const nickSafe = (nick||'Anonymous');
+  const countrySafe = (country||'—');
+  const line = `CROnation — ${countrySafe}`;
+  ctx.fillText(line, 36+128+24, 170);
+
+  // Address chip
+  const addr = address ? (address.slice(0,6)+'…'+address.slice(-4)) : '';
+  if (addr) {
+    const chipX = 36+128+24, chipY = 220;
+    const padX = 16, padY = 8;
+    ctx.font = '700 24px Inter, system-ui, -apple-system';
+    const chipW = Math.ceil(ctx.measureText(addr).width) + padX*2;
+    const chipH = 40;
+    ctx.fillStyle = 'rgba(2,6,23,.35)';
+    roundRect(ctx, chipX, chipY, chipW, chipH, 18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(148,163,184,.28)';
+    ctx.lineWidth = 2;
+    roundRect(ctx, chipX, chipY, chipW, chipH, 18);
+    ctx.stroke();
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText(addr, chipX+padX, chipY+padY-2);
+  }
+
+  // Watermark
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 96px Inter, system-ui, -apple-system';
+  wrapBigUpper(ctx, (country||'').toUpperCase(), 36, H-140, W-72, 100, 1.05);
+  ctx.restore();
+
+  return canvas.toDataURL('image/png', 0.95);
+
+  // ---- helpers ----
+  function roundRect(c, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    c.beginPath();
+    c.moveTo(x+rr, y);
+    c.arcTo(x+w, y,   x+w, y+h, rr);
+    c.arcTo(x+w, y+h, x,   y+h, rr);
+    c.arcTo(x,   y+h, x,   y,   rr);
+    c.arcTo(x,   y,   x+w, y,   rr);
+    c.closePath();
+  }
+  function loadImg(src){ return new Promise((res, rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+  function blobToDataUrl(b){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); }); }
+  function wrapBigUpper(c, text, x, y, maxW, size, lh){
+    const words = (text||'').split(/\s+/);
+    let line = '', yy = y, lineH = 84 * (lh||1.05);
+    for (let w of words){
+      const test = (line?line+' ':'')+w;
+      if (c.measureText(test).width > maxW && line){
+        c.fillText(line, x, yy);
+        line = w; yy += lineH;
+      }else line = test;
+    }
+    if (line) c.fillText(line, x, yy);
+  }
+}
+
     // Form submit
     el('join-form').addEventListener('submit', async (e)=>{
       e.preventDefault();
@@ -1288,55 +1434,66 @@ const INLINE_FLAG_SVGS = {
       const node = el('passport');
       if(!node){ return; }
       try{
-        setBusy(true);
-        // iOS memory guard + make emblem/PFP canvas-safe
-        const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-        await ensureCanvasSafePFP();
-        // Filter out map tooltips / anything off-card
-        const dataUrl = await htmlToImage.toPng(node, {
-          pixelRatio: Math.min(isiOS ? 1.5 : 2, window.devicePixelRatio || 1.5),
-          cacheBust: true,
-          backgroundColor: '#0d203a',
-          filter: (domNode) => {
-            // Exclude Leaflet tooltips or anything aria-hidden=true unless it's our flag layer
-            if (domNode.id === 'passport-flag' || domNode.id === 'passport-flag-img') return true;
-            const hidden = domNode.getAttribute && domNode.getAttribute('aria-hidden') === 'true';
-            return !hidden;
-          }
-        });
+  setBusy(true);
 
-        // Offer a download link (always)
-        const dl = el('downloadLink');
-        if (dl){
-          dl.href = dataUrl;
-          dl.style.display = 'inline-flex';
-        }
+  // Make emblem/PFP canvas-safe & guard DPR for iOS
+  const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  await ensureCanvasSafePFP();
 
-        // Try native share with the image on mobile
-        const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], 'cronation-passport.png', { type: 'image/png' });
+  const node = document.getElementById('passport');
+  let dataUrl = null;
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })){
-          await navigator.share({
-            files: [file],
-            title: 'My CROnation Passport',
-            text: `🌍 I just joined CROnation! Passport #${serial} — ${nick} from ${country}`
-          });
-        } else {
-          // Open X intent with site URL; user can attach the PNG (downloaded) if needed
-          const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
-          const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
-          const tags = 'Cronos,CROnation,CRON8,crofam';
-          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-          window.open(shareUrl, '_blank','noopener');
-          toast('PNG ready — attach it in the composer or use Download PNG.');
-        }
-      }catch(e){
-        console.error(e);
-        alert('Could not generate the image. Try again.');
-      }finally{
-        setBusy(false);
+  // 1) Try DOM snapshot first (nicer if it works)
+  try{
+    dataUrl = await htmlToImage.toPng(node, {
+      pixelRatio: Math.min(isiOS ? 1.5 : 2, window.devicePixelRatio || 1.5),
+      cacheBust: true,
+      backgroundColor: '#0d203a',
+      filter: (n) => {
+        if (n.id === 'passport-flag' || n.id === 'passport-flag-img') return true;
+        const hidden = n.getAttribute && n.getAttribute('aria-hidden') === 'true';
+        return !hidden;
       }
+    });
+  }catch(domErr){
+    console.warn('DOM → PNG failed, falling back to canvas', domErr);
+  }
+
+  // 2) If DOM failed, paint a fresh image on <canvas>
+  if (!dataUrl){
+    dataUrl = await renderPassportPNGViaCanvas({
+      country, nick, serial, address: (window.userAddress || '')
+    });
+  }
+
+  // Offer download
+  const dl = document.getElementById('downloadLink');
+  if (dl){ dl.href = dataUrl; dl.style.display = 'inline-flex'; }
+
+  // Try native share with file
+  const blob = await (await fetch(dataUrl)).blob();
+  const file = new File([blob], 'cronation-passport.png', { type: 'image/png' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })){
+    await navigator.share({
+      files: [file],
+      title: 'My CROnation Passport',
+      text: `🌍 I just joined CROnation! Passport #${serial} — ${nick} from ${country}`
+    });
+  } else {
+    const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
+    const url = `${LAUNCH.siteUrl}?utm_source=twitter&utm_medium=share&utm_campaign=passport`;
+    const tags = 'Cronos,CROnation,CRON8,crofam';
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+    window.open(shareUrl, '_blank','noopener');
+    toast('PNG ready — attach it in the composer or use Download PNG.');
+  }
+}catch(e){
+  console.error(e);
+  alert('Could not generate the image. Try again.');
+}finally{
+  setBusy(false);
+}
     }
     window.sharePassportFlow = sharePassportFlow;
 
