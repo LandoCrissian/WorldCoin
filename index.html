@@ -777,12 +777,6 @@ function iso2FromCountry(input){
 }
 
 // Use the unified resolver everywhere
-setPassportFlag = function(country){
-  const layer = document.getElementById('passport-flag');
-  if(!layer) return;
-  const iso2 = iso2FromCountry(country);
-  layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
-};
 
 setPassportFlagIcon = function(country){
   const icon = document.getElementById('passport-flag-icon');
@@ -802,14 +796,7 @@ setPassportFlagIcon = function(country){
   }
 };
 
-// Repaint if passport was shown earlier
-if (LAST_PASSPORT_COUNTRY) {
-  setPassportFlag(LAST_PASSPORT_COUNTRY);
-  setPassportFlagIcon(LAST_PASSPORT_COUNTRY);
-}
-
-
-    function flagUrlPng(iso){ return `https://flagcdn.com/w320/${iso}.png`; }
+function flagUrlPng(iso){ return `https://flagcdn.com/w320/${iso}.png`; }
 function flagUrlSvg(iso){ return `https://cdn.jsdelivr.net/npm/flag-icons/flags/4x3/${iso}.svg`; }
 
 async function loadFlagInto(el, iso){
@@ -840,6 +827,12 @@ setPassportFlag = function(country){
   if (!iso2) { layer.style.backgroundImage = ''; return; }
   loadFlagInto(layer, iso2);
 };
+
+    // Repaint if passport was shown earlier
+if (LAST_PASSPORT_COUNTRY) {
+  setPassportFlag(LAST_PASSPORT_COUNTRY);
+  setPassportFlagIcon(LAST_PASSPORT_COUNTRY);
+}
 
     // Draw map layer
     const layer = L.geoJSON(data, {
