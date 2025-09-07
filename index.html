@@ -655,8 +655,9 @@ async function loadCitizensIntoModal(country){
     );
   }).catch(err => {
     console.error('Failed to load GeoJSON', err);
-    el('map').innerHTML = '<div style="padding:16px;color:var(--muted)">Unable to load map right now.</div>';
-  });
+    el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+  Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+</div>`;
 
   function populateCountryDropdown(list){
     const sel = el('country');
