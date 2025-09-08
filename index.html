@@ -530,6 +530,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   /**** Helpers ****/
   const el = (id)=>document.getElementById(id);
+  // --- download helpers ---
+const dataUrlToBlob = async (dataUrl) => (await fetch(dataUrl)).blob();
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   function scrollToMap(){
     const header = document.querySelector('header');
@@ -1036,21 +1039,58 @@ if (dlBtn){
   dlBtn.onclick = async () => {
     try{
       setBusy?.(true);
+
+      // 1) Render a clean PNG (you already have this function)
       const dataUrl = await renderPassportPNGViaCanvas({
         country, nick, serial,
         address: (window.userAddress || '')
       });
+
+      // Turn into a real file (works with Web Share + download)
+      const blob = await dataUrlToBlob(dataUrl);
+      const filename = `cronation-passport-${serial}.png`;
+
+      // Detect iOS (old Safari may ignore a.download)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      // 2) If the browser supports native sharing of files, use it (best for iOS/Android)
+      if (navigator.canShare && navigator.canShare({
+        files: [new File([blob], filename, { type: 'image/png' })]
+      })) {
+        await navigator.share({
+          files: [new File([blob], filename, { type: 'image/png' })],
+          title: 'CROnation Passport',
+          text: 'One World. One CROnation.'
+        });
+        toast?.('Shared — Save Image from the sheet');
+        return;
+      }
+
+      // 3) Standard download via blob URL (desktop + many Android browsers)
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `cronation-passport-${serial}.png`;
+      a.href = url;
+      a.download = filename;
+      a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast?.('PNG downloaded');
-    }catch(e){
+      // give the browser time to start the download before revoking
+      await sleep(1500);
+      URL.revokeObjectURL(url);
+
+      // 4) iOS fallback (older Safari): open the image so user can long-press → Save Image
+      if (isIOS) {
+        window.open(dataUrl, '_blank', 'noopener');
+        toast?.('Opened image — long-press and “Save Image”');
+      } else {
+        toast?.('PNG downloaded');
+      }
+
+    } catch (e){
       console.error(e);
       alert('Could not generate the image. Try again.');
-    }finally{
+    } finally {
       setBusy?.(false);
     }
   };
