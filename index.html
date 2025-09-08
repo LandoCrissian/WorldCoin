@@ -441,6 +441,7 @@
     Upload PFP
   </label>
   <button id="shareBtn" type="button" class="btn block">Share to 𝕏</button>
+  <button id="downloadBtn" type="button" class="btn block">Download PNG</button>
 </div>
 
           <!-- ABOUT -->
@@ -564,6 +565,91 @@ function initialsFromNick(n){
   if(!n) return '👤';
   const parts = n.split(/\s+/).slice(0,2);
   return parts.map(p=>p[0]).join('').toUpperCase();
+}
+
+  // Small helpers
+const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
+const blobToDataUrl = (b) => new Promise(r => { const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); });
+const fetchAsDataUrl = async (url) => { const r = await fetch(url,{mode:'cors',cache:'force-cache'}); const b=await r.blob(); return blobToDataUrl(b); };
+
+// Render a PNG of the passport without DOM snapshot (CORS-safe)
+async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
+  const W = 1200, H = 480, DPR = Math.min(2, window.devicePixelRatio || 1.5);
+  const c = document.createElement('canvas'); c.width=W*DPR; c.height=H*DPR;
+  const ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
+
+  // Rounded backdrop
+  const bg = '#0d203a', radius = 24;
+  roundRect(ctx, 0, 0, W, H, radius); ctx.fillStyle = bg; ctx.fill();
+
+  // Flag background (fetch as data URL to avoid taint)
+  const iso2 = countryToISO2(country);
+  if (iso2){
+    try{
+      const flagUrl = await fetchAsDataUrl(`https://flagcdn.com/w320/${iso2}.png`);
+      const flagImg = await loadImg(flagUrl);
+      ctx.save();
+      try{ ctx.filter = 'blur(0.8px) saturate(1.25)'; }catch(_){}
+      ctx.globalAlpha = 0.42;
+      drawCover(flagImg, W, H, ctx);
+      ctx.restore();
+    }catch(_){}
+  }
+
+  // Subtle diagonal sheen
+  const grad = ctx.createLinearGradient(0,0, W,H);
+  grad.addColorStop(0,'rgba(255,255,255,.05)');
+  grad.addColorStop(.35,'rgba(255,255,255,0)');
+  grad.addColorStop(.7,'rgba(255,255,255,.04)');
+  grad.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = grad; roundRect(ctx,0,0,W,H,radius); ctx.fill();
+
+  // Emblem/PFP (convert current <img> to data URL if needed)
+  const pfpEl = document.getElementById('passport-pfp');
+  let pfpSrc = pfpEl?.src || '';
+  if (!pfpSrc.startsWith('data:')) {
+    try { pfpSrc = await fetchAsDataUrl(pfpSrc); } catch(_){ pfpSrc = null; }
+  }
+  if (pfpSrc){
+    const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
+    const p = await loadImg(pfpSrc);
+    ctx.fillStyle='rgba(15,18,25,.7)'; roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r); ctx.fill();
+    roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.save(); ctx.clip();
+    ctx.drawImage(p, EMB.x, EMB.y, EMB.w, EMB.h); ctx.restore();
+    ctx.strokeStyle='rgba(148,163,184,.25)'; ctx.lineWidth=2; roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.stroke();
+  }
+
+  // Title / serial
+  ctx.fillStyle='#fff'; ctx.textBaseline='top';
+  ctx.font='700 52px Inter, system-ui, -apple-system'; ctx.fillText('CROnation Passport', 188, 40);
+  ctx.font='800 58px Inter, system-ui, -apple-system'; ctx.fillText(`#${String(serial).padStart(6,'0')}`, 188, 100);
+
+  // Subtitle
+  ctx.font='600 30px Inter, system-ui, -apple-system'; ctx.fillStyle='rgba(229,231,235,.88)';
+  ctx.fillText(`CROnation — ${country}`, 188, 170);
+
+  // Address chip
+  if (address){
+    const chip = address.slice(0,6)+'…'+address.slice(-4);
+    const x=188, y=220, padX=16, h=40, r=18;
+    ctx.font='700 24px Inter, system-ui, -apple-system';
+    const w = Math.ceil(ctx.measureText(chip).width)+padX*2;
+    ctx.fillStyle='rgba(2,6,23,.35)'; roundRect(ctx,x,y,w,h,r); ctx.fill();
+    ctx.strokeStyle='rgba(148,163,184,.28)'; ctx.lineWidth=2; roundRect(ctx,x,y,w,h,r); ctx.stroke();
+    ctx.fillStyle='#e5e7eb'; ctx.fillText(chip, x+padX, y+8);
+  }
+
+  // Watermark
+  ctx.save(); ctx.globalAlpha=0.09; ctx.fillStyle='#fff';
+  ctx.font='800 96px Inter, system-ui, -apple-system';
+  wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
+
+  return c.toDataURL('image/png', 0.95);
+
+  // --- helpers ---
+  function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
+  function drawCover(img,W,H,ctx){ const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr); const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2; ctx.drawImage(img,dx,dy,dw,dh); }
+  function wrapBig(c, text, x, y, maxW){ const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84; for (const w of words){ const t=(line?line+' ':'')+w; if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; } else { line=t; } } if(line) c.fillText(line,x,yy); }
 }
 
 /* Firestore: get citizens for a country */
@@ -943,6 +1029,32 @@ async function loadCitizensIntoModal(country){
 
     card.style.display = 'grid';
     try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+
+    // inside showPassport(country, nick, serial) after you set up shareBtn:
+const dlBtn = document.getElementById('downloadBtn');
+if (dlBtn){
+  dlBtn.onclick = async () => {
+    try{
+      setBusy?.(true);
+      const dataUrl = await renderPassportPNGViaCanvas({
+        country, nick, serial,
+        address: (window.userAddress || '')
+      });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `cronation-passport-${serial}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast?.('PNG downloaded');
+    }catch(e){
+      console.error(e);
+      alert('Could not generate the image. Try again.');
+    }finally{
+      setBusy?.(false);
+    }
+  };
+}
 
     // show external controls + wire buttons (outside the passport card)
 const controls = document.getElementById('passport-controls');
