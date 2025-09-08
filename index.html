@@ -212,14 +212,50 @@
       z-index:0;
     }
 
-    .passport {
-  box-shadow: inset 0 0 12px rgba(255,255,255,0.06), 
-              inset 0 0 24px rgba(0,0,0,0.25),
-              0 12px 40px rgba(0,0,0,.25);
+    .passport{
+  border:1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow:
+    inset 0 0 12px rgba(255,255,255,0.05),
+    inset 0 0 28px rgba(0,0,0,0.28),
+    0 14px 44px rgba(0,0,0,.28);
 }
+
 
     .passport .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
     .passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
+
+    /* --- Flag polish + legibility --- */
+#passport-flag{
+  position:absolute; inset:0;
+  background-size:cover; background-position:center;
+  filter: saturate(1.25) contrast(1.2) brightness(.9) blur(.4px);
+  opacity:.42; mix-blend-mode:overlay;
+  mask-image: radial-gradient(circle at 55% 55%, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: radial-gradient(circle at 55% 55%, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%);
+}
+
+/* A soft dark-to-clear shade so text always reads */
+.passport .shade{
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(120% 140% at 10% 10%, rgba(0,0,0,.52) 0%, rgba(0,0,0,0) 55%),
+    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,0) 38%);
+}
+
+/* A thin gloss band = laminated feel */
+.passport .gloss{
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background: linear-gradient(25deg, rgba(255,255,255,.12), rgba(255,255,255,0) 28% 72%, rgba(255,255,255,.10));
+  mix-blend-mode:soft-light; opacity:.6;
+}
+
+    /* Emblem frame glow */
+.passport .emblem{
+  box-shadow: 0 6px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(148,163,184,.22) inset;
+}
+
+/* Watermark a hair crisper */
+#passport-watermark{ opacity:.10; letter-spacing:.08em; }
 
     .flag-icon{
       width:18px; height:12px;
@@ -412,8 +448,11 @@
 
           <!-- Passport card -->
           <!-- Passport card -->
-<div id="passport" class="passport" style="display:none; margin-top:12px;">
+  <div id="passport" class="passport" style="display:none; margin-top:12px;">
   <div id="passport-flag" aria-hidden="true"></div>
+  <div id="passport-flag" aria-hidden="true"></div>
+  <div class="shade" aria-hidden="true"></div>
+  <div class="gloss" aria-hidden="true"></div>
 
   <div class="emblem">
     <img id="passport-pfp"
