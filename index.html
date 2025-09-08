@@ -811,39 +811,78 @@ async function loadCitizensIntoModal(country){
 
   function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
 
-  async function connectWallet(){
-  if(!window.ethereum){
-    alert('No wallet detected. Please install a Cronos-compatible wallet.');
-    toast('No wallet detected');                      // 👈 toast
-    return;
-  }
+  // ---- helpers (put these above connectWallet) ----
+async function withTimeout(promise, ms, label='operation'){
+  let t; const timer = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(label+' timeout')), ms));
+  try { return await Promise.race([promise, timer]); }
+  finally { clearTimeout(t); }
+}
+function wireProviderEvents(raw){
+  if (!raw?.on) return;
+  raw.on('connect',    (info)=> console.log('[provider] connect', info));
+  raw.on('disconnect', (err)=>  console.log('[provider] disconnect', err));
+  raw.on('accountsChanged', (acc)=> console.log('[provider] accountsChanged', acc));
+  raw.on('chainChanged',    (ch)=>  console.log('[provider] chainChanged', ch));
+}
+
+// ---- safer connect (drop-in) ----
+let connecting = false;
+async function connectWallet(){
+  if (connecting) return;
+  connecting = true;
+  setBusy(true);
+
   try{
-    setBusy(true);                                    // 👈 start loader
+    if(!window.ethereum){
+      toast('No wallet detected — open in MetaMask/Trust/Crypto.com browser or install one');
+      alert('No wallet detected. Open this site inside your wallet’s in-app browser for the smoothest connect.');
+      return;
+    }
 
-    const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-    userAddress = (accounts && accounts[0]) ? accounts[0] : null;
-    window.userAddress = userAddress;
-    if(!userAddress){ setBusy(false); return; }
+    // 1) request accounts with timeout
+    await withTimeout(window.ethereum.request({ method:'eth_requestAccounts' }), 30_000, 'eth_requestAccounts');
 
-    provider = new ethers.providers.Web3Provider(window.ethereum);
+    // 2) build provider AFTER connect
+    provider = new ethers.providers.Web3Provider(window.ethereum, 'any'); // 'any' avoids stale network
     signer   = provider.getSigner();
+    wireProviderEvents(window.ethereum);
 
-    await ensureChain();
+    // short yield helps some wallets settle before first RPC
+    await new Promise(r => setTimeout(r, 50));
 
-    const message = `CROnation — Verify Wallet\nAddress: ${userAddress}\nTime: ${new Date().toISOString()}`;
-    const signature = await signer.signMessage(message);
-    localStorage.setItem('cronation_sig', signature);
+    // 3) get address (with timeout so we never hang)
+    userAddress = await withTimeout(signer.getAddress(), 10_000, 'getAddress');
+    window.userAddress = userAddress;
 
+    // 4) ensure Cronos 0x19 (your ensureChain already correct)
+    await withTimeout(ensureChain(), 20_000, 'ensureChain');
+
+    // 5) optional verification (don’t block UX if cancelled)
+    try{
+      const message = `CROnation — Verify Wallet
+Address: ${userAddress}
+Time: ${new Date().toISOString()}`;
+      const signature = await withTimeout(signer.signMessage(message), 20_000, 'signMessage');
+      localStorage.setItem('cronation_sig', signature);
+    }catch(_e){ /* ignore sign cancel */ }
+
+    // 6) UI + restore
     connectBtn.textContent = shortAddr(userAddress);
-    toast('Wallet connected');                         // 👈 toast
+    toast('Wallet connected ✅');
     restorePassportIfAny();
     restorePfpIfAny(userAddress);
+
   }catch(err){
-    console.error(err);
+    console.error('[connectWallet] error:', err);
+    if (String(err?.message||'').includes('timeout')) {
+      toast('Connection timed out — try again or open in your wallet browser');
+    } else {
+      toast('Connection cancelled or failed');
+    }
     alert('Wallet connection was cancelled or failed.');
-    toast('Connection cancelled');                     // 👈 toast
   }finally{
-    setBusy(false);                                    // 👈 stop loader
+    setBusy(false);
+    setTimeout(()=> (connecting=false), 600); // small cooldown prevents double-click hangs
   }
 }
 
