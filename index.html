@@ -151,13 +151,16 @@
     }
     .passport > * { position:relative; z-index:1; }
 
-    #passport-flag{
-      position:absolute; inset:0;
-      background-size:cover; background-position:center;
-      filter:saturate(120%) blur(1.5px);
-      opacity:.18; pointer-events:none;
-      z-index:0;
-    }
+    #passport-flag {
+  position:absolute; 
+  inset:0;
+  background-size:cover; 
+  background-position:center;
+  filter:saturate(160%) contrast(1.15) brightness(1.05) blur(0.8px);
+  opacity:.35;   /* was .18 */
+  pointer-events:none;
+  z-index:0;
+}
 
     .passport::before{
       content:"";
