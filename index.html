@@ -152,12 +152,21 @@
     .passport > * { position:relative; z-index:1; }
 
     #passport-flag {
-  position:absolute; 
-  inset:0;
-  background-size:cover; 
+  position:absolute; inset:0;
+  background-size:cover;
   background-position:center;
-  filter:saturate(160%) contrast(1.15) brightness(1.05) blur(0.8px);
-  opacity:.35;   /* was .18 */
+  filter:saturate(150%) contrast(1.15) brightness(1.05) blur(0.6px);
+  opacity:.32;
+  mix-blend-mode:overlay; /* 🔥 gives it that engraved look */
+}
+
+.passport::after {
+  content:"";
+  position:absolute; inset:0;
+  background-image:url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+  background-size:300px;
+  opacity:.15;
+  mix-blend-mode:multiply;
   pointer-events:none;
   z-index:0;
 }
@@ -175,6 +184,11 @@
       pointer-events:none;
       z-index:0;
     }
+
+    #passport-flag {
+  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%);
+}
 
     .passport .emblem { width:96px; height:96px; border-radius:14px; overflow:hidden; background:color-mix(in srgb, var(--soft) 70%, #000 30%); border:1px solid rgba(148,163,184,.25); display:grid; place-items:center; }
     .passport .emblem img{ width:100%; height:100%; object-fit:cover; background:#fff; }
@@ -197,6 +211,12 @@
       word-break: break-word;
       z-index:0;
     }
+
+    .passport {
+  box-shadow: inset 0 0 12px rgba(255,255,255,0.06), 
+              inset 0 0 24px rgba(0,0,0,0.25),
+              0 12px 40px rgba(0,0,0,.25);
+}
 
     .passport .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
     .passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
@@ -845,11 +865,16 @@ async function loadCitizensIntoModal(country){
   const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
 
   function setPassportFlag(country){
-    const layer = document.getElementById('passport-flag');
-    if(!layer) return;
-    const iso2 = countryToISO2(country);
-    layer.style.backgroundImage = iso2 ? `url(https://flagcdn.com/w320/${iso2}.png)` : '';
+  const layer = document.getElementById('passport-flag');
+  if(!layer) return;
+  const iso2 = countryToISO2(country);
+  if (iso2){
+    layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
+    layer.style.filter = (country === "Germany" || country === "China") 
+      ? "brightness(1.25) contrast(1.1)" 
+      : "brightness(1.05) contrast(1.15)";
   }
+}
 
   function setPassportFlagIcon(country){
     const icon = document.getElementById('passport-flag-icon');
