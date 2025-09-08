@@ -585,9 +585,7 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
   const roundRect=(cx,x,y,w,h,r)=>{const rr=Math.min(r,w/2,h/2);cx.beginPath();cx.moveTo(x+rr,y);cx.arcTo(x+w,y,x+w,y+h,rr);cx.arcTo(x+w,y+h,x,y+h,rr);cx.arcTo(x,y+h,x,y,rr);cx.arcTo(x,y,x+w,y,rr);cx.closePath();};
   const drawCover=(img,W,H,cx)=>{const wr=W/img.width,hr=H/img.height,r=Math.max(wr,hr);const dw=img.width*r,dh=img.height*r,dx=(W-dw)/2,dy=(H-dh)/2;cx.drawImage(img,dx,dy,dw,dh);};
   const wrapBig=(cx,text,x,y,maxW)=>{const words=(text||'').split(/\s+/);let line='',yy=y;const lh=84;for(const w of words){const t=(line?line+' ':'')+w;if(cx.measureText(t).width>maxW&&line){cx.fillText(line,x,yy);line=w;yy+=lh;}else{line=t;}}if(line)cx.fillText(line,x,yy);};
-  const loadImg = (src)=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
-  const blobToDataUrl=(b)=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b);});
-  const fetchAsDataUrl = async (url)=>{const r=await fetch(url,{mode:'cors',cache:'force-cache'});const b=await r.blob();return blobToDataUrl(b);};
+  
 
   // background card
   const RADIUS = 24;
