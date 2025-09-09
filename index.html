@@ -125,7 +125,17 @@
     .links{ display:flex; gap:16px; }
     .hamburger{ display:none; margin-left:8px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
     .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
-    .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
+    .mobile-menu{
+  display:none;
+  position:fixed;
+  left:0; right:0;
+  top: var(--menu-top, 64px);   /* <- we’ll set this from JS */
+  background:var(--bg);
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  padding:10px 12px;
+  z-index:1001;                 /* <- higher than header’s 10 */
+}
     .mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
     .mobile-menu a.link + a.link{ border-top:1px solid var(--line); }
     @media (max-width:720px){
@@ -756,17 +766,38 @@ async function loadCitizensIntoModal(country){
 
   /**** Mobile menu ****/
   (function mobileMenu(){
-    const btn = el('hamburger');
-    const menu = el('mobile-menu');
-    if(!btn || !menu) return;
-    const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
-    const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
-    btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
-    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-    window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-    window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
-    window.addEventListener('resize', () => { if (window.innerWidth > 720) close(); }, { passive:true });
-  })();
+  const btn  = el('hamburger');
+  const menu = el('mobile-menu');
+  const header = document.querySelector('header');                 // <- add
+
+  if(!btn || !menu || !header) return;
+
+  // keep menu pinned just under the sticky header
+  const placeMenu = () => {
+    const h = header.getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--menu-top', h + 'px');
+  };
+  placeMenu();                                                     // <- add
+  window.addEventListener('resize', placeMenu, { passive:true });  // <- add
+  window.addEventListener('scroll', placeMenu, { passive:true });  // <- add
+
+  const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+  const open  = () => { menu.classList.add('open');    btn.setAttribute('aria-expanded','true'); };
+
+  btn.addEventListener('click', () => {
+    (btn.getAttribute('aria-expanded') === 'true') ? close() : open();
+  });
+
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+
+  window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+
+  window.addEventListener('click', e => {
+    if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close();
+  }, { passive:true });
+
+  window.addEventListener('resize', () => { if (window.innerWidth > 720) close(); }, { passive:true });
+})();
 
   /**** Map + Countries ****/
   const countryCounts = new Map();
