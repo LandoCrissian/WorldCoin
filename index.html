@@ -145,7 +145,13 @@
   .actions .btn{ padding:10px 12px; min-width:auto; } /* allow Connect to shrink */
 }
 @media (min-width:721px){
-  .mobile-menu{ display:none !important; }
+  /* little slide/fade */
+.mobile-menu {
+  transition: opacity .15s ease, transform .15s ease;
+  opacity: 0; transform: translateY(-6px);
+}
+.mobile-menu.open {
+  opacity: 1; transform: translateY(0);
 }
 
     /* ===== Passport (with flag background) ===== */
