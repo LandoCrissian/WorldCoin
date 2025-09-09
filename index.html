@@ -45,7 +45,7 @@
     :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
-    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; color:var(--text); background:var(--bg); line-height:1.5; overflow-x: hidden; }
+    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; color:var(--text); background:var(--bg); line-height:1.5; }
 
     header{ padding-top: calc(env(safe-area-inset-top, 0px)); position:sticky; top:0; backdrop-filter:saturate(120%) blur(8px); background: color-mix(in srgb, var(--bg) 86%, transparent); border-bottom:1px solid var(--line); z-index:10; }
     html { scroll-padding-top:72px; }
@@ -55,7 +55,7 @@
     .notice small{ color:var(--muted); font-weight:500; }
 
     .container{ width:min(1120px, 92vw); margin-inline:auto; padding:24px 0 72px; }
-    .nav{ width:min(1120px, 92vw); margin-inline:auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; overflow:hidden; }
+    .nav{ width:min(1120px, 92vw); margin-inline:auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
     .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; }
     .nav a.link{ text-decoration:none; color:var(--muted); font-weight:500; margin:0 10px; }
     .actions{ display:flex; align-items:center; gap:10px; }
@@ -125,34 +125,15 @@
     .links{ display:flex; gap:16px; }
     .hamburger{ display:none; margin-left:8px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
     .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
-    .mobile-menu{
-  display:none;
-  position:fixed;
-  left:0; right:0;
-  top: var(--menu-top, 64px);   /* <- we’ll set this from JS */
-  background:var(--bg);
-  border-top:1px solid var(--line);
-  border-bottom:1px solid var(--line);
-  padding:10px 12px;
-  z-index:1001;                 /* <- higher than header’s 10 */
-}
+    .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
     .mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
     .mobile-menu a.link + a.link{ border-top:1px solid var(--line); }
-    @media (max-width:720px){
-  .links{ display:none; }
-  .hamburger{ display:inline-flex; }
-  .actions{ margin-left:auto; gap:8px; }
-  .actions .btn{ padding:10px 12px; min-width:auto; } /* allow Connect to shrink */
-}
-@media (min-width:721px){
-  /* little slide/fade */
-.mobile-menu {
-  transition: opacity .15s ease, transform .15s ease;
-  opacity: 0; transform: translateY(-6px);
-}
-.mobile-menu.open {
-  opacity: 1; transform: translateY(0);
-}
+    @media (max-width:640px){ .links{ display:none; } .hamburger{ display:inline-flex; } .actions{ margin-left:auto; gap:8px; } .actions .btn{ padding:10px 12px; } }
+    @media (min-width:641px){ .mobile-menu{ display:none !important; } }
+    .mobile-menu.open{ display:block; }
+    .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
+    .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
+    .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
 
     /* ===== Passport (with flag background) ===== */
     .passport {
@@ -469,6 +450,7 @@
           <!-- Passport card -->
   <div id="passport" class="passport" style="display:none; margin-top:12px;">
   <div id="passport-flag" aria-hidden="true"></div>
+  <div id="passport-flag" aria-hidden="true"></div>
   <div class="shade" aria-hidden="true"></div>
   <div class="gloss" aria-hidden="true"></div>
 
@@ -772,38 +754,17 @@ async function loadCitizensIntoModal(country){
 
   /**** Mobile menu ****/
   (function mobileMenu(){
-  const btn  = el('hamburger');
-  const menu = el('mobile-menu');
-  const header = document.querySelector('header');                 // <- add
-
-  if(!btn || !menu || !header) return;
-
-  // keep menu pinned just under the sticky header
-  const placeMenu = () => {
-    const h = header.getBoundingClientRect().height;
-    document.documentElement.style.setProperty('--menu-top', h + 'px');
-  };
-  placeMenu();                                                     // <- add
-  window.addEventListener('resize', placeMenu, { passive:true });  // <- add
-  window.addEventListener('scroll', placeMenu, { passive:true });  // <- add
-
-  const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
-  const open  = () => { menu.classList.add('open');    btn.setAttribute('aria-expanded','true'); };
-
-  btn.addEventListener('click', () => {
-    (btn.getAttribute('aria-expanded') === 'true') ? close() : open();
-  });
-
-  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-
-  window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-
-  window.addEventListener('click', e => {
-    if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close();
-  }, { passive:true });
-
-  window.addEventListener('resize', () => { if (window.innerWidth > 720) close(); }, { passive:true });
-})();
+    const btn = el('hamburger');
+    const menu = el('mobile-menu');
+    if(!btn || !menu) return;
+    const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+    const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
+    btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+    window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+    window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
+    window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
+  })();
 
   /**** Map + Countries ****/
   const countryCounts = new Map();
@@ -1385,6 +1346,8 @@ el('join-form').addEventListener('submit', async (e)=>{
 </script>
 </body>
 </html>
+
+        
 
         
 
