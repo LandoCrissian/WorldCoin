@@ -303,6 +303,86 @@
 
     #passport + #passport-controls { margin-top:12px; }
 
+    .badge.holder{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-left:8px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid rgba(59,130,246,.45);
+  background:linear-gradient(180deg, rgba(59,130,246,.22), rgba(2,6,23,.45));
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.03em;
+  box-shadow:0 0 0 1px rgba(59,130,246,.20) inset, 0 4px 18px rgba(59,130,246,.25);
+  white-space:nowrap;
+}
+.badge.holder::before{ content:"◈"; transform:translateY(-1px); }
+
+.passport.holder-glow{
+  box-shadow:
+    0 0 0 1px rgba(59,130,246,.35) inset,
+    0 14px 44px rgba(0,0,0,.28),
+    0 0 40px rgba(59,130,246,.35);
+}
+.passport.tier-1{
+  --accent:#60a5fa;
+  box-shadow:
+    0 0 0 1px rgba(96,165,250,.45) inset,
+    0 18px 56px rgba(0,0,0,.32),
+    0 0 40px rgba(96,165,250,.35);
+}
+.passport.tier-2{
+  --accent:#7dd3fc;
+  position:relative;
+  box-shadow:
+    0 0 0 1px rgba(125,211,252,.55) inset,
+    0 22px 66px rgba(0,0,0,.36),
+    0 0 60px rgba(125,211,252,.45);
+}
+.passport.tier-2 .gloss{
+  opacity:.95;
+  animation: glossSweep 6s linear infinite;
+}
+.passport.tier-3{
+  --accent:#fbbf24;
+  position:relative;
+  box-shadow:
+    0 0 0 1px rgba(251,191,36,.65) inset,
+    0 26px 76px rgba(0,0,0,.4),
+    0 0 84px rgba(251,191,36,.6);
+}
+.passport.tier-3::before{
+  content:"";
+  position:absolute; inset:-1px;
+  pointer-events:none; z-index:1;
+  background:
+    conic-gradient(from 0deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.18) 80%, rgba(255,255,255,0));
+  mix-blend-mode:soft-light;
+  animation: holoHue 8s linear infinite;
+  border-radius: inherit;
+}
+.passport.tier-2 .badge.holder{ filter: drop-shadow(0 0 10px rgba(125,211,252,.3)); }
+.passport.tier-3 .badge.holder{ filter: drop-shadow(0 0 12px rgba(251,191,36,.4)); }
+
+@keyframes glossSweep{
+  0% { background-position:-200% 0; }
+  50%{ background-position:0 0; }
+  100%{ background-position:200% 0; }
+}
+@keyframes holoHue{
+  0% { filter:hue-rotate(0deg) saturate(1.15); }
+  50%{ filter:hue-rotate(180deg) saturate(1.3); }
+  100%{ filter:hue-rotate(360deg) saturate(1.15); }
+}
+@media (prefers-reduced-motion: reduce){
+  .passport.holder-glow,
+  .passport.tier-2 .gloss,
+  .passport.tier-3 .gloss,
+  .passport.tier-3::before{ animation:none; }
+}
+
     /* --- Toast + Loader --- */
     .toast {
       position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
@@ -463,14 +543,15 @@
           </div>
 
           <div class="info">
-            <b>CROnation Passport <span id="passport-serial">#000000</span></b>
-            <small>
-              <span id="passport-nick">—</span> —
-              <span id="passport-country">—</span>
-              <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
-              <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
-            </small>
-          </div>
+  <b>CROnation Passport <span id="passport-serial">#000000</span></b>
+  <small>
+    <span id="passport-nick">—</span> —
+    <span id="passport-country">—</span>
+    <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
+    <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+    <span id="holder-badge" class="badge holder" style="display:none;" aria-label="CRON8 holder badge"></span>
+  </small>
+</div>
 
           <div id="passport-watermark" aria-hidden="true"></div>
         </div>
@@ -1051,6 +1132,107 @@ Time: ${new Date().toISOString()}`;
     const form = el('join-form');
     if(form) form.style.display = 'none';
   }
+
+  (() => {
+  const HOLDER_THRESHOLDS = [
+    { tier: 3, min: '25000000' }, // 25,000,000
+    { tier: 2, min: '5000000'  }, // 5,000,000
+    { tier: 1, min: '1000000'  }, // 1,000,000
+  ];
+
+  const $ = (id) => document.getElementById(id);
+
+  function parseUnits(v, d){
+    if (window.ethers?.parseUnits) return window.ethers.parseUnits(v, d);
+    return window.ethers.utils.parseUnits(v, d);
+  }
+  function formatUnits(v, d){
+    if (window.ethers?.formatUnits) return window.ethers.formatUnits(v, d);
+    return window.ethers.utils.formatUnits(v, d);
+  }
+
+  async function getProviderAndSigner(){
+    const E = window.ethers;
+    if (E?.BrowserProvider){
+      const provider = new E.BrowserProvider(window.ethereum, 'any');
+      const signer = await provider.getSigner();
+      return { provider, signer };
+    }
+    const provider = new E.providers.Web3Provider(window.ethereum, 'any');
+    const signer = provider.getSigner();
+    return { provider, signer };
+  }
+
+  async function fetchCron8Balance(address){
+    try{
+      const { provider } = await getProviderAndSigner();
+      const E = window.ethers;
+      const abi = (typeof CFG !== 'undefined' ? CFG.token.abi : [{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]);
+      const tokenAddr = (typeof CFG !== 'undefined' ? CFG.token.address : '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF');
+      const c = new E.Contract(tokenAddr, abi, provider);
+      const bal = await c.balanceOf(address);
+      return bal;
+    }catch(e){ return null; }
+  }
+
+  function detectTier(bal){
+    try{
+      const d = (typeof CFG !== 'undefined' ? CFG.token.decimals : 18);
+      const toBig = (x)=> parseUnits(x, d);
+      for (const t of HOLDER_THRESHOLDS){
+        if (bal >= toBig(t.min)) return t.tier;
+      }
+      return 0;
+    }catch{ return 0; }
+  }
+
+  function applyHolderUX({ balance, tier }){
+    const badge = $('holder-badge');
+    const passport = $('passport');
+    if (!badge || !passport) return;
+
+    if (tier > 0){
+      const title = tier === 3 ? '👑 CRON8 Elite Diplomat'
+                  : tier === 2 ? '◆ CRON8 Nation Builder'
+                  : '◈ CRON8 Citizen Holder';
+      badge.textContent = title;
+      badge.style.display = 'inline-flex';
+      passport.classList.add('holder-glow');
+      passport.classList.remove('tier-1','tier-2','tier-3');
+      passport.classList.add(`tier-${tier}`);
+    } else {
+      badge.style.display = 'none';
+      passport.classList.remove('holder-glow','tier-1','tier-2','tier-3');
+    }
+  }
+
+  async function refreshHolderUX(){
+    const addr = window.userAddress;
+    if (!addr) return;
+    const bal = await fetchCron8Balance(addr);
+    if (!bal) return;
+    const tier = detectTier(bal);
+    applyHolderUX({ balance: bal, tier });
+  }
+
+  const connectBtn = $('connectBtn');
+  if (connectBtn && !connectBtn._holderPatch){
+    connectBtn._holderPatch = true;
+    connectBtn.addEventListener('click', () => {
+      setTimeout(refreshHolderUX, 800);
+    });
+  }
+
+  const _origShowPassport = window.showPassport;
+  window.showPassport = function(country, nick, serial){
+    if (typeof _origShowPassport === 'function') _origShowPassport(country, nick, serial);
+    setTimeout(refreshHolderUX, 300);
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(refreshHolderUX, 1200);
+  });
+})();
 
   /* === Flag mapping (strict/common names only) === */
   const ISO2 = {
