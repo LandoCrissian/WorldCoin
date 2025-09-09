@@ -41,17 +41,41 @@
   <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
 
+  <!-- Base styles -->
   <style>
-    :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
+    :root{ 
+      --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; 
+      --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; 
+      --accent-600:#2563eb; 
+    }
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
-    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; color:var(--text); background:var(--bg); line-height:1.5; }
+    body{ 
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; 
+      color:var(--text); background:var(--bg); line-height:1.5; 
+    }
 
-    header{ padding-top: calc(env(safe-area-inset-top, 0px)); position:sticky; top:0; backdrop-filter:saturate(120%) blur(8px); background: color-mix(in srgb, var(--bg) 86%, transparent); border-bottom:1px solid var(--line); z-index:10; }
+        /* --- Header / Nav --- */
+    header{ 
+      padding-top: calc(env(safe-area-inset-top, 0px)); 
+      position:sticky; top:0; 
+      backdrop-filter:saturate(120%) blur(8px); 
+      background: color-mix(in srgb, var(--bg) 86%, transparent); 
+      border-bottom:1px solid var(--line); 
+      z-index:10; 
+    }
     html { scroll-padding-top:72px; }
 
-    .notice{ background:color-mix(in srgb, var(--accent) 12%, var(--bg) 88%); border-bottom:1px solid var(--line); color:var(--text); }
-    .notice .wrap{ width:min(1120px,92vw); margin:0 auto; padding:10px 0; font-weight:600; display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+    .notice{ 
+      background:color-mix(in srgb, var(--accent) 12%, var(--bg) 88%); 
+      border-bottom:1px solid var(--line); 
+      color:var(--text); 
+    }
+    .notice .wrap{ 
+      width:min(1120px,92vw); margin:0 auto; padding:10px 0; 
+      font-weight:600; display:flex; gap:10px; align-items:center; 
+      justify-content:center; text-align:center; 
+    }
     .notice small{ color:var(--muted); font-weight:500; }
 
     .container{ width:min(1120px, 92vw); margin-inline:auto; padding:24px 0 72px; }
@@ -60,6 +84,7 @@
     .nav a.link{ text-decoration:none; color:var(--muted); font-weight:500; margin:0 10px; }
     .actions{ display:flex; align-items:center; gap:10px; }
 
+    /* --- Buttons --- */
     .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; transition:.12s; min-height:44px; }
     .btn:hover{ transform: translateY(-1px); }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
@@ -68,37 +93,43 @@
     .btn.ghost{ background:transparent; }
 
     a.btn { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
-
     #connectBtn, #buyBtn { min-width:160px; text-align:center; }
 
+    /* --- Hero --- */
     .hero{ padding:32px 0 8px; display:grid; gap:16px; align-items:center; text-align:center; }
     .hero h1{ margin:0; font-size: clamp(28px, 3.2vw + 12px, 48px); letter-spacing:-0.02em; }
     .hero p.lead{ margin:6px auto 0; color:var(--muted); max-width:740px; font-size:clamp(15px, 1.2vw + 10px, 18px); }
     .hero .cta{ margin-top:18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
+    /* --- Stats --- */
     .stats{ margin-top:28px; display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
     .stat{ padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--soft); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; }
     .stat small{ color:var(--muted); display:block; font-weight:500; }
 
+    /* --- Layout Grid --- */
     .grid{ margin-top:36px; display:grid; gap:24px; grid-template-columns:1.3fr 1fr; }
     @media (max-width:960px){ .grid{ grid-template-columns:1fr; } }
+
     .card{ border:1px solid var(--line); border-radius:14px; background:var(--bg); box-shadow:0 2px 16px rgba(0,0,0,.04); }
     .card h3{ margin:0 0 6px; font-size:18px; }
     .card .body{ padding:16px; }
     .muted{ color:var(--muted); }
 
+    /* --- Map --- */
     #map{ width:100%; height:clamp(280px, 58vh, 560px); border-radius:12px; overflow:hidden; border:1px solid var(--line); background:var(--soft); }
     .leaflet-container{ font:inherit; }
     .map-note{ margin-top:10px; color:var(--muted); font-size:14px; }
     .leaflet-control-zoom { margin:10px; }
     .leaflet-control-zoom a { width:34px; height:34px; line-height:34px; }
 
+        /* --- Tables (leaderboard basics) --- */
     table{ width:100%; border-collapse:collapse; }
     th, td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
     th{ color:var(--muted); font-weight:600; font-size:14px; }
     .rank{ width:56px; color:var(--muted); font-weight:600; }
     .count{ text-align:right; }
 
+    /* --- Modal --- */
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.70); display:none; align-items:center; justify-content:center; padding:20px; z-index:5000; }
     .modal[open]{ display:flex; }
     .modal .panel{ width:min(560px, 96vw); background:var(--bg); border:1px solid var(--line); border-radius:16px; box-shadow:0 18px 60px rgba(0,0,0,.45); overflow:hidden; position:relative; z-index:5001; }
@@ -106,244 +137,157 @@
     .modal .header{ padding:14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
     .modal .content{ padding:16px; display:grid; gap:16px; }
     .modal .footer{ padding:16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; }
+    body.modal-open{ overflow:hidden; }
+    body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
 
+    /* --- Join form --- */
     .join-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
     .join-grid .full{ grid-column:1 / -1; }
     @media (min-width:640px){ .join-grid{ grid-template-columns:1fr 1fr; } }
 
     input, select, textarea{ font-size:16px; }
-    .modal input, .modal select{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:color-mix(in srgb, var(--bg) 92%, #000 8%); font:inherit; color:var(--text); }
-    body.modal-open{ overflow:hidden; }
-    body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
+    .modal input, .modal select,
+    #join-form input, #join-form select{
+      width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+      background:color-mix(in srgb, var(--bg) 92%, #000 8%); font:inherit; color:var(--text);
+    }
 
-    /* --- Nav sizing/behavior --- */
-    .actions{ display:flex; align-items:center; gap:10px; flex-wrap:nowrap; min-width:0; }
-    .actions .btn, .actions a.btn{ display:inline-flex; align-items:center; justify-content:center; min-width:160px; white-space:nowrap; text-decoration:none; }
-    @media (max-width: 720px){ #buyBtn{ display:none; } .hamburger{ display:inline-flex; } }
-    .hamburger{ width:44px; height:44px; }
-    .nav{ position:relative; }
-    .links{ display:flex; gap:16px; }
-    .hamburger{ display:none; margin-left:8px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
-    .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
-    .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
-    .mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
-    .mobile-menu a.link + a.link{ border-top:1px solid var(--line); }
-    @media (max-width:640px){ .links{ display:none; } .hamburger{ display:inline-flex; } .actions{ margin-left:auto; gap:8px; } .actions .btn{ padding:10px 12px; } }
-    @media (min-width:641px){ .mobile-menu{ display:none !important; } }
-    .mobile-menu.open{ display:block; }
-    .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
-    .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
-    .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
-
-    /* ===== Passport (with flag background) ===== */
+    /* --- Passport card --- */
     .passport {
-      position: relative;
-      display: grid !important;
-      grid-template-columns: 96px 1fr;
-      gap: 16px;
-      align-items: center;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: #0d203a;
-      overflow: hidden;
-      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      position: relative; display:grid; grid-template-columns:96px 1fr; gap:16px; align-items:center;
+      padding:16px; border:1px solid var(--line); border-radius:16px; background:#0d203a; overflow:hidden;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
     }
     .passport > * { position:relative; z-index:1; }
 
-    #passport-flag {
-  position:absolute; inset:0;
-  background-size:cover;
-  background-position:center;
-  filter:saturate(150%) contrast(1.15) brightness(1.05) blur(0.6px);
-  opacity:.32;
-  mix-blend-mode:overlay; /* 🔥 gives it that engraved look */
-}
-
-.passport::after {
-  content:"";
-  position:absolute; inset:0;
-  background-image:url('https://www.transparenttextures.com/patterns/paper-fibers.png');
-  background-size:300px;
-  opacity:.15;
-  mix-blend-mode:multiply;
-  pointer-events:none;
-  z-index:0;
-}
-
-    .passport::before{
-      content:"";
-      position:absolute; inset:0;
-      background: repeating-linear-gradient(
-        -30deg,
-        rgba(255,255,255,.06) 0px,
-        rgba(255,255,255,.06) 18px,
-        rgba(255,255,255,0)   18px,
-        rgba(255,255,255,0)   42px
-      );
-      pointer-events:none;
-      z-index:0;
+    /* Flag background (masked) */
+    #passport-flag{
+      position:absolute; inset:0; background-size:cover; background-position:center;
+      filter:saturate(1.25) contrast(1.2) brightness(.95) blur(.4px);
+      opacity:.42; mix-blend-mode:overlay;
+      mask-image: radial-gradient(circle at 55% 55%, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%);
+      -webkit-mask-image: radial-gradient(circle at 55% 55%, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%);
     }
 
-    #passport-flag {
-  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%);
-  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%);
-}
+    /* Paper fibers + diagonal lines for texture */
+    .passport::after{
+      content:""; position:absolute; inset:0;
+      background-image:url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+      background-size:300px; opacity:.15; mix-blend-mode:multiply; pointer-events:none; z-index:0;
+    }
+    .passport::before{
+      content:""; position:absolute; inset:0;
+      background:repeating-linear-gradient(-30deg, rgba(255,255,255,.06) 0 18px, rgba(255,255,255,0) 18px 42px);
+      pointer-events:none; z-index:0;
+    }
 
-    .passport .emblem { width:96px; height:96px; border-radius:14px; overflow:hidden; background:color-mix(in srgb, var(--soft) 70%, #000 30%); border:1px solid rgba(148,163,184,.25); display:grid; place-items:center; }
+    /* Readability overlays */
+    .passport .shade{
+      position:absolute; inset:0; pointer-events:none; z-index:0;
+      background:
+        radial-gradient(120% 140% at 10% 10%, rgba(0,0,0,.52) 0%, rgba(0,0,0,0) 55%),
+        linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,0) 38%);
+    }
+    .passport .gloss{
+      position:absolute; inset:0; pointer-events:none; z-index:0;
+      background:linear-gradient(25deg, rgba(255,255,255,.12), rgba(255,255,255,0) 28% 72%, rgba(255,255,255,.10));
+      mix-blend-mode:soft-light; opacity:.6;
+    }
+
+    /* Emblem frame + image */
+    .passport .emblem{ width:96px; height:96px; border-radius:14px; overflow:hidden;
+      background:color-mix(in srgb, var(--soft) 70%, #000 30%);
+      border:1px solid rgba(148,163,184,.25); display:grid; place-items:center;
+      box-shadow:0 6px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(148,163,184,.22) inset;
+    }
     .passport .emblem img{ width:100%; height:100%; object-fit:cover; background:#fff; }
 
+    /* Copy */
     .passport .info b{ display:block; font-size:18px; letter-spacing:.01em; }
     .passport .info small{ color:var(--muted); }
+    .flag-icon{ width:18px; height:12px; border-radius:2px; margin-left:6px; object-fit:cover;
+      box-shadow:0 0 0 1px rgba(255,255,255,.15) inset; }
 
+    /* Address chip */
     .passport .chip{
       display:inline-block; padding:4px 10px; border-radius:999px;
-      border:1px solid rgba(148,163,184,.28);
-      background: rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.28); background:rgba(2,6,23,.35);
       font-size:12px; font-weight:600; letter-spacing:.04em;
     }
 
+    /* Watermark + activation */
     #passport-watermark{
-      position: absolute; right:16px; bottom:16px; left:16px;
-      font-weight:800; font-size:42px; line-height:1.05;
-      text-transform:uppercase; letter-spacing:.06em;
-      color:#fff; opacity:.08; pointer-events:none;
-      word-break: break-word;
-      z-index:0;
+      position:absolute; right:16px; bottom:16px; left:16px;
+      font-weight:800; font-size:42px; line-height:1.05; text-transform:uppercase;
+      letter-spacing:.08em; color:#fff; opacity:.10; pointer-events:none; word-break:break-word; z-index:0;
     }
-
-    .passport{
-  border:1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  box-shadow:
-    inset 0 0 12px rgba(255,255,255,0.05),
-    inset 0 0 28px rgba(0,0,0,0.28),
-    0 14px 44px rgba(0,0,0,.28);
-}
-
-
-    .passport .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
-    .passport:hover { box-shadow: 0 16px 48px rgba(0,0,0,.30); }
-
-    /* --- Flag polish + legibility --- */
-#passport-flag{
-  position:absolute; inset:0;
-  background-size:cover; background-position:center;
-  filter: saturate(1.25) contrast(1.2) brightness(.9) blur(.4px);
-  opacity:.42; mix-blend-mode:overlay;
-  mask-image: radial-gradient(circle at 55% 55%, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%);
-  -webkit-mask-image: radial-gradient(circle at 55% 55%, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%);
-}
-
-/* A soft dark-to-clear shade so text always reads */
-.passport .shade{
-  position:absolute; inset:0; pointer-events:none; z-index:0;
-  background:
-    radial-gradient(120% 140% at 10% 10%, rgba(0,0,0,.52) 0%, rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,0) 38%);
-}
-
-/* A thin gloss band = laminated feel */
-.passport .gloss{
-  position:absolute; inset:0; pointer-events:none; z-index:0;
-  background: linear-gradient(25deg, rgba(255,255,255,.12), rgba(255,255,255,0) 28% 72%, rgba(255,255,255,.10));
-  mix-blend-mode:soft-light; opacity:.6;
-}
-
-    /* Emblem frame glow */
-.passport .emblem{
-  box-shadow: 0 6px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(148,163,184,.22) inset;
-}
-
-/* Watermark a hair crisper */
-#passport-watermark{ opacity:.10; letter-spacing:.08em; }
-
-    .flag-icon{
-      width:18px; height:12px;
-      border-radius:2px;
-      margin-left:6px;
-      object-fit:cover;
-      box-shadow:0 0 0 1px rgba(255,255,255,.15) inset;
-    }
-
-    .passport{
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), transparent 38%),
-        #0d203a;
-    }
-
     @keyframes glowPulse {
-      0%   { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
-      50%  { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 24px rgba(59,130,246,.8); }
-      100% { box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,.0); }
+      0%{ box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,0); }
+      50%{ box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 24px rgba(59,130,246,.8); }
+      100%{ box-shadow:0 12px 40px rgba(0,0,0,.25), 0 0 0 rgba(59,130,246,0); }
     }
-    .passport.activated{ animation: glowPulse 1.8s ease-in-out 1; }
+    .passport.activated{ animation:glowPulse 1.8s ease-in-out 1; }
 
-    /* Leaderboard accordions */
-#leaderboard details { border:1px solid var(--line); border-radius:10px; background:var(--soft); margin-bottom:10px; }
-#leaderboard summary { list-style:none; cursor:pointer; padding:10px 12px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
-#leaderboard summary::-webkit-details-marker{ display:none; }
-#leaderboard .badge { background:rgba(148,163,184,.18); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; margin-left:10px; }
-#leaderboard .panel { padding:10px 12px; border-top:1px solid var(--line); }
+        /* --- Leaderboard accordions --- */
+    #leaderboard details{
+      border:1px solid var(--line); border-radius:10px; background:var(--soft);
+      margin-bottom:10px; overflow:hidden;
+    }
+    #leaderboard summary{
+      list-style:none; cursor:pointer; padding:10px 12px; font-weight:600;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    #leaderboard summary::-webkit-details-marker{ display:none; }
+    #leaderboard .badge{
+      background:rgba(148,163,184,.18); border:1px solid var(--line);
+      border-radius:999px; padding:4px 10px; font-size:12px; margin-left:10px;
+    }
+    #leaderboard .panel{ padding:10px 12px; border-top:1px solid var(--line); }
 
-/* Citizens list (modal + leaderboard) */
-.citizens-list .citizen { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); }
-.citizens-list .citizen:last-child{ border-bottom:none; }
-.citizens-list .avatar { width:24px; height:24px; border-radius:50%; background:#0f1219; display:grid; place-items:center; font-size:12px; font-weight:700; }
-.citizens-list .meta { display:flex; gap:8px; align-items:center; }
-.citizens-list small { color:var(--muted); }
+    /* --- Citizens list (modal + leaderboard) --- */
+    .citizens-list .citizen{
+      display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line);
+    }
+    .citizens-list .citizen:last-child{ border-bottom:none; }
+    .citizens-list .avatar{
+      width:24px; height:24px; border-radius:50%; background:#0f1219; display:grid; place-items:center;
+      font-size:12px; font-weight:700;
+    }
+    .citizens-list .meta{ display:flex; gap:8px; align-items:center; }
+    .citizens-list small{ color:var(--muted); }
 
-    .passport-controls{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.btn.block{
-  flex:1 1 180px;
-  text-align:center;
-}
-@media (max-width:560px){
-  .btn.block{ flex:1 1 100%; }
-}
-
-    #passport + #passport-controls { margin-top:12px; }
+    /* --- Passport controls (outside card) --- */
+    .passport-controls{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn.block{ flex:1 1 180px; text-align:center; }
+    @media (max-width:560px){ .btn.block{ flex:1 1 100%; } }
+    #passport + #passport-controls{ margin-top:12px; }
 
     /* --- Toast + Loader --- */
-.toast {
-  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
-  background:#0f1219;border:1px solid var(--line);color:var(--text);
-  padding:10px 12px;border-radius:10px;
-  box-shadow:0 8px 30px rgba(0,0,0,.35);
-  z-index:6000;opacity:0;pointer-events:none;transition:.2s;
-}
-.toast.show { opacity:1;pointer-events:auto; }
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background:#0f1219; border:1px solid var(--line); color:var(--text);
+      padding:10px 12px; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.35);
+      z-index:6000; opacity:0; pointer-events:none; transition:.2s;
+    }
+    .toast.show{ opacity:1; pointer-events:auto; }
+    .loader{
+      position:fixed; inset:0; background:rgba(0,0,0,.45);
+      display:none; align-items:center; justify-content:center; z-index:5500;
+    }
+    .loader[aria-busy="true"]{ display:flex; }
+    .loader .dot{ width:8px; height:8px; border-radius:50%; background:#fff; margin:0 4px; animation:ld 1s infinite; }
+    .loader .dot:nth-child(2){ animation-delay:.15s; }
+    .loader .dot:nth-child(3){ animation-delay:.3s; }
+    @keyframes ld{ 0%,80%,100%{opacity:.2; transform:scale(.8);} 40%{opacity:1; transform:scale(1);} }
 
-.loader {
-  position:fixed;inset:0;background:rgba(0,0,0,.45);
-  display:none;align-items:center;justify-content:center;
-  z-index:5500;
-}
-.loader[aria-busy="true"] { display:flex; }
+    <body>
 
-.loader .dot {
-  width:8px;height:8px;border-radius:50%;background:#fff;
-  margin:0 4px;animation:ld 1s infinite;
-}
-.loader .dot:nth-child(2){animation-delay:.15s;}
-.loader .dot:nth-child(3){animation-delay:.3s;}
+  <!-- Global toast + loader (ARIA-live for announcements) -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="loader" class="loader" aria-hidden="true" aria-label="Loading">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
 
-@keyframes ld {
-  0%,80%,100%{opacity:.2;transform:scale(.8);}
-  40%{opacity:1;transform:scale(1);}
-}
-  </style>
-</head>
-<body>
-
-  <!-- Global toast + loader -->
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<div id="loader" class="loader" aria-hidden="true">
-  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-</div>
   <!-- Status notice -->
   <div class="notice" role="status" aria-live="polite">
     <div class="wrap">
@@ -352,61 +296,87 @@
     </div>
   </div>
 
+  <!-- Header / Primary nav -->
   <header>
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="#top" aria-label="CROnation home">
-        <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo" style="width:32px;height:32px;border-radius:50%;" />
+        <img
+          src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
+          alt="CROnation logo" width="32" height="32" style="border-radius:50%" />
         <b>CROnation</b>
       </a>
 
       <!-- Desktop links -->
-<div class="links">
-  <a class="link" href="#map-section">Map</a>
-  <a class="link" href="#leaderboard-card">Leaderboard</a>
-  <a class="link" href="#about">About</a>
-  <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
-  <a class="link" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
-  <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-</div>
+      <div class="links" role="menubar" aria-label="Site">
+        <a class="link" role="menuitem" href="#map-section">Map</a>
+        <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
+        <a class="link" role="menuitem" href="#about">About</a>
+        <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
+        <a class="link" role="menuitem" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
+        <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+      </div>
 
+      <!-- Actions -->
       <div class="actions">
-        <button id="connectBtn" class="btn ghost">Connect Wallet</button>
+        <button id="connectBtn" class="btn ghost" type="button">Connect Wallet</button>
         <a id="buyBtn" class="btn ghost" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-        <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
+        <button class="hamburger" id="hamburger" aria-label="Open menu" aria-controls="mobile-menu" aria-expanded="false" type="button">
           <span></span><span></span><span></span>
         </button>
       </div>
 
       <!-- Mobile menu -->
-<div class="mobile-menu" id="mobile-menu" role="menu">
-  <a class="link" role="menuitem" href="#map-section">Map</a>
-  <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
-  <a class="link" role="menuitem" href="#about">About</a>
-  <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
-  <a class="link" role="menuitem" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Join on Telegram</a>
-  <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
-</div>
+      <div class="mobile-menu" id="mobile-menu" role="menu" aria-label="Mobile">
+        <a class="link" role="menuitem" href="#map-section">Map</a>
+        <a class="link" role="menuitem" href="#leaderboard-card">Leaderboard</a>
+        <a class="link" role="menuitem" href="#about">About</a>
+        <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
+        <a class="link" role="menuitem" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Join on Telegram</a>
+        <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+      </div>
     </nav>
   </header>
 
-  <main id="top">
+      <main id="top">
+    <!-- Hero -->
     <section class="container hero">
       <h1>One World. One CROnation.</h1>
-      <p class="lead">A clean, global map of our community on Cronos. Mark your country, mint a simple passport, and watch the world light up.</p>
-      <div class="cta">
-  <button id="markBtn" class="btn primary" onclick="scrollToMap()">Mark Your Country</button>
-  <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
-  <a href="https://t.me/CRONationOfficial" target="_blank" rel="noopener" class="btn">Join on Telegram</a>
-</div>
+      <p class="lead">
+        A clean, global map of our community on Cronos. Mark your country, mint a simple passport, and watch the world light up.
+      </p>
 
+      <div class="cta">
+        <button id="markBtn" class="btn primary" type="button" onclick="scrollToMap()">Mark Your Country</button>
+        <a href="https://x.com/cronation8" target="_blank" rel="noopener" class="btn" title="Follow on 𝕏">Follow on 𝕏</a>
+        <a href="https://t.me/CRONationOfficial" target="_blank" rel="noopener" class="btn">Join on Telegram</a>
+      </div>
+
+      <!-- Live stats -->
       <div class="stats" role="status" aria-live="polite">
-        <div class="stat"><div><small>Countries represented</small><span id="stat-countries">0</span></div></div>
-        <div class="stat"><div><small>Citizens joined</small><span id="stat-citizens">0</span></div></div>
-        <div class="stat"><div><small>Most active today</small><span id="stat-top">—</span></div></div>
+        <div class="stat">
+          <div>
+            <small>Countries represented</small>
+            <span id="stat-countries">0</span>
+          </div>
+        </div>
+        <div class="stat">
+          <div>
+            <small>Citizens joined</small>
+            <span id="stat-citizens">0</span>
+          </div>
+        </div>
+        <div class="stat">
+          <div>
+            <small>Most active today</small>
+            <span id="stat-top">—</span>
+          </div>
+        </div>
       </div>
     </section>
 
+        <!-- Map + Leaderboard -->
     <section id="map-section" class="container grid">
+      <!-- Map card -->
       <div class="card">
         <div class="body">
           <h3>Community Map</h3>
@@ -416,29 +386,30 @@
         </div>
       </div>
 
+      <!-- Leaderboard shell -->
       <aside class="card" id="leaderboard-card">
-  <div class="body">
-    <h3>Leaderboard</h3>
-    <div id="leaderboard"></div>
-  </div>
-</aside>
+        <div class="body">
+          <h3>Leaderboard</h3>
+          <div id="leaderboard"></div>
+        </div>
+      </aside>
 
-      <!-- JOIN -->
+          <!-- Join CROnation -->
       <div class="card" id="join-card">
         <div class="body">
           <h3>Join CROnation</h3>
 
-          <form id="join-form" class="join-grid">
+          <form id="join-form" class="join-grid" novalidate>
             <div class="field">
               <label for="country">Country</label>
-              <select id="country" required>
+              <select id="country" required aria-required="true">
                 <option value="">Select your country</option>
               </select>
             </div>
 
             <div class="field">
               <label for="nickname">Nickname (optional)</label>
-              <input id="nickname" placeholder="e.g. WillyBilly" />
+              <input id="nickname" inputmode="text" autocomplete="nickname" placeholder="e.g. WillyBilly" />
             </div>
 
             <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -447,82 +418,93 @@
           </form>
 
           <!-- Passport card -->
-          <!-- Passport card -->
-  <div id="passport" class="passport" style="display:none; margin-top:12px;">
-  <div id="passport-flag" aria-hidden="true"></div>
-  <div id="passport-flag" aria-hidden="true"></div>
-  <div class="shade" aria-hidden="true"></div>
-  <div class="gloss" aria-hidden="true"></div>
+          <div id="passport" class="passport" style="display:none; margin-top:12px;">
+            <!-- Flag layers -->
+            <div id="passport-flag" aria-hidden="true"></div>
+            <div class="shade" aria-hidden="true"></div>
+            <div class="gloss" aria-hidden="true"></div>
 
-  <div class="emblem">
-    <img id="passport-pfp"
-         src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
-         alt="CROnation logo">
-  </div>
+            <!-- Emblem / PFP -->
+            <div class="emblem" aria-hidden="true">
+              <img
+                id="passport-pfp"
+                src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png"
+                alt="CROnation emblem"
+              />
+            </div>
 
-  <div class="info">
-    <b>CROnation Passport <span id="passport-serial">#000000</span></b>
-    <small>
-      <span id="passport-nick">—</span> —
-      <span id="passport-country">—</span>
-      <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
-      <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
-    </small>
-  </div> <!-- ✅ CLOSE .info -->
+            <!-- Info -->
+            <div class="info">
+              <b>CROnation Passport <span id="passport-serial">#000000</span></b>
+              <small>
+                <span id="passport-nick">—</span> —
+                <span id="passport-country">—</span>
+                <img id="passport-flag-icon" class="flag-icon" alt="" style="display:none;" />
+                <span id="passport-address-chip" class="chip" style="margin-left:6px;">—</span>
+              </small>
+            </div>
 
-  <div id="passport-watermark" aria-hidden="true"></div>
-</div>
+            <!-- Watermark -->
+            <div id="passport-watermark" aria-hidden="true"></div>
+          </div>
 
-<!-- Controls OUTSIDE the passport -->
-<div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
-  <label class="btn block" style="cursor:pointer;">
-    <input id="pfpInput" type="file" accept="image/*" style="display:none;">
-    Upload PFP
-  </label>
-  <button id="shareBtn" type="button" class="btn block">Share to 𝕏</button>
-  <button id="downloadBtn" type="button" class="btn block">Download PNG</button>
-</div>
+          <!-- Controls (outside passport) -->
+          <div id="passport-controls" class="passport-controls" style="display:none; margin-top:12px;">
+            <label class="btn block" style="cursor:pointer;">
+              <input id="pfpInput" type="file" accept="image/*" style="display:none;" />
+              Upload PFP
+            </label>
+            <button id="shareBtn" type="button" class="btn block">Share to 𝕏</button>
+            <button id="downloadBtn" type="button" class="btn block">Download PNG</button>
+          </div>
 
-          <!-- ABOUT -->
-          <div class="card" id="about">
+          <!-- About -->
+          <div class="card" id="about" style="margin-top:12px;">
             <div class="body">
               <h3>About</h3>
-              <p class="muted">CROnation is a simple, global participation map for the Cronos community. It’s not a complicated game or an overpromised utility — just a clean way to visualize where we all are, and a minimal passport to flex your origin.</p>
-              <p class="muted">Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room to grow into wallet connections, airdrops, and seasonal leaderboards.</p>
+              <p class="muted">
+                CROnation is a simple, global participation map for the Cronos community. It’s not a complicated game or
+                an overpromised utility — just a clean way to visualize where we all are, and a minimal passport to flex your
+                origin.
+              </p>
+              <p class="muted">
+                Design language: premium, minimal, accessible. Built mobile-first with a lightweight stack and room to grow into
+                wallet connections, airdrops, and seasonal leaderboards.
+              </p>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Modal (map click) -->
+        <!-- Modal (map click) -->
     <div class="modal" id="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
-  <div class="panel">
-    <div class="header">
-      <b id="join-title">Join CROnation</b>
-      <button class="btn" onclick="closeModal()">Close</button>
-    </div>
-    <div class="content">
-      <div class="field">
-        <label for="modal-country">Country</label>
-        <input id="modal-country" disabled>
+      <div class="panel">
+        <div class="header">
+          <b id="join-title">Join CROnation</b>
+          <button class="btn" type="button" onclick="closeModal()" aria-label="Close modal">Close</button>
+        </div>
+        <div class="content">
+          <div class="field">
+            <label for="modal-country">Country</label>
+            <input id="modal-country" disabled aria-disabled="true" />
+          </div>
+          <div class="field">
+            <label for="modal-nickname">Nickname (optional)</label>
+            <input id="modal-nickname" inputmode="text" autocomplete="nickname" placeholder="e.g. WillyBillyCRO" />
+          </div>
+          <div class="field full">
+            <div id="citizens-list" class="citizens-list" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="footer">
+          <button id="modalMintBtn" class="btn primary" type="button" onclick="mintFromModal()">Mint Passport</button>
+        </div>
       </div>
-      <div class="field">
-        <label for="modal-nickname">Nickname (optional)</label>
-        <input id="modal-nickname" placeholder="e.g. WillyBillyCRO">
-      </div>
-      <div class="field full">
-        <div id="citizens-list" class="citizens-list"></div>
-      </div>
     </div>
-    <div class="footer">
-      <button id="modalMintBtn" class="btn primary" onclick="mintFromModal()">Mint Passport</button>
-    </div>
-  </div>
-</div>
   </main>
 
-  <footer class="footer">
+      <footer class="footer">
     <div class="container">
       <div style="display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <small>© <span id="year"></span> CROnation. Built for Cronos — community-first.</small>
@@ -531,818 +513,1815 @@
     </div>
   </footer>
 
-  <script>
-window.addEventListener('DOMContentLoaded', () => {
-  /**** Flags ****/
-  const FLAGS = {
-    TOKEN_GATE: true,
-    REQUIRE_WALLET: true,
-    AUTO_CONNECT: false,
-    PASSPORT_MINT_ENABLED: true,
-    NFT_MINT_ENABLED: false
-  };
+      <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    /**** Flags ****/
+    const FLAGS = {
+      TOKEN_GATE: true,
+      REQUIRE_WALLET: true,
+      AUTO_CONNECT: false,
+      PASSPORT_MINT_ENABLED: true,
+      NFT_MINT_ENABLED: false
+    };
 
-  const LAUNCH = {
-    xHandle: 'cronation8',
-    siteUrl: 'https://cronation.netlify.app',
-    token: {
-      address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
-      decimals: 18,
-      minBalance: '1',
-      chainIdHex: '0x19', // Cronos Mainnet (25)
-      rpc: 'https://evm.cronos.org',
-      abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
-    }
-  };
-
-  /**** Firebase ****/
-  const firebaseConfig = {
-    apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
-    authDomain: "cronation-6058b.firebaseapp.com",
-    projectId: "cronation-6058b",
-    storageBucket: "cronation-6058b.appspot.com",
-    messagingSenderId: "303748855698",
-    appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  /**** Helpers ****/
-  const el = (id)=>document.getElementById(id);
-  // --- download helpers ---
-const dataUrlToBlob = async (dataUrl) => (await fetch(dataUrl)).blob();
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-  function scrollToMap(){
-    const header = document.querySelector('header');
-    const sec = document.getElementById('map-section');
-    if(!header || !sec) return;
-    const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
-    window.scrollTo({ top: y, behavior:'smooth' });
-  }
-  window.scrollToMap = scrollToMap;
-
-  function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.classList.add('show');
-  clearTimeout(t._h);
-  t._h=setTimeout(()=>t.classList.remove('show'),2600);
-}
-
-function setBusy(on){
-  const l=document.getElementById('loader');
-  l.setAttribute('aria-busy',on?'true':'false');
-  l.setAttribute('aria-hidden',on?'false':'true');
-}
-
-  /* UI helpers + privacy */
-function hideCTAIfMinted(){
-  const btn = document.getElementById('markBtn');
-  if (btn) btn.style.display = 'none';
-}
-function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
-function initialsFromNick(n){
-  n = (n||'').trim();
-  if(!n) return '👤';
-  const parts = n.split(/\s+/).slice(0,2);
-  return parts.map(p=>p[0]).join('').toUpperCase();
-}
-
-  // Small helpers
-const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
-const blobToDataUrl = (b) => new Promise(r => { const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); });
-const fetchAsDataUrl = async (url) => { const r = await fetch(url,{mode:'cors',cache:'force-cache'}); const b=await r.blob(); return blobToDataUrl(b); };
-
-// Render a PNG of the passport without DOM snapshot (CORS-safe)
-async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
-  const W = 1200, H = 480, DPR = Math.min(2, window.devicePixelRatio || 1.5);
-  const c = document.createElement('canvas'); c.width=W*DPR; c.height=H*DPR;
-  const ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
-
-  // Rounded backdrop
-  const bg = '#0d203a', radius = 24;
-  roundRect(ctx, 0, 0, W, H, radius); ctx.fillStyle = bg; ctx.fill();
-
-  // Flag background (fetch as data URL to avoid taint)
-  const iso2 = countryToISO2(country);
-  if (iso2){
-    try{
-      const flagUrl = await fetchAsDataUrl(`https://flagcdn.com/w320/${iso2}.png`);
-      const flagImg = await loadImg(flagUrl);
-      ctx.save();
-      try{ ctx.filter = 'blur(0.8px) saturate(1.25)'; }catch(_){}
-      ctx.globalAlpha = 0.42;
-      drawCover(flagImg, W, H, ctx);
-      ctx.restore();
-    }catch(_){}
-  }
-
-  // Subtle diagonal sheen
-  const grad = ctx.createLinearGradient(0,0, W,H);
-  grad.addColorStop(0,'rgba(255,255,255,.05)');
-  grad.addColorStop(.35,'rgba(255,255,255,0)');
-  grad.addColorStop(.7,'rgba(255,255,255,.04)');
-  grad.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle = grad; roundRect(ctx,0,0,W,H,radius); ctx.fill();
-
-  // Emblem/PFP (convert current <img> to data URL if needed)
-  const pfpEl = document.getElementById('passport-pfp');
-  let pfpSrc = pfpEl?.src || '';
-  if (!pfpSrc.startsWith('data:')) {
-    try { pfpSrc = await fetchAsDataUrl(pfpSrc); } catch(_){ pfpSrc = null; }
-  }
-  if (pfpSrc){
-    const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
-    const p = await loadImg(pfpSrc);
-    ctx.fillStyle='rgba(15,18,25,.7)'; roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r); ctx.fill();
-    roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.save(); ctx.clip();
-    ctx.drawImage(p, EMB.x, EMB.y, EMB.w, EMB.h); ctx.restore();
-    ctx.strokeStyle='rgba(148,163,184,.25)'; ctx.lineWidth=2; roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.stroke();
-  }
-
-  // Title / serial
-  ctx.fillStyle='#fff'; ctx.textBaseline='top';
-  ctx.font='700 52px Inter, system-ui, -apple-system'; ctx.fillText('CROnation Passport', 188, 40);
-  ctx.font='800 58px Inter, system-ui, -apple-system'; ctx.fillText(`#${String(serial).padStart(6,'0')}`, 188, 100);
-
-  // Subtitle
-  ctx.font='600 30px Inter, system-ui, -apple-system'; ctx.fillStyle='rgba(229,231,235,.88)';
-  ctx.fillText(`CROnation — ${country}`, 188, 170);
-
-  // Address chip
-  if (address){
-    const chip = address.slice(0,6)+'…'+address.slice(-4);
-    const x=188, y=220, padX=16, h=40, r=18;
-    ctx.font='700 24px Inter, system-ui, -apple-system';
-    const w = Math.ceil(ctx.measureText(chip).width)+padX*2;
-    ctx.fillStyle='rgba(2,6,23,.35)'; roundRect(ctx,x,y,w,h,r); ctx.fill();
-    ctx.strokeStyle='rgba(148,163,184,.28)'; ctx.lineWidth=2; roundRect(ctx,x,y,w,h,r); ctx.stroke();
-    ctx.fillStyle='#e5e7eb'; ctx.fillText(chip, x+padX, y+8);
-  }
-
-  // Watermark
-  ctx.save(); ctx.globalAlpha=0.09; ctx.fillStyle='#fff';
-  ctx.font='800 96px Inter, system-ui, -apple-system';
-  wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
-
-  return c.toDataURL('image/png', 0.95);
-
-  // --- helpers ---
-  function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
-  function drawCover(img,W,H,ctx){ const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr); const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2; ctx.drawImage(img,dx,dy,dw,dh); }
-  function wrapBig(c, text, x, y, maxW){ const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84; for (const w of words){ const t=(line?line+' ':'')+w; if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; } else { line=t; } } if(line) c.fillText(line,x,yy); }
-}
-
-/* Firestore: get citizens for a country */
-async function fetchCitizens(country){
-  const qs = await db.collection('passports').where('country','==',country).get();
-  const rows = [];
-  qs.forEach(doc=>{
-    const d = doc.data();
-    if(!d) return;
-    rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
-  });
-  rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
-  return rows;
-}
-
-/* Render citizens into a container */
-function renderCitizens(container, citizens){
-  if(!container) return;
-  if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
-  container.innerHTML = citizens.map(c=>`
-    <div class="citizen">
-      <div class="avatar">${initialsFromNick(c.nick)}</div>
-      <div class="meta">
-        <b>${c.nick || 'Anonymous'}</b>
-        <small>${shortAddrFull(c.address)}</small>
-      </div>
-    </div>
-  `).join('');
-}
-
-/* Load citizens into the modal */
-async function loadCitizensIntoModal(country){
-  const box = document.getElementById('citizens-list');
-  if(!box) return;
-  box.innerHTML = `<small class="muted">Loading citizens…</small>`;
-  try{
-    const citizens = await fetchCitizens(country);
-    renderCitizens(box, citizens);
-    toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
-  }catch(e){
-    console.error(e);
-    box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
-  }
-}
-
-  // --- Country coloring ---
-  const countryLayers = new Map();
-  function colorFor(count){
-    if (count >= 25) return '#1d4ed8';
-    if (count >= 10) return '#3b82f6';
-    if (count >= 1)  return '#93c5fd';
-    return '#e5e7eb';
-  }
-  function updateCountryStyle(name){
-    const layer = countryLayers.get(name);
-    if (!layer) return;
-    const count = countryCounts.get(name) || 0;
-    layer.setStyle({ fillColor: colorFor(count) });
-  }
-
-  /**** Mobile menu ****/
-  (function mobileMenu(){
-    const btn = el('hamburger');
-    const menu = el('mobile-menu');
-    if(!btn || !menu) return;
-    const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
-    const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
-    btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
-    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-    window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-    window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
-    window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
-  })();
-
-  /**** Map + Countries ****/
-  const countryCounts = new Map();
-  const countryList = [];
-  let totalCitizens = 0;
-  el('year').textContent = new Date().getFullYear();
-
-  const map = L.map('map', {
-    zoomControl: true, minZoom: 1, maxZoom: 6, worldCopyJump: true, attributionControl: false
-  }).setView([20, 0], 2);
-
-  const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
-  fetch(GEOJSON_URL).then(r => r.json()).then(data => {
-    data.features.forEach(f => {
-      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-      countryList.push(name);
-    });
-    countryList.sort((a,b)=>a.localeCompare(b));
-    populateCountryDropdown(countryList);
-
-    const layer = L.geoJSON(data, {
-      style: (feature) => {
-        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-        const count = countryCounts.get(name) || 0;
-        return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
-      },
-      onEachFeature: (feature, l) => {
-        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-        countryLayers.set(name, l);
-        l.on({
-          mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
-          mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
-          click:     () => openModal(name)
-        });
-        l.bindTooltip(name, { sticky: true });
+    const LAUNCH = {
+      xHandle: 'cronation8',
+      siteUrl: 'https://cronation.netlify.app',
+      token: {
+        address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
+        decimals: 18,
+        minBalance: '1',
+        chainIdHex: '0x19', // Cronos Mainnet (25)
+        rpc: 'https://evm.cronos.org',
+        abi: [
+          {"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}
+        ],
       }
-    }).addTo(map);
+    };
 
-    try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
-    requestAnimationFrame(() => map.invalidateSize());
-    setTimeout(() => map.invalidateSize(), 300);
-    ['orientationchange','resize'].forEach(ev =>
-      window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
-    );
-  }).catch(err => {
-    console.error('Failed to load GeoJSON', err);
-    el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
-  Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
-</div>`;
-});
+    /**** Firebase ****/
+    const firebaseConfig = {
+      apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+      authDomain: "cronation-6058b.firebaseapp.com",
+      projectId: "cronation-6058b",
+      storageBucket: "cronation-6058b.appspot.com",
+      messagingSenderId: "303748855698",
+      appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-  function populateCountryDropdown(list){
-    const sel = el('country');
-    if(!sel) return;
-    const frag = document.createDocumentFragment();
-    list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; frag.appendChild(opt); });
-    sel.appendChild(frag);
-  }
+    /**** DOM + Misc Helpers ****/
+    const el = (id)=>document.getElementById(id);
 
-  /**** Modal ****/
-  function openModal(country){
-    const modal = el('join-modal');
-    if(!modal) return;
-    el('modal-country').value = country || '';
-    el('modal-nickname').value = '';
-    modal.setAttribute('open', '');
-    document.body.classList.add('modal-open');
-    loadCitizensIntoModal(country);
-  }
-  function closeModal(){
-    const modal = el('join-modal');
-    if(!modal) return;
-    modal.removeAttribute('open');
-    document.body.classList.remove('modal-open');
-  }
-  window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-  window.openModal = openModal;
-  window.closeModal = closeModal;
+    // download helpers
+    const dataUrlToBlob = async (dataUrl) => (await fetch(dataUrl)).blob();
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  /**** Wallet + gating ****/
-  const connectBtn = el('connectBtn');
-  let provider = null, signer = null, userAddress = null;
+    function scrollToMap(){
+      const header = document.querySelector('header');
+      const sec = document.getElementById('map-section');
+      if(!header || !sec) return;
+      const y = sec.getBoundingClientRect().top + window.pageYOffset - header.getBoundingClientRect().height - 8;
+      window.scrollTo({ top: y, behavior:'smooth' });
+    }
+    window.scrollToMap = scrollToMap;
 
-  function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet'; }
-
-  // ---- helpers (put these above connectWallet) ----
-async function withTimeout(promise, ms, label='operation'){
-  let t; const timer = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(label+' timeout')), ms));
-  try { return await Promise.race([promise, timer]); }
-  finally { clearTimeout(t); }
-}
-function wireProviderEvents(raw){
-  if (!raw?.on) return;
-  raw.on('connect',    (info)=> console.log('[provider] connect', info));
-  raw.on('disconnect', (err)=>  console.log('[provider] disconnect', err));
-  raw.on('accountsChanged', (acc)=> console.log('[provider] accountsChanged', acc));
-  raw.on('chainChanged',    (ch)=>  console.log('[provider] chainChanged', ch));
-}
-
-// ---- safer connect (drop-in) ----
-let connecting = false;
-async function connectWallet(){
-  if (connecting) return;
-  connecting = true;
-  setBusy(true);
-
-  try{
-    if(!window.ethereum){
-      toast('No wallet detected — open in MetaMask/Trust/Crypto.com browser or install one');
-      alert('No wallet detected. Open this site inside your wallet’s in-app browser for the smoothest connect.');
-      return;
+    function toast(msg){
+      const t=document.getElementById('toast');
+      if(!t) return;
+      t.textContent=msg;
+      t.classList.add('show');
+      clearTimeout(t._h);
+      t._h=setTimeout(()=>t.classList.remove('show'),2600);
     }
 
-    // 1) request accounts with timeout
-    await withTimeout(window.ethereum.request({ method:'eth_requestAccounts' }), 30_000, 'eth_requestAccounts');
+    function setBusy(on){
+      const l=document.getElementById('loader');
+      if(!l) return;
+      l.setAttribute('aria-busy',on?'true':'false');
+      l.setAttribute('aria-hidden',on?'false':'true');
+    }
 
-    // 2) build provider AFTER connect
-    provider = new ethers.providers.Web3Provider(window.ethereum, 'any'); // 'any' avoids stale network
-    signer   = provider.getSigner();
-    wireProviderEvents(window.ethereum);
+    /* UI helpers + privacy */
+    function hideCTAIfMinted(){
+      const btn = document.getElementById('markBtn');
+      if (btn) btn.style.display = 'none';
+    }
+    function shortAddrFull(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+    function initialsFromNick(n){
+      n = (n||'').trim();
+      if(!n) return '👤';
+      const parts = n.split(/\s+/).slice(0,2);
+      return parts.map(p=>p[0]).join('').toUpperCase();
+    }
 
-    // short yield helps some wallets settle before first RPC
-    await new Promise(r => setTimeout(r, 50));
+    // Image/data helpers
+    const loadImg = (src) => new Promise((res, rej) => {
+      const i = new Image();
+      i.onload=()=>res(i);
+      i.onerror=rej;
+      i.src=src;
+    });
+    const blobToDataUrl = (b) => new Promise(r => {
+      const fr=new FileReader();
+      fr.onload=()=>r(fr.result);
+      fr.readAsDataURL(b);
+    });
+    const fetchAsDataUrl = async (url) => {
+      const r = await fetch(url,{mode:'cors',cache:'force-cache'});
+      const b=await r.blob();
+      return blobToDataUrl(b);
+    };
 
-    // 3) get address (with timeout so we never hang)
-    userAddress = await withTimeout(signer.getAddress(), 10_000, 'getAddress');
-    window.userAddress = userAddress;
+    // ---- CORS-safe Passport PNG renderer (Canvas) ----
+    async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
+      const W = 1200, H = 480, DPR = Math.min(2, window.devicePixelRatio || 1.5);
+      const c = document.createElement('canvas'); c.width=W*DPR; c.height=H*DPR;
+      const ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
 
-    // 4) ensure Cronos 0x19 (your ensureChain already correct)
-    await withTimeout(ensureChain(), 20_000, 'ensureChain');
+      // Rounded backdrop
+      const bg = '#0d203a', radius = 24;
+      roundRect(ctx, 0, 0, W, H, radius); ctx.fillStyle = bg; ctx.fill();
 
-    // 5) optional verification (don’t block UX if cancelled)
-    try{
-      const message = `CROnation — Verify Wallet
+      // Flag background (fetch as data URL to avoid taint)
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        try{
+          const flagUrl = await fetchAsDataUrl(`https://flagcdn.com/w320/${iso2}.png`);
+          const flagImg = await loadImg(flagUrl);
+          ctx.save();
+          try{ ctx.filter = 'blur(0.8px) saturate(1.25)'; }catch(_){}
+          ctx.globalAlpha = 0.42;
+          drawCover(flagImg, W, H, ctx);
+          ctx.restore();
+        }catch(_){}
+      }
+
+      // Subtle diagonal sheen
+      const grad = ctx.createLinearGradient(0,0, W,H);
+      grad.addColorStop(0,'rgba(255,255,255,.05)');
+      grad.addColorStop(.35,'rgba(255,255,255,0)');
+      grad.addColorStop(.7,'rgba(255,255,255,.04)');
+      grad.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = grad; roundRect(ctx,0,0,W,H,radius); ctx.fill();
+
+      // Emblem/PFP (convert current <img> to data URL if needed)
+      const pfpEl = document.getElementById('passport-pfp');
+      let pfpSrc = pfpEl?.src || '';
+      if (pfpSrc && !pfpSrc.startsWith('data:')) {
+        try { pfpSrc = await fetchAsDataUrl(pfpSrc); } catch(_){ pfpSrc = null; }
+      }
+      if (pfpSrc){
+        const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
+        const p = await loadImg(pfpSrc);
+        ctx.fillStyle='rgba(15,18,25,.7)'; roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r); ctx.fill();
+        roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.save(); ctx.clip();
+        ctx.drawImage(p, EMB.x, EMB.y, EMB.w, EMB.h); ctx.restore();
+        ctx.strokeStyle='rgba(148,163,184,.25)'; ctx.lineWidth=2; roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.stroke();
+      }
+
+      // Title / serial
+      ctx.fillStyle='#fff'; ctx.textBaseline='top';
+      ctx.font='700 52px Inter, system-ui, -apple-system'; ctx.fillText('CROnation Passport', 188, 40);
+      ctx.font='800 58px Inter, system-ui, -apple-system'; ctx.fillText(`#${String(serial).padStart(6,'0')}`, 188, 100);
+
+      // Subtitle
+      ctx.font='600 30px Inter, system-ui, -apple-system'; ctx.fillStyle='rgba(229,231,235,.88)';
+      ctx.fillText(`CROnation — ${country}`, 188, 170);
+
+      // Address chip
+      if (address){
+        const chip = address.slice(0,6)+'…'+address.slice(-4);
+        const x=188, y=220, padX=16, h=40, r=18;
+        ctx.font='700 24px Inter, system-ui, -apple-system';
+        const w = Math.ceil(ctx.measureText(chip).width)+padX*2;
+        ctx.fillStyle='rgba(2,6,23,.35)'; roundRect(ctx,x,y,w,h,r); ctx.fill();
+        ctx.strokeStyle='rgba(148,163,184,.28)'; ctx.lineWidth=2; roundRect(ctx,x,y,w,h,r); ctx.stroke();
+        ctx.fillStyle='#e5e7eb'; ctx.fillText(chip, x+padX, y+8);
+      }
+
+      // Watermark
+      ctx.save(); ctx.globalAlpha=0.09; ctx.fillStyle='#fff';
+      ctx.font='800 96px Inter, system-ui, -apple-system';
+      wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
+
+      return c.toDataURL('image/png', 0.95);
+
+      // --- helpers ---
+      function roundRect(c,x,y,w,h,r){
+        const rr=Math.min(r,w/2,h/2);
+        c.beginPath();
+        c.moveTo(x+rr,y);
+        c.arcTo(x+w,y,x+w,y+h,rr);
+        c.arcTo(x+w,y+h,x,y+h,rr);
+        c.arcTo(x,y+h,x,y,rr);
+        c.arcTo(x,y,x+w,y,rr);
+        c.closePath();
+      }
+      function drawCover(img,W,H,ctx){
+        const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr);
+        const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2;
+        ctx.drawImage(img,dx,dy,dw,dh);
+      }
+      function wrapBig(c, text, x, y, maxW){
+        const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84;
+        for (const w of words){
+          const t=(line?line+' ':'')+w;
+          if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; }
+          else { line=t; }
+        }
+        if(line) c.fillText(line,x,yy);
+      }
+    }
+
+    // Expose a couple of helpers globally where needed
+    window.toast = toast;
+    window.setBusy = setBusy;
+  });
+  </script>
+
+    /**** Wallet + gating ****/
+    const connectBtn = el('connectBtn');
+    let provider = null, signer = null, userAddress = null;
+
+    // Utils
+    const shortAddr = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet';
+
+    async function withTimeout(promise, ms, label='operation'){
+      let t; const timer = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(label+' timeout')), ms));
+      try { return await Promise.race([promise, timer]); }
+      finally { clearTimeout(t); }
+    }
+    function wireProviderEvents(raw){
+      if (!raw?.on) return;
+      raw.on('connect',    (info)=> console.log('[provider] connect', info));
+      raw.on('disconnect', (err)=>  console.log('[provider] disconnect', err));
+      raw.on('accountsChanged', async (acc)=> {
+        console.log('[provider] accountsChanged', acc);
+        // reload to keep state sane
+        try { location.reload(); } catch(_) {}
+      });
+      raw.on('chainChanged', async (ch)=> {
+        console.log('[provider] chainChanged', ch);
+        // small delay lets some wallets settle
+        setTimeout(()=> location.reload(), 200);
+      });
+    }
+
+    let connecting = false;
+    async function connectWallet(){
+      if (connecting) return;
+      connecting = true;
+      setBusy(true);
+
+      try{
+        if(!window.ethereum){
+          toast('No wallet detected — open in MetaMask/Trust/Crypto.com browser or install one');
+          alert('No wallet detected. Open this site inside your wallet’s in-app browser for the smoothest connect.');
+          return;
+        }
+
+        // 1) request accounts with timeout
+        await withTimeout(window.ethereum.request({ method:'eth_requestAccounts' }), 30_000, 'eth_requestAccounts');
+
+        // 2) build provider AFTER connect
+        provider = new ethers.providers.Web3Provider(window.ethereum, 'any'); // 'any' avoids stale network
+        signer   = provider.getSigner();
+        wireProviderEvents(window.ethereum);
+
+        // 3) get address (with timeout so we never hang)
+        await new Promise(r => setTimeout(r, 50)); // settle
+        userAddress = await withTimeout(signer.getAddress(), 10_000, 'getAddress');
+        window.userAddress = userAddress;
+
+        // 4) ensure Cronos 0x19
+        await withTimeout(ensureChain(), 20_000, 'ensureChain');
+
+        // 5) optional verification (don’t block UX if cancelled)
+        try{
+          const message = `CROnation — Verify Wallet
 Address: ${userAddress}
 Time: ${new Date().toISOString()}`;
-      const signature = await withTimeout(signer.signMessage(message), 20_000, 'signMessage');
-      localStorage.setItem('cronation_sig', signature);
-    }catch(_e){ /* ignore sign cancel */ }
+          const signature = await withTimeout(signer.signMessage(message), 20_000, 'signMessage');
+          localStorage.setItem('cronation_sig', signature);
+        }catch(_e){ /* ignore sign cancel */ }
 
-    // 6) UI + restore
-    connectBtn.textContent = shortAddr(userAddress);
-    toast('Wallet connected ✅');
-    restorePassportIfAny();
-    restorePfpIfAny(userAddress);
+        // 6) UI
+        if (connectBtn) connectBtn.textContent = shortAddr(userAddress);
+        toast('Wallet connected ✅');
 
-  }catch(err){
-    console.error('[connectWallet] error:', err);
-    if (String(err?.message||'').includes('timeout')) {
-      toast('Connection timed out — try again or open in your wallet browser');
-    } else {
-      toast('Connection cancelled or failed');
+        // Post-connect restores (will be defined in later sections)
+        try { restorePassportIfAny?.(); } catch(_) {}
+        try { restorePfpIfAny?.(userAddress); } catch(_) {}
+
+      }catch(err){
+        console.error('[connectWallet] error:', err);
+        if (String(err?.message||'').includes('timeout')) {
+          toast('Connection timed out — try again or open in your wallet browser');
+        } else {
+          toast('Connection cancelled or failed');
+        }
+        alert('Wallet connection was cancelled or failed.');
+      }finally{
+        setBusy(false);
+        setTimeout(()=> (connecting=false), 600); // cooldown prevents double-click hangs
+      }
     }
-    alert('Wallet connection was cancelled or failed.');
-  }finally{
-    setBusy(false);
-    setTimeout(()=> (connecting=false), 600); // small cooldown prevents double-click hangs
-  }
-}
 
-  async function ensureChain(){
-    const desired = LAUNCH.token.chainIdHex;
-    const current = await provider.send('eth_chainId', []);
-    if(current?.toLowerCase() !== desired.toLowerCase()){
+    async function ensureChain(){
+      const desired = LAUNCH.token.chainIdHex;
+      const current = await provider.send('eth_chainId', []);
+      if(current?.toLowerCase() !== desired.toLowerCase()){
+        try{
+          await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
+        }catch(switchErr){
+          if(switchErr.code === 4902){
+            await provider.send('wallet_addEthereumChain', [{
+              chainId: desired,
+              chainName: 'Cronos Mainnet',
+              nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+              rpcUrls:[LAUNCH.token.rpc],
+              blockExplorerUrls:['https://cronoscan.com']
+            }]);
+          }else{ throw switchErr; }
+        }
+      }
+    }
+
+    async function hasRequiredTokens(address){
       try{
-        await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
-      }catch(switchErr){
-        if(switchErr.code === 4902){
-          await provider.send('wallet_addEthereumChain', [{
-            chainId: desired,
-            chainName: 'Cronos Mainnet',
-            nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
-            rpcUrls:[LAUNCH.token.rpc],
-            blockExplorerUrls:['https://cronoscan.com']
-          }]);
-        }else{ throw switchErr; }
+        if(!FLAGS.TOKEN_GATE) return true;
+
+        const token = LAUNCH.token.address;
+        if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+
+        const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+        const bal   = await erc20.balanceOf(address);
+        const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+
+        const ok = bal.gte(min);
+        if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
+        return ok;
+      }catch(e){
+        console.error('Token-gate check failed:', e);
+        toast('Token check failed');
+        alert('Could not verify token balance. Check network and token address.');
+        return false;
       }
     }
-  }
 
-  async function hasRequiredTokens(address){
-  try{
-    const token = LAUNCH.token.address;
-    if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
 
-    const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
-    const bal   = await erc20.balanceOf(address);
-    const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+    /**** Map + Countries ****/
+    const countryCounts = new Map();
+    const countryLayers = new Map();
+    const countryList   = [];
+    let totalCitizens   = 0;
 
-    const ok = bal.gte(min);
-    if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
-    return ok;
-  }catch(e){
-    console.error('Token-gate check failed:', e);
-    toast('Token check failed');
-    alert('Could not verify token balance. Check network and token address.');
-    return false;
-  }
-}
+    el('year').textContent = new Date().getFullYear();
 
-  if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+    // Create the Leaflet map (butter-smooth config)
+    const map = L.map('map', {
+      zoomControl: true,
+      minZoom: 1,
+      maxZoom: 6,
+      worldCopyJump: true,
+      attributionControl: false,
+      inertia: true,
+      inertiaDeceleration: 3000
+    }).setView([20, 0], 2);
 
-  /**** Firestore-backed mint ****/
-  async function attemptMint(country, nick){
-  if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
-  if(FLAGS.REQUIRE_WALLET && !userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
-
-  try{
-    setBusy(true);                                     // 👈 start loader
-
-    if(FLAGS.TOKEN_GATE){
-      await ensureChain();
-      const ok = await hasRequiredTokens(userAddress);
-      if(!ok){ return; }                               // toast already shown in hasRequiredTokens
+    // Country color ramp
+    const colorFor = (count) => {
+      if (count >= 25) return '#1d4ed8';
+      if (count >= 10) return '#3b82f6';
+      if (count >= 1)  return '#93c5fd';
+      return '#e5e7eb';
+    };
+    function updateCountryStyle(name){
+      const layer = countryLayers.get(name);
+      if (!layer) return;
+      const count = countryCounts.get(name) || 0;
+      layer.setStyle({ fillColor: colorFor(count) });
     }
 
-    const addrKey = userAddress.toLowerCase();
-    const docRef = db.collection('passports').doc(addrKey);
-    const snap = await docRef.get();
+    // Load world GeoJSON
+    const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+    fetch(GEOJSON_URL)
+      .then(r => r.json())
+      .then(data => {
+        data.features.forEach(f => {
+          const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+          countryList.push(name);
+        });
+        countryList.sort((a,b)=>a.localeCompare(b));
+        populateCountryDropdown(countryList);
 
-    if(snap.exists){
-      const p = snap.data();
-      showPassport(p.country, p.nick, p.serial);
-      hideJoinForm();
-      toast('You already minted — showing passport');  // 👈 toast
-      alert('You already have a passport. Showing it now.');
-      return;
-    }
+        const layer = L.geoJSON(data, {
+          style: (feature) => {
+            const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+            const count = countryCounts.get(name) || 0;
+            return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+          },
+          onEachFeature: (feature, l) => {
+            const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+            countryLayers.set(name, l);
+            l.on({
+              mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
+              mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
+              click:     () => openModal(name)
+            });
+            l.bindTooltip(name, { sticky: true });
+          }
+        }).addTo(map);
 
-    const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
-    await docRef.set({
-      address: userAddress,
-      country, nick,
-      serial,
-      created: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    showPassport(country, nick, serial);
-    hideJoinForm();
-    hideCTAIfMinted();
-    toast(`Minted! Passport #${serial}`);              // 👈 success
-  }catch(err){
-    console.error(err);
-    toast('Mint failed — try again');                  // 👈 error toast
-    alert('Mint failed. Please try again.');
-  }finally{
-    setBusy(false);                                    // 👈 stop loader
-  }
-}
-
-  function hideJoinForm(){
-    const form = el('join-form');
-    if(form) form.style.display = 'none';
-  }
-
-  /* === Flag mapping (strict/common names only) === */
-  const ISO2 = {
-    "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
-    "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
-    "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
-    "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
-    "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
-    "Nigeria":"ng","Kenya":"ke"
-  };
-  const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
-
-  function setPassportFlag(country){
-  const layer = document.getElementById('passport-flag');
-  if(!layer) return;
-  const iso2 = countryToISO2(country);
-  if (iso2){
-    layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
-    layer.style.filter = (country === "Germany" || country === "China") 
-      ? "brightness(1.25) contrast(1.1)" 
-      : "brightness(1.05) contrast(1.15)";
-  }
-}
-
-  function setPassportFlagIcon(country){
-    const icon = document.getElementById('passport-flag-icon');
-    if(!icon) return;
-    const iso2 = countryToISO2(country);
-    if (iso2){
-      icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-      icon.style.display = 'inline-block';
-      icon.alt = country + ' flag';
-    } else {
-      icon.removeAttribute('src');
-      icon.style.display = 'none';
-      icon.alt = '';
-    }
-  }
-
-  // --- PFP persistence (per-wallet, local only) ---
-  function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
-  function restorePfpIfAny(addr){
-    try{
-      const key = pfpKey(addr);
-      if(!key) return;
-      const dataUrl = localStorage.getItem(key);
-      if(dataUrl){
-        const img = el('passport-pfp');
-        if(img) img.src = dataUrl;
-      }
-    }catch(_e){}
-  }
-  async function fileToDataURLResized(file, max=360, quality=0.86){
-    const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
-    const scale = Math.min(1, max / Math.max(img.width, img.height));
-    const w = Math.max(1, Math.round(img.width * scale));
-    const h = Math.max(1, Math.round(img.height * scale));
-    const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-    try{ URL.revokeObjectURL(img.src); }catch(_e){}
-    return dataUrl;
-  }
-
-  /* === Passport rendering === */
-  function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
-  function setSrc(id, url){ const n = document.getElementById(id); if(n) n.src = url; }
-
-  function showPassport(country, nick, serial){
-    const card = document.getElementById('passport');
-    if(!card) return;
-
-    setText('passport-nick', nick);
-    setText('passport-country', country);
-    setText('passport-serial', '#'+serial);
-    setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
-    setText('passport-address-chip', shortAddr(window.userAddress||userAddress||''));
-
-    setPassportFlag(country);
-    setPassportFlagIcon(country);
-
-    // restore any saved pfp for this wallet
-    restorePfpIfAny(window.userAddress || userAddress);
-
-    // flash the activation glow
-    card.classList.remove('activated');
-    requestAnimationFrame(()=>{ card.classList.add('activated'); });
-
-    card.style.display = 'grid';
-    try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
-
-    // inside showPassport(country, nick, serial) after you set up shareBtn:
-const dlBtn = document.getElementById('downloadBtn');
-if (dlBtn){
-  dlBtn.onclick = async () => {
-    try{
-      setBusy?.(true);
-
-      // 1) Render a clean PNG (you already have this function)
-      const dataUrl = await renderPassportPNGViaCanvas({
-        country, nick, serial,
-        address: (window.userAddress || '')
+        try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
+        requestAnimationFrame(() => map.invalidateSize());
+        setTimeout(() => map.invalidateSize(), 300);
+        ['orientationchange','resize'].forEach(ev =>
+          window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
+        );
+      })
+      .catch(err => {
+        console.error('Failed to load GeoJSON', err);
+        el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+          Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+        </div>`;
       });
 
-      // Turn into a real file (works with Web Share + download)
-      const blob = await dataUrlToBlob(dataUrl);
-      const filename = `cronation-passport-${serial}.png`;
+    function populateCountryDropdown(list){
+      const sel = el('country');
+      if(!sel) return;
+      const frag = document.createDocumentFragment();
+      list.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        frag.appendChild(opt);
+      });
+      sel.appendChild(frag);
+    }
 
-      // Detect iOS (old Safari may ignore a.download)
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    /**** Modal ****/
+    function openModal(country){
+      const modal = el('join-modal');
+      if(!modal) return;
+      el('modal-country').value = country || '';
+      el('modal-nickname').value = '';
+      modal.setAttribute('open', '');
+      document.body.classList.add('modal-open');
+      loadCitizensIntoModal(country);
+    }
+    function closeModal(){
+      const modal = el('join-modal');
+      if(!modal) return;
+      modal.removeAttribute('open');
+      document.body.classList.remove('modal-open');
+    }
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); }, { passive:true });
+    window.openModal = openModal;
+    window.closeModal = closeModal;
 
-      // 2) If the browser supports native sharing of files, use it (best for iOS/Android)
-      if (navigator.canShare && navigator.canShare({
-        files: [new File([blob], filename, { type: 'image/png' })]
-      })) {
-        await navigator.share({
-          files: [new File([blob], filename, { type: 'image/png' })],
-          title: 'CROnation Passport',
-          text: 'One World. One CROnation.'
-        });
-        toast?.('Shared — Save Image from the sheet');
+    /**** Firestore: country citizens ****/
+    async function fetchCitizens(country){
+      const qs = await db.collection('passports').where('country','==',country).get();
+      const rows = [];
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d) return;
+        rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
+      });
+      rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
+      return rows;
+    }
+
+    function initialsFromNick(n){
+      n = (n||'').trim();
+      if(!n) return '👤';
+      const parts = n.split(/\s+/).slice(0,2);
+      return parts.map(p=>p[0]).join('').toUpperCase();
+    }
+    const shortAddrFull = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
+
+    function renderCitizens(container, citizens){
+      if(!container) return;
+      if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
+      container.innerHTML = citizens.map(c=>`
+        <div class="citizen">
+          <div class="avatar">${initialsFromNick(c.nick)}</div>
+          <div class="meta">
+            <b>${c.nick || 'Anonymous'}</b>
+            <small>${shortAddrFull(c.address)}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadCitizensIntoModal(country){
+      const box = document.getElementById('citizens-list');
+      if(!box) return;
+      box.innerHTML = `<small class="muted">Loading citizens…</small>`;
+      try{
+        const citizens = await fetchCitizens(country);
+        renderCitizens(box, citizens);
+        toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
+      }catch(e){
+        console.error(e);
+        box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
+      }
+    }
+
+    /**** Stats + Leaderboard ****/
+    function renderStats(){
+      el('stat-countries').textContent = countryCounts.size;
+      el('stat-citizens').textContent  = totalCitizens;
+      let top = '—', max = -1;
+      countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
+      el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
+    }
+
+    async function renderLeaderboard(){
+      const container = document.getElementById('leaderboard');
+      if(!container) return;
+
+      const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
+      if(entries.length === 0){
+        container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
         return;
       }
 
-      // 3) Standard download via blob URL (desktop + many Android browsers)
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      // give the browser time to start the download before revoking
-      await sleep(1500);
-      URL.revokeObjectURL(url);
+      container.innerHTML = entries.map(([name, count], i) => `
+        <details data-country="${name}">
+          <summary>
+            <span>${i+1}. ${name}</span>
+            <span class="badge">${count}</span>
+          </summary>
+          <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
+        </details>
+      `).join('');
 
-      // 4) iOS fallback (older Safari): open the image so user can long-press → Save Image
-      if (isIOS) {
-        window.open(dataUrl, '_blank', 'noopener');
-        toast?.('Opened image — long-press and “Save Image”');
+      container.querySelectorAll('details').forEach((det, idx)=>{
+        det.addEventListener('toggle', async () => {
+          if(!det.open) return;
+          const name = det.getAttribute('data-country');
+          const pane = document.getElementById(`lb-${idx}`);
+          if(!pane) return;
+          pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
+          try{
+            const citizens = await fetchCitizens(name);
+            renderCitizens(pane, citizens);
+          }catch(e){
+            console.error(e);
+            pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+          }
+        }, { passive:true });
+      });
+    }
+
+    // Real-time Firestore listener for counts
+    db.collection('passports').onSnapshot((qs)=>{
+      countryCounts.clear();
+      totalCitizens = 0;
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d || !d.country) return;
+        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+        totalCitizens += 1;
+      });
+      renderStats();
+      renderLeaderboard();
+      countryLayers.forEach((_, name) => updateCountryStyle(name));
+    });
+
+    /* === Small DOM helpers used here === */
+    const setText = (id, text) => { const n = document.getElementById(id); if(n) n.textContent = text; };
+
+    /* === ISO2 mapping + flag helpers (same mapping as earlier) === */
+    const ISO2 = {
+      "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
+      "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
+      "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
+      "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
+      "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
+      "Nigeria":"ng","Kenya":"ke"
+    };
+    const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
+
+    function setPassportFlag(country){
+      const layer = document.getElementById('passport-flag');
+      if(!layer) return;
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
+        layer.style.filter = (country === "Germany" || country === "China")
+          ? "brightness(1.25) contrast(1.1)"
+          : "brightness(1.05) contrast(1.15)";
+      }
+    }
+    function setPassportFlagIcon(country){
+      const icon = document.getElementById('passport-flag-icon');
+      if(!icon) return;
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+        icon.style.display = 'inline-block';
+        icon.alt = country + ' flag';
       } else {
-        toast?.('PNG downloaded');
+        icon.removeAttribute('src');
+        icon.style.display = 'none';
+        icon.alt = '';
+      }
+    }
+
+    /* === PFP persistence (per-wallet, local only) === */
+    const pfpKey = (addr)=> addr ? `cronation_pfp:${addr.toLowerCase()}` : null;
+    function restorePfpIfAny(addr){
+      try{
+        const key = pfpKey(addr);
+        if(!key) return;
+        const dataUrl = localStorage.getItem(key);
+        if(dataUrl){
+          const img = el('passport-pfp');
+          if(img) img.src = dataUrl;
+        }
+      }catch(_e){}
+    }
+    async function fileToDataURLResized(file, max=360, quality=0.86){
+      const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      try{ URL.revokeObjectURL(img.src); }catch(_e){}
+      return dataUrl;
+    }
+
+    /* === Passport card render + controls === */
+    function showPassport(country, nick, serial){
+      const card = document.getElementById('passport');
+      if(!card) return;
+
+      setText('passport-nick', nick);
+      setText('passport-country', country);
+      setText('passport-serial', '#'+serial);
+      setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
+      setText('passport-address-chip', (window.userAddress||'').slice(0,6)+'…'+(window.userAddress||'').slice(-4));
+
+      setPassportFlag(country);
+      setPassportFlagIcon(country);
+
+      // restore saved pfp for this wallet
+      restorePfpIfAny(window.userAddress);
+
+      // activation glow
+      card.classList.remove('activated');
+      requestAnimationFrame(()=> card.classList.add('activated'));
+      card.style.display = 'grid';
+      try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+
+      // Controls area
+      const controls = document.getElementById('passport-controls');
+      if (controls) controls.style.display = 'flex';
+
+      // Share to X
+      const shareBtn = document.getElementById('shareBtn');
+      if (shareBtn){
+        shareBtn.onclick = () => shareToX({ country, nick, serial });
       }
 
-    } catch (e){
-      console.error(e);
-      alert('Could not generate the image. Try again.');
-    } finally {
-      setBusy?.(false);
+      // Download / Share PNG (uses renderPassportPNGViaCanvas from earlier section)
+      const dlBtn = document.getElementById('downloadBtn');
+      if (dlBtn){
+        dlBtn.onclick = async () => {
+          try{
+            setBusy?.(true);
+
+            const dataUrl = await renderPassportPNGViaCanvas({
+              country, nick, serial,
+              address: (window.userAddress || '')
+            });
+
+            const blob = await dataUrlToBlob(dataUrl);
+            const filename = `cronation-passport-${serial}.png`;
+
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            // Native share if available (best mobile UX)
+            if (navigator.canShare && navigator.canShare({
+              files: [new File([blob], filename, { type: 'image/png' })]
+            })) {
+              await navigator.share({
+                files: [new File([blob], filename, { type: 'image/png' })],
+                title: 'CROnation Passport',
+                text: 'One World. One CROnation.'
+              });
+              toast?.('Shared — Save Image from the sheet');
+              return;
+            }
+
+            // Fallback: force download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.rel = 'noopener';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(()=> URL.revokeObjectURL(url), 1500);
+
+            // iOS older Safari fallback: open image
+            if (isIOS) {
+              window.open(dataUrl, '_blank', 'noopener');
+              toast?.('Opened image — long-press “Save Image”');
+            } else {
+              toast?.('PNG downloaded');
+            }
+          }catch(e){
+            console.error(e);
+            alert('Could not generate the image. Try again.');
+          }finally{
+            setBusy?.(false);
+          }
+        };
+      }
+
+      // PFP upload + local persistence
+      const pfpInput = document.getElementById('pfpInput');
+      if (pfpInput && !pfpInput._wired){
+        pfpInput._wired = true;
+        let lastObjectUrl = null;
+        const imgEl = document.getElementById('passport-pfp');
+
+        pfpInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if(!file) return;
+          if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+          if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+
+          // instant preview (object URL)
+          if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+          lastObjectUrl = URL.createObjectURL(file);
+          if (imgEl) imgEl.src = lastObjectUrl;
+
+          // persist compressed copy per-wallet
+          (async ()=>{
+            try{
+              const dataUrl = await fileToDataURLResized(file, 360, 0.86);
+              const key = window.userAddress ? `cronation_pfp:${window.userAddress.toLowerCase()}` : null;
+              if(key) localStorage.setItem(key, dataUrl);
+            }catch(_e){}
+          })();
+        });
+
+        // cleanup object URL on unload
+        const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+        window.addEventListener('pagehide', cleanup, { once:true });
+        window.addEventListener('beforeunload', cleanup, { once:true });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'unloaded') cleanup();
+        });
+      }
     }
-  };
-}
 
-    // show external controls + wire buttons (outside the passport card)
-const controls = document.getElementById('passport-controls');
-if (controls) controls.style.display = 'flex';
+    /* ---------- Provider helpers ---------- */
+    async function withTimeout(promise, ms, label='operation'){
+      let t; const timer = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(label+' timeout')), ms));
+      try { return await Promise.race([promise, timer]); }
+      finally { clearTimeout(t); }
+    }
+    function wireProviderEvents(raw){
+      if (!raw?.on) return;
+      raw.on('connect',    (info)=> console.log('[provider] connect', info));
+      raw.on('disconnect', (err)=>  console.log('[provider] disconnect', err));
+      raw.on('accountsChanged', (acc)=> console.log('[provider] accountsChanged', acc));
+      raw.on('chainChanged',    (ch)=>  console.log('[provider] chainChanged', ch));
+    }
 
-const shareBtn = document.getElementById('shareBtn');
-if (shareBtn){
-  shareBtn.onclick = () => shareToX({ country, nick, serial });
-}
+    /* ---------- Wallet state ---------- */
+    const connectBtn = document.getElementById('connectBtn');
+    let provider = null, signer = null;
+    window.userAddress = null;
 
-const pfpInput = document.getElementById('pfpInput');
-if (pfpInput && !pfpInput._wired){
-  pfpInput._wired = true;
-  let lastObjectUrl = null;
-  const imgEl = document.getElementById('passport-pfp');
+    const shortAddr = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet';
 
-  pfpInput.addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
-    if (file.size > 5 * 1024 * 1024) { alert('Image is too large (max 5MB).'); return; }
+    /* ---------- Connect flow (MetaMask / Trust / Crypto.com) ---------- */
+    let connecting = false;
+    async function connectWallet(){
+      if (connecting) return;
+      connecting = true;
+      setBusy(true);
 
-    // instant preview
-    if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
-    lastObjectUrl = URL.createObjectURL(file);
-    if (imgEl) imgEl.src = lastObjectUrl;
-
-    // persist compressed copy
-    (async ()=>{
       try{
-        const dataUrl = await fileToDataURLResized(file, 360, 0.86);
-        const key = (window.userAddress || userAddress)
-          ? `cronation_pfp:${(window.userAddress || userAddress).toLowerCase()}`
-          : null;
-        if(key) localStorage.setItem(key, dataUrl);
-      }catch(_e){}
+        if(!window.ethereum){
+          toast('No wallet detected — open in MetaMask/Trust/Crypto.com browser or install one');
+          alert('No wallet detected. Open this site inside your wallet’s in-app browser for the smoothest connect.');
+          return;
+        }
+
+        // 1) request accounts with timeout
+        await withTimeout(window.ethereum.request({ method:'eth_requestAccounts' }), 30_000, 'eth_requestAccounts');
+
+        // 2) build provider AFTER connect
+        provider = new ethers.providers.Web3Provider(window.ethereum, 'any'); // 'any' avoids stale network
+        signer   = provider.getSigner();
+        wireProviderEvents(window.ethereum);
+
+        // short yield helps some wallets settle before first RPC
+        await new Promise(r => setTimeout(r, 50));
+
+        // 3) get address (with timeout so we never hang)
+        window.userAddress = await withTimeout(signer.getAddress(), 10_000, 'getAddress');
+
+        // 4) ensure Cronos (0x19)
+        await withTimeout(ensureChain(), 20_000, 'ensureChain');
+
+        // 5) optional verification (don’t block UX if cancelled)
+        try{
+          const message = `CROnation — Verify Wallet
+Address: ${window.userAddress}
+Time: ${new Date().toISOString()}`;
+          const signature = await withTimeout(signer.signMessage(message), 20_000, 'signMessage');
+          localStorage.setItem('cronation_sig', signature);
+        }catch(_e){ /* ignore sign cancel */ }
+
+        // 6) UI + restore
+        if (connectBtn) connectBtn.textContent = shortAddr(window.userAddress);
+        toast('Wallet connected ✅');
+        restorePassportIfAny();
+        restorePfpIfAny(window.userAddress);
+
+      }catch(err){
+        console.error('[connectWallet] error:', err);
+        if (String(err?.message||'').includes('timeout')) {
+          toast('Connection timed out — try again or open in your wallet browser');
+        } else {
+          toast('Connection cancelled or failed');
+        }
+        alert('Wallet connection was cancelled or failed.');
+      }finally{
+        setBusy(false);
+        setTimeout(()=> (connecting=false), 600); // cooldown prevents double-click hangs
+      }
+    }
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+
+    /* ---------- Chain helpers ---------- */
+    async function ensureChain(){
+      const desired = LAUNCH.token.chainIdHex; // '0x19'
+      const current = await provider.send('eth_chainId', []);
+      if(current?.toLowerCase() !== desired.toLowerCase()){
+        try{
+          await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
+        }catch(switchErr){
+          if(switchErr.code === 4902){
+            await provider.send('wallet_addEthereumChain', [{
+              chainId: desired,
+              chainName: 'Cronos Mainnet',
+              nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+              rpcUrls:[LAUNCH.token.rpc],
+              blockExplorerUrls:['https://cronoscan.com']
+            }]);
+          }else{ throw switchErr; }
+        }
+      }
+    }
+
+    /* ---------- Token-gate check (≥1 CRON8) ---------- */
+    async function hasRequiredTokens(address){
+      try{
+        const token = LAUNCH.token.address;
+        if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+
+        const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+        const bal   = await erc20.balanceOf(address);
+        const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+
+        const ok = bal.gte(min);
+        if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
+        return ok;
+      }catch(e){
+        console.error('Token-gate check failed:', e);
+        toast('Token check failed');
+        alert('Could not verify token balance. Check network and token address.');
+        return false;
+      }
+    }
+
+    /* ---------- Firestore-backed mint flow ---------- */
+    async function attemptMint(country, nick){
+      if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
+      if(FLAGS.REQUIRE_WALLET && !window.userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
+
+      try{
+        setBusy(true);
+
+        if(FLAGS.TOKEN_GATE){
+          await ensureChain();
+          const ok = await hasRequiredTokens(window.userAddress);
+          if(!ok){ return; } // toast already shown
+        }
+
+        const addrKey = window.userAddress.toLowerCase();
+        const docRef = db.collection('passports').doc(addrKey);
+        const snap = await docRef.get();
+
+        if(snap.exists){
+          const p = snap.data();
+          showPassport(p.country, p.nick, p.serial);
+          hideJoinForm();
+          toast('You already minted — showing passport');
+          alert('You already have a passport. Showing it now.');
+          return;
+        }
+
+        const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
+        await docRef.set({
+          address: window.userAddress,
+          country, nick,
+          serial,
+          created: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showPassport(country, nick, serial);
+        hideJoinForm();
+        hideCTAIfMinted();
+        toast(`Minted! Passport #${serial}`);
+      }catch(err){
+        console.error(err);
+        toast('Mint failed — try again');
+        alert('Mint failed. Please try again.');
+      }finally{
+        setBusy(false);
+      }
+    }
+
+    function hideJoinForm(){
+      const form = document.getElementById('join-form');
+      if(form) form.style.display = 'none';
+    }
+
+    /* ---------- Restore if user has a passport ---------- */
+    async function restorePassportIfAny(){
+      if(!window.userAddress) return;
+      try{
+        const snap = await db.collection('passports').doc(window.userAddress.toLowerCase()).get();
+        if(snap.exists){
+          const p = snap.data();
+          showPassport(p.country, p.nick, p.serial);
+          toast('Welcome back — passport restored');
+          hideJoinForm();
+        }
+      }catch(e){ console.warn('restorePassportIfAny failed', e); }
+    }
+
+    /* ---------- Share to X ---------- */
+    function shareToX({country, nick, serial}){
+      const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
+      const url = LAUNCH.siteUrl;
+      const tags = 'Cronos,CROnation,CRON8,crofam';
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+      toast('Opening 𝕏 to share…');
+      window.open(shareUrl, '_blank','noopener');
+    }
+
+    /* ---------- Boot tweaks ---------- */
+    (function boot(){
+      const mintBtn = document.getElementById('mintBtn');
+      const modalMintBtn = document.getElementById('modalMintBtn');
+      if(!FLAGS.PASSPORT_MINT_ENABLED){
+        if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
+        if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
+      }else{
+        if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
+        if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
+      }
+      document.getElementById('year').textContent = new Date().getFullYear();
     })();
-  });
 
-  const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
-  window.addEventListener('pagehide', cleanup, { once:true });
-  window.addEventListener('beforeunload', cleanup, { once:true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'unloaded') cleanup();
-  });
-}
-}
+    /* ---------- Country helpers ---------- */
+    const countryCounts   = new Map();
+    const countryLayers   = new Map();
+    const countryList     = [];
+    let   totalCitizens   = 0;
 
-  // Stats + leaderboard
-  function renderStats(){
-    el('stat-countries').textContent = countryCounts.size;
-    el('stat-citizens').textContent  = totalCitizens;
-    let top = '—', max = -1;
-    countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
-    el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
-  }
+    const colorFor = (count)=>{
+      if (count >= 25) return '#1d4ed8';
+      if (count >= 10) return '#3b82f6';
+      if (count >= 1)  return '#93c5fd';
+      return '#e5e7eb';
+    };
+    function updateCountryStyle(name){
+      const layer = countryLayers.get(name);
+      if (!layer) return;
+      const count = countryCounts.get(name) || 0;
+      layer.setStyle({ fillColor: colorFor(count) });
+    }
 
-  async function renderLeaderboard(){
-  const container = document.getElementById('leaderboard');
-  if(!container) return;
-
-  const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
-  if(entries.length === 0){
-    container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
-    return;
-  }
-
-  container.innerHTML = entries.map(([name, count], i) => `
-    <details data-country="${name}">
-      <summary>
-        <span>${i+1}. ${name}</span>
-        <span class="badge">${count}</span>
-      </summary>
-      <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
-    </details>
-  `).join('');
-
-  container.querySelectorAll('details').forEach((det, idx)=>{
-    det.addEventListener('toggle', async () => {
-      if(!det.open) return;
-      const name = det.getAttribute('data-country');
-      const pane = document.getElementById(`lb-${idx}`);
-      if(!pane) return;
-      pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
+    /* ---------- Citizens (per-country) ---------- */
+    async function fetchCitizens(country){
+      // read-only; sorted by nick client-side to minimize Firestore reads
+      const qs = await db.collection('passports').where('country','==',country).get();
+      const rows = [];
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d) return;
+        rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
+      });
+      rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
+      return rows;
+    }
+    const shortAddrFull = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
+    const initialsFromNick = (n)=>{
+      n = (n||'').trim();
+      if(!n) return '👤';
+      const parts = n.split(/\s+/).slice(0,2);
+      return parts.map(p=>p[0]).join('').toUpperCase();
+    };
+    function renderCitizens(container, citizens){
+      if(!container) return;
+      if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
+      container.innerHTML = citizens.map(c=>`
+        <div class="citizen">
+          <div class="avatar">${initialsFromNick(c.nick)}</div>
+          <div class="meta">
+            <b>${c.nick || 'Anonymous'}</b>
+            <small>${shortAddrFull(c.address)}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+    async function loadCitizensIntoModal(country){
+      const box = document.getElementById('citizens-list');
+      if(!box) return;
+      box.innerHTML = `<small class="muted">Loading citizens…</small>`;
       try{
-        const citizens = await fetchCitizens(name);
-        renderCitizens(pane, citizens);
+        const citizens = await fetchCitizens(country);
+        renderCitizens(box, citizens);
+        toast(`Loaded ${citizens.length} citizen${citizens.length===1?'':'s'}`);
       }catch(e){
         console.error(e);
-        pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+        box.innerHTML = `<small class="muted">Could not load citizens right now.</small>`;
       }
-    }, { passive:true });
-  });
-}
-
-  // recolor after counts change
-  countryLayers.forEach((_, name) => updateCountryStyle(name));
-
-  async function restorePassportIfAny(){
-    if(!userAddress) return;
-    const snap = await db.collection('passports').doc(userAddress.toLowerCase()).get();
-    if(snap.exists){
-      const p = snap.data();
-      showPassport(p.country, p.nick, p.serial);
-      toast('Welcome back — passport restored');
-      hideJoinForm();
     }
-  }
 
-  // Real-time listener for stats/leaderboard
-  db.collection('passports').onSnapshot((qs)=>{
-    countryCounts.clear();
-    totalCitizens = 0;
-    qs.forEach(doc=>{
-      const d = doc.data();
-      if(!d || !d.country) return;
-      countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-      totalCitizens += 1;
+    /* ---------- Map init + GeoJSON ---------- */
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const map = L.map('map', {
+      zoomControl: true,
+      minZoom: 1,
+      maxZoom: 6,
+      worldCopyJump: true,
+      attributionControl: false
+    }).setView([20, 0], 2);
+
+    const GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+
+    fetch(GEOJSON_URL)
+      .then(r => r.json())
+      .then(data => {
+        // Build country list for the dropdown
+        data.features.forEach(f => {
+          const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+          countryList.push(name);
+        });
+        countryList.sort((a,b)=>a.localeCompare(b));
+        populateCountryDropdown(countryList);
+
+        // Layer styling + events
+        const geoLayer = L.geoJSON(data, {
+          style: (feature) => {
+            const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+            const count = countryCounts.get(name) || 0;
+            return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+          },
+          onEachFeature: (feature, layer) => {
+            const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+            countryLayers.set(name, layer);
+            layer.on({
+              mouseover: () => layer.setStyle({ fillOpacity: 1, weight: 1.2 }),
+              mouseout:  () => { updateCountryStyle(name); layer.setStyle({ weight: 1 }); },
+              click:     () => openModal(name)
+            });
+            layer.bindTooltip(name, { sticky: true });
+          }
+        }).addTo(map);
+
+        try { map.fitBounds(geoLayer.getBounds(), {padding:[10,10]}); } catch(e){}
+        requestAnimationFrame(() => map.invalidateSize());
+        setTimeout(() => map.invalidateSize(), 300);
+        ['orientationchange','resize'].forEach(ev =>
+          window.addEventListener(ev, () => map.invalidateSize(), { passive: true })
+        );
+      })
+      .catch(err => {
+        console.error('Failed to load GeoJSON', err);
+        document.getElementById('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+          Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+        </div>`;
+      });
+
+    function populateCountryDropdown(list){
+      const sel = document.getElementById('country');
+      if(!sel) return;
+      const frag = document.createDocumentFragment();
+      list.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        frag.appendChild(opt);
+      });
+      sel.appendChild(frag);
+    }
+
+    /* ---------- Modal open/close ---------- */
+    function openModal(country){
+      const modal = document.getElementById('join-modal');
+      if(!modal) return;
+      document.getElementById('modal-country').value = country || '';
+      document.getElementById('modal-nickname').value = '';
+      modal.setAttribute('open', '');
+      document.body.classList.add('modal-open');
+      loadCitizensIntoModal(country);
+    }
+    function closeModal(){
+      const modal = document.getElementById('join-modal');
+      if(!modal) return;
+      modal.removeAttribute('open');
+      document.body.classList.remove('modal-open');
+    }
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+
+    /* ---------- Stats + Leaderboard ---------- */
+    function renderStats(){
+      document.getElementById('stat-countries').textContent = countryCounts.size;
+      document.getElementById('stat-citizens').textContent  = totalCitizens;
+      let top = '—', max = -1;
+      countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
+      document.getElementById('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
+    }
+
+    async function renderLeaderboard(){
+      const container = document.getElementById('leaderboard');
+      if(!container) return;
+
+      const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
+      if(entries.length === 0){
+        container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
+        return;
+      }
+
+      container.innerHTML = entries.map(([name, count], i) => `
+        <details data-country="${name}">
+          <summary>
+            <span>${i+1}. ${name}</span>
+            <span class="badge">${count}</span>
+          </summary>
+          <div class="panel">
+            <div class="citizens-list" id="lb-${i}">
+              <small class="muted">Tap to load…</small>
+            </div>
+          </div>
+        </details>
+      `).join('');
+
+      container.querySelectorAll('details').forEach((det, idx)=>{
+        det.addEventListener('toggle', async () => {
+          if(!det.open) return;
+          const name = det.getAttribute('data-country');
+          const pane = document.getElementById(`lb-${idx}`);
+          if(!pane) return;
+          pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
+          try{
+            const citizens = await fetchCitizens(name);
+            renderCitizens(pane, citizens);
+          }catch(e){
+            console.error(e);
+            pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+          }
+        }, { passive:true });
+      });
+    }
+
+    /* ---------- Firestore live counts → recolor + stats + leaderboard ---------- */
+    db.collection('passports').onSnapshot((qs)=>{
+      countryCounts.clear();
+      totalCitizens = 0;
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d || !d.country) return;
+        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+        totalCitizens += 1;
+      });
+      renderStats();
+      renderLeaderboard();
+      countryLayers.forEach((_, name) => updateCountryStyle(name));
     });
-    renderStats();
-    renderLeaderboard();
-    countryLayers.forEach((_, name) => updateCountryStyle(name));
-  });
 
-  // Form submit
-  // Form submit
-el('join-form').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const country = el('country').value;
-  if(!country){ 
-    toast('Choose your country');
-    return; 
-  }
-  const nick = el('nickname').value || 'Anonymous';
-  await attemptMint(country, nick);
-});
+    /* ---------- Form & Modal submit ---------- */
+    document.getElementById('join-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const country = document.getElementById('country').value;
+      if(!country){
+        toast('Choose your country');
+        return;
+      }
+      const nick = (document.getElementById('nickname').value || 'Anonymous').trim();
+      await attemptMint(country, nick);
+    });
 
-  // Modal -> mint
-  function mintFromModal(){
-    const country = el('modal-country').value;
-    const nick = el('modal-nickname').value || 'Anonymous';
-    attemptMint(country, nick);
-    closeModal();
-  }
-  window.mintFromModal = mintFromModal;
-
-  /**** Share to X ****/
-  function shareToX({country, nick, serial}){
-    const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
-    const url = LAUNCH.siteUrl;
-    const tags = 'Cronos,CROnation,CRON8,crofam';
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-    toast('Opening 𝕏 to share…');
-    window.open(shareUrl, '_blank','noopener');
-  }
-
-  /**** Page boot ****/
-  (function boot(){
-    const mintBtn = el('mintBtn');
-    const modalMintBtn = el('modalMintBtn');
-    if(!FLAGS.PASSPORT_MINT_ENABLED){
-      if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
-      if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
-    }else{
-      if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
-      if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
+    function mintFromModal(){
+      const country = document.getElementById('modal-country').value;
+      const nick = (document.getElementById('modal-nickname').value || 'Anonymous').trim();
+      attemptMint(country, nick);
+      closeModal();
     }
-    el('year').textContent = new Date().getFullYear();
-  })(); // end boot IIFE
-});   // end DOMContentLoaded
-</script>
+    window.mintFromModal = mintFromModal;
+
+    /* ---------- Strict ISO2 map (expand over time) ---------- */
+    const ISO2 = {
+      "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
+      "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
+      "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
+      "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
+      "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
+      "Nigeria":"ng","Kenya":"ke"
+    };
+    const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
+
+    /* ---------- Flag visuals on the live DOM card ---------- */
+    function setPassportFlag(country){
+      const layer = document.getElementById('passport-flag');
+      if(!layer) return;
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
+        layer.style.filter = (country === "Germany" || country === "China")
+          ? "saturate(1.25) contrast(1.1) brightness(1.05) blur(0.4px)"
+          : "saturate(1.25) contrast(1.2) brightness(0.9) blur(0.4px)";
+      } else {
+        layer.style.removeProperty('background-image');
+      }
+    }
+    function setPassportFlagIcon(country){
+      const icon = document.getElementById('passport-flag-icon');
+      if(!icon) return;
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+        icon.style.display = 'inline-block';
+        icon.alt = `${country} flag`;
+      } else {
+        icon.removeAttribute('src');
+        icon.style.display = 'none';
+        icon.alt = '';
+      }
+    }
+
+    /* ---------- Local PFP persistence (per wallet) ---------- */
+    const pfpKey = (addr)=> addr ? `cronation_pfp:${addr.toLowerCase()}` : null;
+    function restorePfpIfAny(addr){
+      try{
+        const key = pfpKey(addr);
+        if(!key) return;
+        const dataUrl = localStorage.getItem(key);
+        if(dataUrl){
+          const img = document.getElementById('passport-pfp');
+          if(img) img.src = dataUrl;
+        }
+      }catch(_e){}
+    }
+    async function fileToDataURLResized(file, max=360, quality=0.86){
+      const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      try{ URL.revokeObjectURL(img.src); }catch(_e){}
+      return dataUrl;
+    }
+
+    /* ---------- Canvas PNG export (CORS-safe) ---------- */
+    const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
+    const blobToDataUrl = (b) => new Promise(r => { const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); });
+    const fetchAsDataUrl = async (url) => { const r = await fetch(url,{mode:'cors',cache:'force-cache'}); const b=await r.blob(); return blobToDataUrl(b); };
+
+    async function renderPassportPNGViaCanvas({ country, nick, serial, address }) {
+      const W = 1200, H = 480, DPR = Math.min(2, window.devicePixelRatio || 1.5);
+      const c = document.createElement('canvas'); c.width=W*DPR; c.height=H*DPR;
+      const ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
+
+      // Rounded backdrop
+      const bg = '#0d203a', radius = 24;
+      roundRect(ctx, 0, 0, W, H, radius); ctx.fillStyle = bg; ctx.fill();
+
+      // Flag background
+      const iso2 = countryToISO2(country);
+      if (iso2){
+        try{
+          const flagUrl = await fetchAsDataUrl(`https://flagcdn.com/w320/${iso2}.png`);
+          const flagImg = await loadImg(flagUrl);
+          ctx.save();
+          try{ ctx.filter = 'blur(0.8px) saturate(1.25)'; }catch(_){}
+          ctx.globalAlpha = 0.42;
+          drawCover(flagImg, W, H, ctx);
+          ctx.restore();
+        }catch(_){}
+      }
+
+      // Subtle sheen
+      const grad = ctx.createLinearGradient(0,0, W,H);
+      grad.addColorStop(0,'rgba(255,255,255,.05)');
+      grad.addColorStop(.35,'rgba(255,255,255,0)');
+      grad.addColorStop(.7,'rgba(255,255,255,.04)');
+      grad.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = grad; roundRect(ctx,0,0,W,H,radius); ctx.fill();
+
+      // Emblem / PFP
+      const pfpEl = document.getElementById('passport-pfp');
+      let pfpSrc = pfpEl?.src || '';
+      if (!pfpSrc.startsWith('data:')) {
+        try { pfpSrc = await fetchAsDataUrl(pfpSrc); } catch(_){ pfpSrc = null; }
+      }
+      if (pfpSrc){
+        const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
+        const p = await loadImg(pfpSrc);
+        ctx.fillStyle='rgba(15,18,25,.7)'; roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r); ctx.fill();
+        roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.save(); ctx.clip();
+        ctx.drawImage(p, EMB.x, EMB.y, EMB.w, EMB.h); ctx.restore();
+        ctx.strokeStyle='rgba(148,163,184,.25)'; ctx.lineWidth=2; roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.stroke();
+      }
+
+      // Title / serial
+      ctx.fillStyle='#fff'; ctx.textBaseline='top';
+      ctx.font='700 52px Inter, system-ui, -apple-system'; ctx.fillText('CROnation Passport', 188, 40);
+      ctx.font='800 58px Inter, system-ui, -apple-system'; ctx.fillText(`#${String(serial).padStart(6,'0')}`, 188, 100);
+
+      // Subtitle
+      ctx.font='600 30px Inter, system-ui, -apple-system'; ctx.fillStyle='rgba(229,231,235,.88)';
+      ctx.fillText(`CROnation — ${country}`, 188, 170);
+
+      // Address chip
+      if (address){
+        const chip = address.slice(0,6)+'…'+address.slice(-4);
+        const x=188, y=220, padX=16, h=40, r=18;
+        ctx.font='700 24px Inter, system-ui, -apple-system';
+        const w = Math.ceil(ctx.measureText(chip).width)+padX*2;
+        ctx.fillStyle='rgba(2,6,23,.35)'; roundRect(ctx,x,y,w,h,r); ctx.fill();
+        ctx.strokeStyle='rgba(148,163,184,.28)'; ctx.lineWidth=2; roundRect(ctx,x,y,w,h,r); ctx.stroke();
+        ctx.fillStyle='#e5e7eb'; ctx.fillText(chip, x+padX, y+8);
+      }
+
+      // Watermark
+      ctx.save(); ctx.globalAlpha=0.09; ctx.fillStyle='#fff';
+      ctx.font='800 96px Inter, system-ui, -apple-system';
+      wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
+
+      return c.toDataURL('image/png', 0.95);
+
+      // helpers
+      function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
+      function drawCover(img,W,H,ctx){ const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr); const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2; ctx.drawImage(img,dx,dy,dw,dh); }
+      function wrapBig(c, text, x, y, maxW){ const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84; for (const w of words){ const t=(line?line+' ':'')+w; if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; } else { line=t; } } if(line) c.fillText(line,x,yy); }
+    }
+
+    /* ---------- Share to X ---------- */
+    function shareToX({country, nick, serial}){
+      const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @cronation8`;
+      const url  = 'https://cronation.netlify.app';
+      const tags = 'Cronos,CROnation,CRON8,crofam';
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+      toast('Opening 𝕏 to share…');
+      window.open(shareUrl, '_blank','noopener');
+    }
+
+    /* ---------- Passport DOM wiring & controls ---------- */
+    const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
+    const dataUrlToBlob = async (dataUrl) => (await fetch(dataUrl)).blob();
+    function setText(id, text){ const n = document.getElementById(id); if(n) n.textContent = text; }
+
+    function showPassport(country, nick, serial){
+      const card = document.getElementById('passport');
+      if(!card) return;
+
+      setText('passport-nick', nick);
+      setText('passport-country', country);
+      setText('passport-serial', '#'+serial);
+      setText('passport-watermark', (country||'').toUpperCase().slice(0,22));
+      setText('passport-address-chip', (window.userAddress||'').slice(0,6)+'…'+(window.userAddress||'').slice(-4));
+
+      setPassportFlag(country);
+      setPassportFlagIcon(country);
+
+      // restore saved PFP for this wallet
+      restorePfpIfAny(window.userAddress);
+
+      // activation glow
+      card.classList.remove('activated');
+      requestAnimationFrame(()=> card.classList.add('activated'));
+
+      card.style.display = 'grid';
+      try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+
+      // External controls block
+      const controls = document.getElementById('passport-controls');
+      if (controls) controls.style.display = 'flex';
+
+      // Share
+      const shareBtn = document.getElementById('shareBtn');
+      if (shareBtn){
+        shareBtn.onclick = () => shareToX({ country, nick, serial });
+      }
+
+      // Download / Web Share
+      const dlBtn = document.getElementById('downloadBtn');
+      if (dlBtn){
+        dlBtn.onclick = async () => {
+          try{
+            setBusy?.(true);
+            const dataUrl = await renderPassportPNGViaCanvas({
+              country, nick, serial, address: (window.userAddress || '')
+            });
+            const blob = await dataUrlToBlob(dataUrl);
+            const filename = `cronation-passport-${serial}.png`;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (navigator.canShare && navigator.canShare({
+              files: [new File([blob], filename, { type: 'image/png' })]
+            })) {
+              await navigator.share({
+                files: [new File([blob], filename, { type: 'image/png' })],
+                title: 'CROnation Passport',
+                text: 'One World. One CROnation.'
+              });
+              toast?.('Shared — Save Image from the sheet');
+              return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.rel = 'noopener';
+            document.body.appendChild(a); a.click(); a.remove();
+            await sleep(1200);
+            URL.revokeObjectURL(url);
+
+            if (isIOS) {
+              window.open(dataUrl, '_blank', 'noopener');
+              toast?.('Opened image — long-press “Save Image”');
+            } else {
+              toast?.('PNG downloaded');
+            }
+          }catch(e){
+            console.error(e);
+            alert('Could not generate the image. Try again.');
+          }finally{
+            setBusy?.(false);
+          }
+        };
+      }
+
+      // PFP upload wire (once)
+      const pfpInput = document.getElementById('pfpInput');
+      if (pfpInput && !pfpInput._wired){
+        pfpInput._wired = true;
+        let lastObjectUrl = null;
+        const imgEl = document.getElementById('passport-pfp');
+
+        pfpInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if(!file) return;
+          if (!file.type.startsWith('image/')) { alert('Please choose an image.'); return; }
+          if (file.size > 5 * 1024 * 1024)      { alert('Image is too large (max 5MB).'); return; }
+
+          // instant preview
+          if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+          lastObjectUrl = URL.createObjectURL(file);
+          if (imgEl) imgEl.src = lastObjectUrl;
+
+          // persist compressed copy
+          (async ()=>{
+            try{
+              const dataUrl = await fileToDataURLResized(file, 360, 0.86);
+              const key = window.userAddress ? `cronation_pfp:${window.userAddress.toLowerCase()}` : null;
+              if(key) localStorage.setItem(key, dataUrl);
+            }catch(_e){}
+          })();
+        });
+
+        const cleanup = () => { if (lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; } };
+        window.addEventListener('pagehide', cleanup, { once:true });
+        window.addEventListener('beforeunload', cleanup, { once:true });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'unloaded') cleanup();
+        });
+      }
+    }
+
+    /* ---------- Wallet connect + provider wiring ---------- */
+    const connectBtn = document.getElementById('connectBtn');
+    let provider = null, signer = null;
+    window.userAddress = null;
+
+    const shortAddr = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : 'Connect Wallet';
+
+    function wireProviderEvents(raw){
+      if (!raw?.on) return;
+      raw.on('connect',         (info)=> console.log('[provider] connect', info));
+      raw.on('disconnect',      (err)=>  console.log('[provider] disconnect', err));
+      raw.on('accountsChanged', (acc)=>  console.log('[provider] accountsChanged', acc));
+      raw.on('chainChanged',    (ch)=>   console.log('[provider] chainChanged', ch));
+    }
+
+    async function withTimeout(promise, ms, label='operation'){
+      let t; const timer = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(label+' timeout')), ms));
+      try { return await Promise.race([promise, timer]); }
+      finally { clearTimeout(t); }
+    }
+
+    let connecting = false;
+    async function connectWallet(){
+      if (connecting) return;
+      connecting = true;
+      setBusy(true);
+      try{
+        if(!window.ethereum){
+          toast('No wallet — use MetaMask/Trust/Crypto.com in-app browser or install one');
+          alert('No wallet detected. Open this site inside your wallet’s in-app browser for the smoothest connect.');
+          return;
+        }
+
+        await withTimeout(window.ethereum.request({ method:'eth_requestAccounts' }), 30_000, 'eth_requestAccounts');
+
+        provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        signer   = provider.getSigner();
+        wireProviderEvents(window.ethereum);
+
+        await new Promise(r => setTimeout(r, 50)); // settle
+
+        window.userAddress = await withTimeout(signer.getAddress(), 10_000, 'getAddress');
+        await withTimeout(ensureChain(), 20_000, 'ensureChain');
+
+        // Optional lightweight verification (non-blocking)
+        try{
+          const message = `CROnation — Verify Wallet
+Address: ${window.userAddress}
+Time: ${new Date().toISOString()}`;
+          const signature = await withTimeout(signer.signMessage(message), 20_000, 'signMessage');
+          localStorage.setItem('cronation_sig', signature);
+        }catch(_e){ /* ignore cancel */ }
+
+        connectBtn.textContent = shortAddr(window.userAddress);
+        toast('Wallet connected ✅');
+
+        // Restore user visuals
+        restorePassportIfAny();
+        restorePfpIfAny(window.userAddress);
+
+      }catch(err){
+        console.error('[connectWallet]', err);
+        if (String(err?.message||'').includes('timeout')){
+          toast('Connection timed out — try again or open in wallet browser');
+        } else {
+          toast('Connection cancelled or failed');
+        }
+        alert('Wallet connection failed or was cancelled.');
+      }finally{
+        setBusy(false);
+        setTimeout(()=> (connecting=false), 600);
+      }
+    }
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+
+    async function ensureChain(){
+      const desired = LAUNCH.token.chainIdHex; // 0x19 Cronos
+      const current = await provider.send('eth_chainId', []);
+      if(current?.toLowerCase() !== desired.toLowerCase()){
+        try{
+          await provider.send('wallet_switchEthereumChain', [{ chainId: desired }]);
+        }catch(switchErr){
+          if(switchErr.code === 4902){
+            await provider.send('wallet_addEthereumChain', [{
+              chainId: desired,
+              chainName: 'Cronos Mainnet',
+              nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+              rpcUrls:[LAUNCH.token.rpc],
+              blockExplorerUrls:['https://cronoscan.com']
+            }]);
+          }else{ throw switchErr; }
+        }
+      }
+    }
+
+    async function hasRequiredTokens(address){
+      try{
+        const token = LAUNCH.token.address;
+        if(!token || token === '0x0000000000000000000000000000000000000000') return false;
+
+        const erc20 = new ethers.Contract(token, LAUNCH.token.abi, provider);
+        const bal   = await erc20.balanceOf(address);
+        const min   = ethers.utils.parseUnits(LAUNCH.token.minBalance, LAUNCH.token.decimals);
+
+        const ok = bal.gte(min);
+        if(!ok){ toast('Token gate: need ≥ 1 $CRON8'); }
+        return ok;
+      }catch(e){
+        console.error('Token-gate check failed:', e);
+        toast('Token check failed');
+        alert('Could not verify token balance. Check network and token address.');
+        return false;
+      }
+    }
+
+    /* ---------- Firestore: counts, leaderboard, restore ---------- */
+    const countryCounts = new Map();
+    let totalCitizens = 0;
+
+    function renderStats(){
+      document.getElementById('stat-countries').textContent = countryCounts.size;
+      document.getElementById('stat-citizens').textContent  = totalCitizens;
+      let top = '—', max = -1;
+      countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
+      document.getElementById('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
+    }
+
+    async function fetchCitizens(country){
+      const qs = await db.collection('passports').where('country','==',country).get();
+      const rows = [];
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d) return;
+        rows.push({ nick: d.nick || 'Anonymous', address: d.address || '' });
+      });
+      rows.sort((a,b)=> (a.nick||'').localeCompare(b.nick||''));
+      return rows;
+    }
+
+    function renderCitizens(container, citizens){
+      if(!container) return;
+      if(!citizens.length){ container.innerHTML = `<small class="muted">No citizens yet.</small>`; return; }
+      container.innerHTML = citizens.map(c=>`
+        <div class="citizen">
+          <div class="avatar">${(c.nick||'A').slice(0,2).toUpperCase()}</div>
+          <div class="meta">
+            <b>${(c.nick||'Anonymous')}</b>
+            <small>${c.address ? c.address.slice(0,6)+'…'+c.address.slice(-4) : ''}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function renderLeaderboard(){
+      const container = document.getElementById('leaderboard');
+      if(!container) return;
+
+      const entries = Array.from(countryCounts.entries()).sort((a,b)=> b[1]-a[1]);
+      if(entries.length === 0){
+        container.innerHTML = `<div class="muted" style="padding:10px 0;">No countries yet</div>`;
+        return;
+      }
+
+      container.innerHTML = entries.map(([name, count], i) => `
+        <details data-country="${name}">
+          <summary>
+            <span>${i+1}. ${name}</span>
+            <span class="badge">${count}</span>
+          </summary>
+          <div class="panel"><div class="citizens-list" id="lb-${i}"><small class="muted">Tap to load…</small></div></div>
+        </details>
+      `).join('');
+
+      container.querySelectorAll('details').forEach((det, idx)=>{
+        det.addEventListener('toggle', async () => {
+          if(!det.open) return;
+          const name = det.getAttribute('data-country');
+          const pane = document.getElementById(`lb-${idx}`);
+          if(!pane) return;
+          pane.innerHTML = `<small class="muted">Loading citizens…</small>`;
+          try{
+            const citizens = await fetchCitizens(name);
+            renderCitizens(pane, citizens);
+          }catch(e){
+            console.error(e);
+            pane.innerHTML = `<small class="muted">Could not load citizens.</small>`;
+          }
+        }, { passive:true });
+      });
+    }
+
+    async function restorePassportIfAny(){
+      if(!window.userAddress) return;
+      const snap = await db.collection('passports').doc(window.userAddress.toLowerCase()).get();
+      if(snap.exists){
+        const p = snap.data();
+        showPassport(p.country, p.nick, p.serial);
+        toast('Welcome back — passport restored');
+        const form = document.getElementById('join-form');
+        if(form) form.style.display = 'none';
+        const markBtn = document.getElementById('markBtn');
+        if (markBtn) markBtn.style.display = 'none';
+      }
+    }
+
+    // Live stats/leaderboard
+    db.collection('passports').onSnapshot((qs)=>{
+      countryCounts.clear();
+      totalCitizens = 0;
+      qs.forEach(doc=>{
+        const d = doc.data();
+        if(!d || !d.country) return;
+        countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+        totalCitizens += 1;
+      });
+      renderStats();
+      renderLeaderboard();
+      // recolor map regions if layers are present
+      if (window.countryLayers){
+        window.countryLayers.forEach((layer, name)=>{
+          const count = countryCounts.get(name) || 0;
+          if (layer?.setStyle) layer.setStyle({ fillColor: count>=25?'#1d4ed8':count>=10?'#3b82f6':count>=1?'#93c5fd':'#e5e7eb' });
+        });
+      }
+    });
+
+    /* ---------- Mint flow (guarded by token gate) ---------- */
+    async function attemptMint(country, nick){
+      if(!FLAGS.PASSPORT_MINT_ENABLED){ toast('Mint paused'); alert('Passport mint is temporarily paused.'); return; }
+      if(FLAGS.REQUIRE_WALLET && !window.userAddress){ toast('Connect your wallet first'); alert('Please connect your wallet first.'); return; }
+
+      try{
+        setBusy(true);
+
+        if(FLAGS.TOKEN_GATE){
+          await ensureChain();
+          const ok = await hasRequiredTokens(window.userAddress);
+          if(!ok){ return; }
+        }
+
+        const addrKey = window.userAddress.toLowerCase();
+        const docRef = db.collection('passports').doc(addrKey);
+        const snap = await docRef.get();
+
+        if(snap.exists){
+          const p = snap.data();
+          showPassport(p.country, p.nick, p.serial);
+          const form = document.getElementById('join-form');
+          if(form) form.style.display = 'none';
+          toast('You already minted — showing passport');
+          alert('You already have a passport. Showing it now.');
+          return;
+        }
+
+        const serial = Math.floor(Math.random()*999999).toString().padStart(6, '0');
+        await docRef.set({
+          address: window.userAddress,
+          country, nick,
+          serial,
+          created: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showPassport(country, nick, serial);
+        const form = document.getElementById('join-form');
+        if(form) form.style.display = 'none';
+        const markBtn = document.getElementById('markBtn');
+        if (markBtn) markBtn.style.display = 'none';
+        toast(`Minted! Passport #${serial}`);
+      }catch(err){
+        console.error(err);
+        toast('Mint failed — try again');
+        alert('Mint failed. Please try again.');
+      }finally{
+        setBusy(false);
+      }
+    }
+
+    // Form submit
+    document.getElementById('join-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const country = document.getElementById('country').value;
+      if(!country){ toast('Choose your country'); return; }
+      const nick = document.getElementById('nickname').value || 'Anonymous';
+      await attemptMint(country, nick);
+    });
+
+    // Modal mint
+    window.mintFromModal = function(){
+      const country = document.getElementById('modal-country').value;
+      const nick    = document.getElementById('modal-nickname').value || 'Anonymous';
+      attemptMint(country, nick);
+      // close modal
+      const modal = document.getElementById('join-modal');
+      if(modal){ modal.removeAttribute('open'); document.body.classList.remove('modal-open'); }
+    };
+
+    /* ---------- Boot ---------- */
+    (function boot(){
+      const mintBtn = document.getElementById('mintBtn');
+      const modalMintBtn = document.getElementById('modalMintBtn');
+      if(!FLAGS.PASSPORT_MINT_ENABLED){
+        if(mintBtn){ mintBtn.disabled = true; mintBtn.textContent = 'Mint Passport (disabled)'; }
+        if(modalMintBtn){ modalMintBtn.disabled = true; modalMintBtn.textContent = 'Mint Passport (disabled)'; }
+      }else{
+        if(mintBtn){ mintBtn.disabled = false; mintBtn.textContent = 'Mint Passport'; }
+        if(modalMintBtn){ modalMintBtn.disabled = false; modalMintBtn.textContent = 'Mint Passport'; }
+      }
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      // Optional auto-connect
+      if (FLAGS.AUTO_CONNECT) {
+        try { connectWallet(); } catch(_e){}
+      }
+    })();
+
+  // ===== end of DOMContentLoaded =====
+  }); // window.addEventListener('DOMContentLoaded', ...)
+  </script>
+
 </body>
 </html>
+
+        
