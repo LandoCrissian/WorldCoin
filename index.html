@@ -773,34 +773,48 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   ctx.font='800 96px Inter, system-ui, -apple-system';
   wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
 
-  // --- Holder tier pill (bottom left) ---
+    // --- Holder tier pill (just under the address chip) ---
   if (tier > 0){
     const label = tier === 3 ? '👑 CRON8 Elite Diplomat'
                 : tier === 2 ? '◆ CRON8 Nation Builder'
                 : '◈ CRON8 Citizen Holder';
 
-    ctx.font = '700 28px Inter, system-ui, -apple-system';
-    const padX = 18, r = 20, pillH = 48;
-    const textW = Math.ceil(ctx.measureText(label).width);
-    const pillW = textW + padX*2;
-    const x = 188, y = H - pillH - 28;
+    // Anchor to the same x as the info column and just below the address chip
+    const INFO_X = 188;
+    const CHIP_Y = 220;     // where we drew the address chip
+    const GAP    = 22;      // space between chip and tier
+    const PILL_Y = CHIP_Y + 40 /*chip h*/ + GAP;
 
-    const g = ctx.createLinearGradient(x, y, x + pillW, y + pillH);
+    // Measure / fit
+    const padX = 18, r = 20, pillH = 48;
+    ctx.font = '700 28px Inter, system-ui, -apple-system';
+    let textW = Math.ceil(ctx.measureText(label).width);
+    const maxW = 1200 - INFO_X - 36; // keep inside right edge
+    const pillW = Math.min(textW + padX*2, maxW);
+
+    // Background gradient by tier
+    const g = ctx.createLinearGradient(INFO_X, PILL_Y, INFO_X + pillW, PILL_Y + pillH);
     if (tier === 3){ g.addColorStop(0,'rgba(251,191,36,.28)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
     else if (tier === 2){ g.addColorStop(0,'rgba(125,211,252,.26)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
     else { g.addColorStop(0,'rgba(96,165,250,.24)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
 
-    roundRect(ctx, x, y, pillW, pillH, r); ctx.fillStyle = g; ctx.fill();
+    roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.fillStyle = g; ctx.fill();
     ctx.strokeStyle = tier === 3 ? 'rgba(251,191,36,.55)'
                     : tier === 2 ? 'rgba(125,211,252,.45)'
                     : 'rgba(96,165,250,.45)';
-    ctx.lineWidth = 2; roundRect(ctx, x, y, pillW, pillH, r); ctx.stroke();
+    ctx.lineWidth = 2; roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.stroke();
 
+    // Text (truncate if needed)
     ctx.fillStyle = '#e5e7eb';
-    ctx.fillText(label, x + padX, y + (pillH - 28)/2 - 2);
+    let shown = label;
+    while (ctx.measureText(shown).width > pillW - padX*2 && shown.length > 3) {
+      shown = shown.slice(0, -2) + '…';
+    }
+    ctx.fillText(shown, INFO_X + padX, PILL_Y + (pillH - 28)/2 - 2);
 
-    ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12;
-    roundRect(ctx, x, y, pillW, pillH, r); ctx.stroke();
+    // Subtle outer glow
+    ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 10;
+    roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.stroke();
     ctx.shadowBlur = 0;
   }
 
