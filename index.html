@@ -906,8 +906,6 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   let totalCitizens = 0;
   el('year').textContent = new Date().getFullYear();
 
-  const todayCounts = new Map(); // values now: {count, latest}
-
   const map = L.map('map', {
     zoomControl: true,
     minZoom: 1,
@@ -1511,23 +1509,10 @@ function detectTier(balance){
 
   // "Most active today" = top country by new mints since local midnight
   function renderTopToday(){
-  // todayCounts: Map(country -> {count, latest})
-  if (todayCounts.size === 0) {
-    el('stat-top').textContent = '—';
-    return;
+    let top = '—', max = -1;
+    todayCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
+    el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
   }
-  const rows = Array.from(todayCounts.entries())
-    .map(([name, v]) => ({ name, count: v.count, latest: v.latest || 0 }))
-    .sort((a,b)=>{
-      if (b.count !== a.count) return b.count - a.count;   // higher count first
-      return b.latest - a.latest;                           // break ties by newer mint
-    });
-
-  const topCount = rows[0].count;
-  const topGroup = rows.filter(r => r.count === topCount).slice(0, 2); // show up to 2 tied
-  const names = topGroup.map(r => r.name).join(' & ');
-  el('stat-top').textContent = `${names} (${topCount})`;
-}
 
   async function renderLeaderboard(){
     const container = document.getElementById('leaderboard');
@@ -1606,20 +1591,16 @@ function startOfLocalDayTs(){
 // subscribe to today's mints and fill todayCounts
 let unsubToday = null;
 function subscribeToday(){
-  if (unsubToday) unsubToday();  // re-subscribe safety
+  if (unsubToday) unsubToday();  // safety: re-subscribe if called again
   const since = startOfLocalDayTs();
   unsubToday = db.collection('passports')
     .where('created','>=', since)
     .onSnapshot((qs)=>{
-      todayCounts.clear(); // Map(country -> {count, latest})
+      todayCounts.clear();
       qs.forEach(doc=>{
         const d = doc.data();
         if(!d || !d.country) return;
-        const key = d.country;
-        const prev = todayCounts.get(key) || { count:0, latest:0 };
-        const ts = (d.created && d.created.toMillis) ? d.created.toMillis() : 0;
-        const next = { count: prev.count + 1, latest: Math.max(prev.latest, ts) };
-        todayCounts.set(key, next);
+        todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
       });
       renderTopToday();
     });
@@ -1687,13 +1668,3 @@ subscribeToday();
 </body>
 </html>
 <!-- SECTION 7.F END -->
-
-  
-
-        
-
-        
-
-        
-
-        
