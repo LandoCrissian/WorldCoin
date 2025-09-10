@@ -532,7 +532,6 @@
         <!-- Passport card -->
         <div id="passport" class="passport" style="display:none; margin-top:12px;">
           <div id="passport-flag" aria-hidden="true"></div>
-          <div id="passport-flag" aria-hidden="true"></div>
           <div class="shade" aria-hidden="true"></div>
           <div class="gloss" aria-hidden="true"></div>
 
@@ -1175,16 +1174,37 @@ Time: ${new Date().toISOString()}`;
     }catch(e){ return null; }
   }
 
-  function detectTier(bal){
-    try{
-      const d = (typeof CFG !== 'undefined' ? CFG.token.decimals : 18);
-      const toBig = (x)=> parseUnits(x, d);
-      for (const t of HOLDER_THRESHOLDS){
-        if (bal >= toBig(t.min)) return t.tier;
-      }
-      return 0;
-    }catch{ return 0; }
-  }
+  // --- safe >= for BigNumber (ethers v5) and bigint (ethers v6)
+function gteBN(a, b){
+  const isV5BN = (x) => !!(x && x._isBigNumber === true);
+
+  // both bigint
+  if (typeof a === 'bigint' && typeof b === 'bigint') return a >= b;
+  // both v5 BigNumber
+  if (isV5BN(a) && isV5BN(b)) return a.gte(b);
+  // mixed: normalize to BigInt
+  try {
+    const A = BigInt(a.toString());
+    const B = BigInt(b.toString());
+    return A >= B;
+  } catch { return false; }
+}
+
+// use this instead of your old detectTier
+function detectTier(balance){
+  try{
+    const d = (typeof CFG !== 'undefined' ? CFG.token.decimals : 18);
+    const thresholds = HOLDER_THRESHOLDS.map(t => ({ 
+      tier: t.tier, 
+      min: parseUnits(t.min, d) 
+    }));
+
+    for (const t of thresholds){
+      if (gteBN(balance, t.min)) return t.tier;
+    }
+    return 0;
+  }catch{ return 0; }
+}
 
   function applyHolderUX({ balance, tier }){
     const badge = $('holder-badge');
