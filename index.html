@@ -901,7 +901,6 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
 
   /**** Map + Countries ****/
   const countryCounts = new Map();
-  let todayCounts = new Map();
   const countryList = [];
   let totalCitizens = 0;
   el('year').textContent = new Date().getFullYear();
@@ -1502,15 +1501,11 @@ function detectTier(balance){
 
   
   // Stats + leaderboard
-  function renderStatsGlobal(){
+  function renderStats(){
     el('stat-countries').textContent = countryCounts.size;
     el('stat-citizens').textContent  = totalCitizens;
-  }
-
-  // "Most active today" = top country by new mints since local midnight
-  function renderTopToday(){
     let top = '—', max = -1;
-    todayCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
+    countryCounts.forEach((count, name)=>{ if(count > max){ max = count; top = name; } });
     el('stat-top').textContent = max > 0 ? `${top} (${max})` : '—';
   }
 
@@ -1568,53 +1563,18 @@ function detectTier(balance){
 
   // Real-time listener for stats/leaderboard
   db.collection('passports').onSnapshot((qs)=>{
-  countryCounts.clear();
-  totalCitizens = 0;
-  qs.forEach(doc=>{
-    const d = doc.data();
-    if(!d || !d.country) return;
-    countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
-    totalCitizens += 1;
-  });
-  renderStatsGlobal();
-  renderLeaderboard();
-  countryLayers.forEach((_, name) => updateCountryStyle(name));
-});
-
-  // helper: Timestamp at *local* midnight for the viewer
-function startOfLocalDayTs(){
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  return firebase.firestore.Timestamp.fromDate(d);
-}
-
-// subscribe to today's mints and fill todayCounts
-let unsubToday = null;
-function subscribeToday(){
-  if (unsubToday) unsubToday();  // safety: re-subscribe if called again
-  const since = startOfLocalDayTs();
-  unsubToday = db.collection('passports')
-    .where('created','>=', since)
-    .onSnapshot((qs)=>{
-      todayCounts.clear();
-      qs.forEach(doc=>{
-        const d = doc.data();
-        if(!d || !d.country) return;
-        todayCounts.set(d.country, (todayCounts.get(d.country)||0)+1);
-      });
-      renderTopToday();
+    countryCounts.clear();
+    totalCitizens = 0;
+    qs.forEach(doc=>{
+      const d = doc.data();
+      if(!d || !d.country) return;
+      countryCounts.set(d.country, (countryCounts.get(d.country)||0)+1);
+      totalCitizens += 1;
     });
-}
-
-// start it now…
-subscribeToday();
-
-// …and refresh the listener at the next local midnight so “today” rolls over
-(function resubAtMidnight(){
-  const now = new Date();
-  const next = new Date(now); next.setHours(24,0,0,0);
-  setTimeout(()=>{ subscribeToday(); resubAtMidnight(); }, next - now);
-})();
+    renderStats();
+    renderLeaderboard();
+    countryLayers.forEach((_, name) => updateCountryStyle(name));
+  });
 
   // Form submit
   el('join-form').addEventListener('submit', async (e)=>{
