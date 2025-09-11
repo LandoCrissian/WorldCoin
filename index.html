@@ -383,6 +383,33 @@
   .passport.tier-3::before{ animation:none; }
 }
 
+    .spotlight{
+  position: relative;
+  margin: 10px 0 12px;
+  border-radius: 12px;
+  border:1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background:
+    radial-gradient(120% 120% at 20% 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    color-mix(in srgb, var(--soft) 85%, #000);
+  overflow:hidden;
+  padding: 10px 14px;
+}
+.spotlight .glow{
+  position:absolute; inset:-40% -10%;
+  background: radial-gradient(60% 60% at 15% 50%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 60%);
+  filter: blur(20px); opacity:.5; pointer-events:none;
+  animation: spotPulse 3.2s ease-in-out infinite;
+}
+@keyframes spotPulse { 0%,100%{opacity:.35} 50%{opacity:.7} }
+.spotlight .spotlight-content{
+  position:relative; display:flex; align-items:center; gap:10px; z-index:1;
+  font-weight:700;
+}
+#spotlight-flag{
+  width:24px; height:18px; border-radius:3px; object-fit:cover;
+  box-shadow:0 0 0 1px rgba(255,255,255,.25) inset;
+}
+
     /* --- Toast + Loader --- */
     .toast {
       position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
@@ -485,12 +512,22 @@
     <div class="stats" role="status" aria-live="polite">
       <div class="stat"><div><small>Countries represented</small><span id="stat-countries">0</span></div></div>
       <div class="stat"><div><small>Citizens joined</small><span id="stat-citizens">0</span></div></div>
-      <div class="stat"><div><small>Most active today</small><span id="stat-top">—</span></div></div>
+      <div class="stat"><div><small>Most active</small><span id="stat-top">—</span></div></div>
       <div class="stat"><div><small>Country spotlight</small><span id="stat-spotlight">—</span></div></div>
     </div>
   </section>
 <!-- SECTION 3 END -->
   <!-- SECTION 4 START: Map + Leaderboard + Join -->
+  <!-- Country Spotlight (wide banner above map) -->
+<div id="spotlight-banner" class="spotlight" style="display:none">
+  <div class="glow"></div>
+  <div class="spotlight-content">
+    <img id="spotlight-flag" alt="" />
+    <span id="spotlight-text">—</span>
+  </div>
+</div>
+
+  
   <section id="map-section" class="container grid">
     <div class="card">
       <div class="body">
@@ -1568,27 +1605,32 @@ function detectTier(balance){
   }
 
   function renderSpotlight(name){
+  // small stat tile
   const n = el('stat-spotlight');
-  if (!n) return;
-  n.textContent = name || '—';
-}
+  if (n) n.textContent = name || '—';
 
-function subscribeSpotlight(){
-  try{
-    db.collection('countries')
-      .orderBy('created', 'desc')
-      .limit(1)
-      .onSnapshot((qs)=>{
-        let latest = '—';
-        qs.forEach(doc=>{
-          const d = doc.data();
-          if (d?.name) latest = d.name;
-        });
-        renderSpotlight(latest);
-      }, (err)=> console.warn('spotlight sub err', err));
-  }catch(e){
-    console.warn('spotlight init failed', e);
+  // wide banner above the map
+  const box  = el('spotlight-banner');
+  const text = el('spotlight-text');
+  const flag = el('spotlight-flag');
+
+  if (!box || !text || !flag) return;
+
+  if (!name){
+    box.style.display = 'none';
+    return;
   }
+
+  text.textContent = `New country joined: ${name}!`;
+  const iso2 = countryToISO2(name);
+  if (iso2){
+    flag.src = `https://flagcdn.com/24x18/${iso2}.png`;
+    flag.alt = `${name} flag`;
+  } else {
+    flag.removeAttribute('src');
+    flag.alt = '';
+  }
+  box.style.display = 'block';
 }
 
   // recolor after counts change
@@ -1619,6 +1661,9 @@ function subscribeSpotlight(){
     renderLeaderboard();
     countryLayers.forEach((_, name) => updateCountryStyle(name));
   });
+
+  /* Start Country Spotlight subscription */
+subscribeSpotlight();
 
   // Form submit
   el('join-form').addEventListener('submit', async (e)=>{
