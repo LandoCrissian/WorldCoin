@@ -591,23 +591,6 @@
   </div>
 </div>
 
-        <label style="display:flex; gap:10px; align-items:center;">
-  <span>Filter by country:</span>
-  <select id="ad-country" style="flex:1; padding:8px;">
-    <option value="">All countries</option>
-  </select>
-</label>
-
-<label style="display:flex; gap:10px; align-items:flex-start;">
-  <span style="min-width:140px;">Manual addresses (one per line):</span>
-  <textarea id="ad-manual" rows="4" style="flex:1; padding:8px;"></textarea>
-</label>
-
-<label style="display:flex; gap:8px; align-items:center;">
-  <input id="ad-unique" type="checkbox" checked>
-  <span>Skip wallets that already received this drop</span>
-</label>
-
         <form id="join-form" class="join-grid">
           <div class="field">
             <label for="country">Country</label>
@@ -1670,15 +1653,6 @@ function detectTier(balance){
     });
   }
 
-  function populateAdminCountryFilter(){
-  const sel = document.getElementById('ad-country');
-  if (!sel) return;
-  const opts = [''].concat(Array.from(countryCounts.keys()).sort());
-  sel.innerHTML =
-    `<option value="">All countries</option>` +
-    opts.slice(1).map(c=>`<option value="${c}">${c}</option>`).join('');
-}
-
   function renderSpotlight(name){
   // small stat tile
   const n = el('stat-spotlight');
@@ -1848,72 +1822,36 @@ function showAdminUI(on){
   }
 
   // Load first 10 citizens (oldest)
-  async function loadRecipients({ limit=50, country='', manual=[], unique=true } = {}){
-  const rows = [];
-  try{
-    setLog(`Loading recipients… ${country? '('+country+') ':''}limit=${limit}`);
-    let q = db.collection('passports').orderBy('created','asc');
-    if (country) q = q.where('country','==',country);
-    if (limit) q = q.limit(limit);
+  async function loadFirst10(){
+    const rows = [];
+    try{
+      setLog('Loading first 10 citizens…');
+      const qs = await db.collection('passports')
+        .orderBy('created','asc')
+        .limit(10)
+        .get();
 
-    const qs = await q.get();
-    qs.forEach(doc=>{
-      const d = doc.data(); if (!d?.address) return;
-      rows.push({ address: String(d.address).trim(), nick: d.nick||'', country: d.country||'' });
-    });
+      qs.forEach(doc => {
+        const d = doc.data();
+        if (!d?.address) return;
+        rows.push({
+          address: String(d.address).trim(),
+          nick: d.nick || '',
+          country: d.country || ''
+        });
+      });
 
-    // add manual
-    const extra = (manual||[])
-      .map(a=>String(a).trim())
-      .filter(a=>/^0x[a-fA-F0-9]{40}$/.test(a))
-      .map(a=>({ address:a, nick:'(manual)', country:'(manual)' }));
-    rows.push(...extra);
-
-    // de-dupe
-    const seen = new Set(); const out = [];
-    for (const r of rows){
-      const k = r.address.toLowerCase();
-      if (!seen.has(k)){ seen.add(k); out.push(r); }
+      if (rows.length === 0) setLog('No citizens found.');
+      else {
+        setLog(`Loaded ${rows.length} wallet(s):`);
+        rows.forEach((r,i)=> setLog(` ${i+1}. ${r.address} — ${r.nick} (${r.country})`));
+      }
+    }catch(e){
+      console.error(e);
+      setLog('Failed to load citizens: ' + (e?.message||e));
     }
-
-    // unique per airdrop: if checked, exclude addresses already recorded for this “campaign id”
-    if (unique){
-      const campaign = currentCampaignId();
-      const got = await alreadyPaidSet(campaign);
-      const filtered = out.filter(r=> !got.has(r.address.toLowerCase()));
-      setLog(`Prepared ${filtered.length} unique recipient(s).`);
-      return filtered;
-    }
-
-    setLog(`Prepared ${out.length} recipient(s).`);
-    return out;
-  }catch(e){
-    console.error(e);
-    setLog('Failed to load recipients: ' + (e?.message||e));
-    return [];
+    return rows;
   }
-}
-
-// helpers for audit/uniqueness
-function currentCampaignId(){
-  // simple: key by token + amount + selected country (override as needed)
-  const amt = (document.getElementById('ad-amount')?.value||'').trim();
-  const c   = (document.getElementById('ad-country')?.value||'').trim();
-  return `${LAUNCH.token.address.toLowerCase()}::${amt}::${c||'all'}`;
-}
-async function alreadyPaidSet(campaign){
-  const set = new Set();
-  try{
-    const q = await db.collection('airdrops')
-      .where('campaign','==',campaign)
-      .where('status','==','success')
-      .get();
-    q.forEach(d=>{
-      (d.data()?.recipients||[]).forEach(a=> set.add(String(a).toLowerCase()));
-    });
-  }catch(_) {}
-  return set;
-}
 
   async function ensureCronosChain(){
     try{
@@ -1925,113 +1863,52 @@ async function alreadyPaidSet(campaign){
   }
 
   async function startAirdrop(){
-  if (!window.userAddress){ toast('Connect admin wallet first'); return; }
-  if (!isAdmin(window.userAddress)){ toast('Not an admin wallet'); return; }
+    if (!window.userAddress){ toast('Connect admin wallet first'); return; }
+    if (!isAdmin(window.userAddress)){ toast('Not an admin wallet'); return; }
 
-  const amountStr = (document.getElementById('ad-amount')?.value || '0').trim();
-  const dry       = !!document.getElementById('ad-dry')?.checked;
-  const country   = document.getElementById('ad-country')?.value || '';
-  const manual    = (document.getElementById('ad-manual')?.value || '')
-                      .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  const unique    = !!document.getElementById('ad-unique')?.checked;
+    try{
+      setBusy(true);
+      await ensureCronosChain();
 
-  const list = await loadRecipients({ limit:50, country, manual, unique });
-  if (list.length === 0){ toast('No recipients'); return; }
+      const list = await loadFirst10();
+      if (list.length === 0){ toast('No recipients'); return; }
 
-  if (!confirm(`Airdrop ${amountStr} CRON8 to ${list.length} wallet(s)?\n` +
-               `${dry ? '[DRY RUN]\n' : ''}` +
-               `${country ? 'Filter: ' + country + '\n' : ''}` +
-               `Proceed?`)) return;
+      const amountStr = (document.getElementById('ad-amount')?.value || '0').trim();
+      const dry = !!document.getElementById('ad-dry')?.checked;
 
-  try{
-    setBusy(true);
-    await ensureCronosChain();
+      const amt = ethers.utils.parseUnits(amountStr, LAUNCH.token.decimals);
+      const erc20 = new ethers.Contract(LAUNCH.token.address, [
+        'function balanceOf(address) view returns (uint256)',
+        'function transfer(address to, uint256 value) returns (bool)'
+      ], signer || provider.getSigner());
 
-    const amt   = ethers.utils.parseUnits(amountStr, LAUNCH.token.decimals);
-    const erc20 = new ethers.Contract(LAUNCH.token.address, [
-      'function balanceOf(address) view returns (uint256)',
-      'function transfer(address to, uint256 value) returns (bool)'
-    ], signer || provider.getSigner());
-
-    if (!dry){
+      // Check token balance
       const selfBal = await erc20.balanceOf(window.userAddress);
       if (selfBal.lt(amt.mul(list.length))){
-        setLog(`✖ Insufficient CRON8 for ${list.length} transfers`);
-        toast('Not enough CRON8 in admin wallet'); return;
+        setLog(`✖ Insufficient CRON8 balance for ${list.length} transfers`);
+        toast('Not enough CRON8 in admin wallet');
+        return;
       }
-    }
 
-    const campaign = currentCampaignId();
-    const auditRef = db.collection('airdrops').doc();
-    await auditRef.set({
-      created: firebase.firestore.FieldValue.serverTimestamp(),
-      admin: window.userAddress,
-      token: LAUNCH.token.address,
-      amount: amountStr,
-      campaign,
-      filter: { country, unique },
-      dry,
-      status: 'running'
-    });
+      setLog(`Airdrop: ${amountStr} CRON8 to ${list.length} wallets (${dry ? 'DRY RUN' : 'LIVE'})`);
+      if (dry){
+        list.forEach((r,i)=> setLog(`(dry) ${i+1}/${list.length} -> ${r.address}`));
+        toast('Dry run complete');
+        return;
+      }
 
-    const BATCH = 1;              // sequential keeps nonce sane; increase carefully
-    const RETRIES = 2;
-    const successes = []; const failures = [];
-
-    async function sendOne(to){
-      for (let attempt=0; attempt<=RETRIES; attempt++){
+      // Live transfers (sequential for nonce sanity)
+      for (let i=0;i<list.length;i++){
+        const to = list[i].address;
         try{
-          if (dry){ setLog(`(dry) -> ${to}`); return { hash:'dry-run' }; }
           const tx = await erc20.transfer(to, amt, { gasLimit: 120000 });
-          setLog(`→ ${to}  tx: ${tx.hash}`);
+          setLog(`→ ${i+1}/${list.length} ${to}  tx: ${tx.hash}`);
           await tx.wait(1);
-          return { hash: tx.hash };
-        }catch(e){
-          if (attempt===RETRIES) throw e;
-          setLog(`… retrying ${to}: ${e?.message||e}`);
-          await new Promise(r=>setTimeout(r, 1200));
+        }catch(err){
+          console.error(err);
+          setLog(`✖ ${i+1}/${list.length} ${to}  ${err?.message || err}`);
         }
       }
-    }
-
-    for (let i=0;i<list.length;i+=BATCH){
-      const chunk = list.slice(i, i+BATCH);
-      for (const r of chunk){
-        try{
-          const { hash } = await sendOne(r.address);
-          successes.push({ address:r.address, tx: hash });
-        }catch(e){
-          failures.push({ address:r.address, error: String(e?.message||e) });
-        }
-      }
-    }
-
-    await auditRef.update({
-      status: dry ? 'dry-complete' : 'complete',
-      recipients: successes.map(s=>s.address),
-      txs: successes,
-      failures,
-      finished: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    // mark as paid for uniqueness in future campaigns
-    if (!dry && successes.length){
-      await db.collection('airdrops')
-        .doc(`${auditRef.id}::paid`)
-        .set({ campaign, recipients: successes.map(s=>s.address), status:'success' });
-    }
-
-    setLog(`✔ Done — ${successes.length} success, ${failures.length} failed`);
-    if (failures.length) setLog('Failed: ' + failures.map(f=>f.address).join(', '));
-    toast('Airdrop finished');
-  }catch(e){
-    console.error(e);
-    setLog(`✖ Error: ${e?.message||e}`);
-    toast('Airdrop error');
-  }finally{
-    setBusy(false);
-  }
-}
 
       setLog('✔ Done');
       toast('Airdrop finished');
@@ -2045,14 +1922,11 @@ async function alreadyPaidSet(campaign){
     }
   }
 
-  if (btnLoad) btnLoad.addEventListener('click', async ()=>{
-  const country = document.getElementById('ad-country')?.value || '';
-  const manual  = (document.getElementById('ad-manual')?.value || '')
-    .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  const unique  = !!document.getElementById('ad-unique')?.checked;
-  const rows = await loadRecipients({ limit:50, country, manual, unique });
-  rows.forEach((r,i)=> setLog(` ${i+1}. ${r.address} — ${r.nick} (${r.country})`));
-});
+  const btnLoad = document.getElementById('ad-load');
+  const btnGo   = document.getElementById('ad-go');
+  if (btnLoad) btnLoad.addEventListener('click', loadFirst10);
+  if (btnGo)   btnGo.addEventListener('click', startAirdrop);
+})();
 
   <!-- SECTION 7.F START: Boot sequence and closing -->
   /**** Page boot ****/
