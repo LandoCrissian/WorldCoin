@@ -492,6 +492,7 @@
         <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
         <a class="link" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
         <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+        <a class="link" id="adminLink" href="#admin" style="display:none;">Admin</a>
       </div>
 
       <div class="actions">
@@ -566,6 +567,29 @@
     <div class="card" id="join-card">
       <div class="body">
         <h3>Join CROnation</h3>
+
+        <!-- Admin Panel -->
+<div id="admin" class="card" style="display:none;">
+  <div class="body">
+    <h3>Admin — Appreciation Airdrop</h3>
+    <div style="display:grid; gap:10px; max-width:560px;">
+      <label style="display:flex; gap:10px; align-items:center;">
+        <span>Amount per wallet (CRON8):</span>
+        <input id="ad-amount" type="number" min="0" step="0.000001" value="1000" style="flex:1; padding:8px;">
+      </label>
+      <label style="display:flex; gap:8px; align-items:center;">
+        <input id="ad-dry" type="checkbox" checked>
+        <span>Dry run (no tokens sent)</span>
+      </label>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="ad-load" class="btn">Load first 10 citizens</button>
+        <button id="ad-go" class="btn primary">Start Airdrop</button>
+      </div>
+      <small class="muted">Token: CRON8 at <code id="ad-token"></code> on Cronos</small>
+      <textarea id="ad-log" rows="10" style="width:100%; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; padding:10px; background:#0f1219; color:#e5e7eb; border:1px solid var(--line); border-radius:8px;" placeholder="Log…"></textarea>
+    </div>
+  </div>
+</div>
 
         <form id="join-form" class="join-grid">
           <div class="field">
@@ -696,6 +720,12 @@ window.addEventListener('DOMContentLoaded', () => {
       abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
     }
   };
+
+  /* Admin allow-list (checksums, lowercase ok) */
+const ADMIN_WALLETS = new Set([
+  0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0,
+  // add more if needed
+]);
 
   /**** Firebase ****/
   const firebaseConfig = {
@@ -1754,6 +1784,148 @@ subscribeSpotlight();
     toast('Opening 𝕏 to share…');
     window.open(shareUrl, '_blank','noopener');
   }
+
+  /* ========= Admin wiring ========= */
+function isAdmin(addr){
+  if (!addr) return false;
+  return ADMIN_WALLETS.has(addr) || ADMIN_WALLETS.has(addr.toLowerCase());
+}
+
+function showAdminUI(on){
+  const link = document.getElementById('adminLink');
+  const panel = document.getElementById('admin');
+  if (link)  link.style.display  = on ? 'inline-block' : 'none';
+  if (panel) panel.style.display = on ? 'block' : 'none';
+}
+
+(function wireAdmin(){
+  const logEl = document.getElementById('ad-log');
+  const setLog = (msg) => { if (logEl){ logEl.value += (msg + '\n'); logEl.scrollTop = logEl.scrollHeight; } };
+  const setField = (id, v) => { const n=document.getElementById(id); if(n) n.textContent=v; };
+
+  setField('ad-token', LAUNCH.token.address);
+
+  // Reveal admin link/panel after wallet connects
+  const origConnect = window.connectWallet;
+  // If you didn’t expose connectWallet, hook after your connectBtn click success:
+  // we already update connectBtn in connectWallet, so just extend that flow:
+  const patchConnectUI = () => {
+    if (window.userAddress && isAdmin(window.userAddress)) showAdminUI(true);
+  };
+  // If your connectWallet isn’t globally exposed, we still call after you set window.userAddress:
+  // We already do that; so add:
+  setTimeout(patchConnectUI, 1000);
+  // and also after accounts change
+  if (window.ethereum?.on){
+    window.ethereum.on('accountsChanged', () => setTimeout(patchConnectUI, 300));
+  }
+
+  // Load first 10 citizens (oldest)
+  async function loadFirst10(){
+    const rows = [];
+    try{
+      setLog('Loading first 10 citizens…');
+      const qs = await db.collection('passports')
+        .orderBy('created','asc')
+        .limit(10)
+        .get();
+
+      qs.forEach(doc => {
+        const d = doc.data();
+        if (!d?.address) return;
+        rows.push({
+          address: String(d.address).trim(),
+          nick: d.nick || '',
+          country: d.country || ''
+        });
+      });
+
+      if (rows.length === 0) setLog('No citizens found.');
+      else {
+        setLog(`Loaded ${rows.length} wallet(s):`);
+        rows.forEach((r,i)=> setLog(` ${i+1}. ${r.address} — ${r.nick} (${r.country})`));
+      }
+    }catch(e){
+      console.error(e);
+      setLog('Failed to load citizens: ' + (e?.message||e));
+    }
+    return rows;
+  }
+
+  async function ensureCronosChain(){
+    try{
+      const current = await provider.send('eth_chainId', []);
+      if ((current||'').toLowerCase() !== (LAUNCH.token.chainIdHex||'').toLowerCase()){
+        await provider.send('wallet_switchEthereumChain', [{ chainId: LAUNCH.token.chainIdHex }]);
+      }
+    }catch(e){ throw new Error('Switch to Cronos failed'); }
+  }
+
+  async function startAirdrop(){
+    if (!window.userAddress){ toast('Connect admin wallet first'); return; }
+    if (!isAdmin(window.userAddress)){ toast('Not an admin wallet'); return; }
+
+    try{
+      setBusy(true);
+      await ensureCronosChain();
+
+      const list = await loadFirst10();
+      if (list.length === 0){ toast('No recipients'); return; }
+
+      const amountStr = (document.getElementById('ad-amount')?.value || '0').trim();
+      const dry = !!document.getElementById('ad-dry')?.checked;
+
+      const amt = ethers.utils.parseUnits(amountStr, LAUNCH.token.decimals);
+      const erc20 = new ethers.Contract(LAUNCH.token.address, [
+        'function balanceOf(address) view returns (uint256)',
+        'function transfer(address to, uint256 value) returns (bool)'
+      ], signer || provider.getSigner());
+
+      // Check token balance
+      const selfBal = await erc20.balanceOf(window.userAddress);
+      if (selfBal.lt(amt.mul(list.length))){
+        setLog(`✖ Insufficient CRON8 balance for ${list.length} transfers`);
+        toast('Not enough CRON8 in admin wallet');
+        return;
+      }
+
+      setLog(`Airdrop: ${amountStr} CRON8 to ${list.length} wallets (${dry ? 'DRY RUN' : 'LIVE'})`);
+      if (dry){
+        list.forEach((r,i)=> setLog(`(dry) ${i+1}/${list.length} -> ${r.address}`));
+        toast('Dry run complete');
+        return;
+      }
+
+      // Live transfers (sequential for nonce sanity)
+      for (let i=0;i<list.length;i++){
+        const to = list[i].address;
+        try{
+          const tx = await erc20.transfer(to, amt, { gasLimit: 120000 });
+          setLog(`→ ${i+1}/${list.length} ${to}  tx: ${tx.hash}`);
+          await tx.wait(1);
+        }catch(err){
+          console.error(err);
+          setLog(`✖ ${i+1}/${list.length} ${to}  ${err?.message || err}`);
+        }
+      }
+
+      setLog('✔ Done');
+      toast('Airdrop finished');
+    }catch(e){
+      console.error(e);
+      toast('Airdrop error');
+      const logEl = document.getElementById('ad-log');
+      if (logEl) logEl.value += `\n✖ ${e?.message||e}\n`;
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  const btnLoad = document.getElementById('ad-load');
+  const btnGo   = document.getElementById('ad-go');
+  if (btnLoad) btnLoad.addEventListener('click', loadFirst10);
+  if (btnGo)   btnGo.addEventListener('click', startAirdrop);
+})();
 
   <!-- SECTION 7.F START: Boot sequence and closing -->
   /**** Page boot ****/
