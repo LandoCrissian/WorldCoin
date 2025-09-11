@@ -721,9 +721,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  /* Admin allow-list (checksums, lowercase ok) */
+  /* Admin allow-list (strings, normalized to lowercase) */
 const ADMIN_WALLETS = new Set([
-  0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0,
+  '0x69b6c23e59f9fd56fa3de3edf624d5c2c67c05f0'  // 👈 lowercase string
   // add more if needed
 ]);
 
@@ -1152,6 +1152,7 @@ Time: ${new Date().toISOString()}`;
       toast('Wallet connected ✅');
       restorePassportIfAny();
       restorePfpIfAny(userAddress);
+      if (isAdmin(userAddress)) showAdminUI(true);
 
     }catch(err){
       console.error('[connectWallet] error:', err);
