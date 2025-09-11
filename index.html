@@ -456,6 +456,11 @@
       0%,80%,100%{opacity:.2;transform:scale(.8);}
       40%{opacity:1;transform:scale(1);}
     }
+
+    .tab-panel .table { width:100%; border-collapse:collapse; }
+    .tab-panel .table th, .tab-panel .table td { padding:8px 10px; border-bottom:1px solid var(--line); font-size:14px; }
+    .tab-panel .table th { color:var(--muted); text-align:left; }
+    .tab-panel button[data-tab].active { border-color: var(--accent); color:#fff; background: var(--accent); }
   </style>
 </head>
 <!-- SECTION 1 END -->
@@ -568,25 +573,190 @@
       <div class="body">
         <h3>Join CROnation</h3>
 
-        <!-- Admin Panel -->
+        <!-- ADMIN PANEL (PRO) -->
 <div id="admin" class="card" style="display:none;">
   <div class="body">
-    <h3>Admin — Appreciation Airdrop</h3>
-    <div style="display:grid; gap:10px; max-width:560px;">
-      <label style="display:flex; gap:10px; align-items:center;">
-        <span>Amount per wallet (CRON8):</span>
-        <input id="ad-amount" type="number" min="0" step="0.000001" value="1000" style="flex:1; padding:8px;">
-      </label>
-      <label style="display:flex; gap:8px; align-items:center;">
-        <input id="ad-dry" type="checkbox" checked>
-        <span>Dry run (no tokens sent)</span>
-      </label>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button id="ad-load" class="btn">Load first 10 citizens</button>
-        <button id="ad-go" class="btn primary">Start Airdrop</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <h3 style="margin:0">Admin</h3>
+      <small class="muted">Token: <code id="ad-token"></code> · Net: Cronos</small>
+    </div>
+
+    <!-- Tabs -->
+    <div style="margin-top:12px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn ghost" data-tab="airdrop">Airdrop</button>
+      <button class="btn ghost" data-tab="audit">Campaigns / Audit</button>
+      <button class="btn ghost" data-tab="tools">Tools</button>
+      <button class="btn ghost" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- TAB: AIRDROP -->
+    <div class="tab-panel" id="tab-airdrop" style="display:block;margin-top:12px;">
+      <div class="spotlight" style="margin:0 0 12px;">
+        <div class="spotlight-content"><span>Smart airdrop control · deterministic & auditable</span></div>
       </div>
-      <small class="muted">Token: CRON8 at <code id="ad-token"></code> on Cronos</small>
-      <textarea id="ad-log" rows="10" style="width:100%; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; padding:10px; background:#0f1219; color:#e5e7eb; border:1px solid var(--line); border-radius:8px;" placeholder="Log…"></textarea>
+
+      <div style="display:grid;gap:12px;grid-template-columns:1fr;max-width:880px;">
+        <!-- Token -->
+        <label style="display:flex;gap:10px;align-items:center;">
+          <span style="min-width:140px;">Token (ERC-20)</span>
+          <input id="ad-token-input" placeholder="0x… (leave blank for CRON8)" style="flex:1;padding:8px;">
+        </label>
+
+        <!-- Mode -->
+        <label style="display:flex;gap:10px;align-items:center;">
+          <span style="min-width:140px;">Mode</span>
+          <select id="ad-mode" style="flex:1;padding:8px;">
+            <option value="simple">Simple Transfer (same amount)</option>
+            <option value="tiered">Tiered Transfer (by country)</option>
+            <option value="csv">CSV / Manual (address,amount)</option>
+            <option value="erc721">ERC-721 Mint (simulated)</option>
+            <option value="erc1155">ERC-1155 Airdrop (simulated)</option>
+          </select>
+        </label>
+
+        <!-- Filters -->
+        <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr;">
+          <label style="display:flex;gap:10px;align-items:center;">
+            <span>Country filter</span>
+            <select id="ad-country" style="flex:1;padding:8px;">
+              <option value="">All countries</option>
+            </select>
+          </label>
+          <label style="display:flex;gap:10px;align-items:center;">
+            <span>Limit</span>
+            <input id="ad-limit" type="number" min="0" step="1" placeholder="e.g. 50 (blank = all)" style="flex:1;padding:8px;">
+          </label>
+        </div>
+
+        <label style="display:flex;gap:8px;align-items:center;">
+          <input id="ad-unique" type="checkbox" checked>
+          <span>Unique per campaign (skip wallets already paid in this campaign)</span>
+        </label>
+
+        <!-- Amounts / per-mode -->
+        <div id="ad-amounts">
+          <!-- Simple -->
+          <label class="ad-mode-simple" style="display:flex;gap:10px;align-items:center;">
+            <span style="min-width:140px;">Amount / wallet</span>
+            <input id="ad-amount" type="number" min="0" step="0.000001" value="1000" style="flex:1;padding:8px;">
+          </label>
+
+          <!-- Tiered -->
+          <div class="ad-mode-tiered" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <b>Tier rules</b>
+              <button id="ad-tier-add" class="btn">Add rule</button>
+            </div>
+            <div id="ad-tier-rows" style="border:1px solid var(--line);border-radius:10px;padding:8px;"></div>
+            <small class="muted">Each rule: Country → Amount. “Else” row applies to any country not listed.</small>
+          </div>
+
+          <!-- CSV -->
+          <div class="ad-mode-csv" style="display:none;">
+            <label style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="min-width:140px;">CSV / Manual</span>
+              <textarea id="ad-csv" rows="6" style="flex:1;padding:8px;" placeholder="address,amount
+0xabc...,1000
+0xdef...,2500"></textarea>
+            </label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <input id="ad-csv-file" type="file" accept=".csv" class="btn" />
+              <small class="muted">Columns: address,amount — amounts in human units (e.g., 1000)</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Run options -->
+        <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr 1fr;">
+          <label style="display:flex;gap:10px;align-items:center;">
+            <span>Batch size</span>
+            <input id="ad-batch" type="number" min="1" step="1" value="1" style="flex:1;padding:8px;">
+          </label>
+          <label style="display:flex;gap:10px;align-items:center;">
+            <span>Gas limit</span>
+            <input id="ad-gas" type="number" min="0" step="1000" placeholder="optional" style="flex:1;padding:8px;">
+          </label>
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input id="ad-dry" type="checkbox" checked>
+            <span>Dry run (no tokens sent)</span>
+          </label>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button id="ad-preview" class="btn">Preview Plan</button>
+          <button id="ad-go" class="btn primary">Start Airdrop</button>
+          <button id="ad-copy-plan" class="btn">Copy Plan CSV</button>
+          <button id="ad-copy-addrs" class="btn">Copy Addresses</button>
+        </div>
+
+        <!-- Status + Log -->
+        <div id="ad-status" class="muted" style="padding:8px 0;">Status: —</div>
+        <textarea id="ad-log" rows="10" style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding:10px;background:#0f1219;color:#e5e7eb;border:1px solid var(--line);border-radius:8px;" placeholder="Log…"></textarea>
+      </div>
+    </div>
+
+    <!-- TAB: AUDIT -->
+    <div class="tab-panel" id="tab-audit" style="display:none;margin-top:12px;">
+      <div id="audit-table"></div>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button id="audit-refresh" class="btn">Refresh</button>
+        <button id="audit-export-csv" class="btn">Export CSV</button>
+        <button id="audit-export-json" class="btn">Export JSON</button>
+      </div>
+    </div>
+
+    <!-- TAB: TOOLS -->
+    <div class="tab-panel" id="tab-tools" style="display:none;margin-top:12px;max-width:880px;">
+      <div style="display:grid;gap:12px;">
+        <div class="card"><div class="body" style="display:grid;gap:10px;">
+          <b>Balance Check</b>
+          <label style="display:flex;gap:10px;align-items:center;">
+            <span style="min-width:120px;">Address</span>
+            <input id="tool-balance-addr" placeholder="0x…" style="flex:1;padding:8px;">
+          </label>
+          <button id="tool-balance-go" class="btn">Check</button>
+          <small id="tool-balance-out" class="muted">—</small>
+        </div></div>
+
+        <div class="card"><div class="body" style="display:grid;gap:10px;">
+          <b>Holder Snapshot (passports)</b>
+          <button id="tool-snapshot" class="btn">Export CSV</button>
+          <small class="muted">Exports: address,country,nick,created</small>
+        </div></div>
+
+        <div class="card"><div class="body" style="display:grid;gap:10px;">
+          <b>De-dupe Helper</b>
+          <textarea id="tool-dedupe-in" rows="4" placeholder="One address per line"></textarea>
+          <button id="tool-dedupe-go" class="btn">De-dupe</button>
+          <textarea id="tool-dedupe-out" rows="4" placeholder="Unique, lowercased…" readonly></textarea>
+          <small id="tool-dedupe-count" class="muted">—</small>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- TAB: SETTINGS -->
+    <div class="tab-panel" id="tab-settings" style="display:none;margin-top:12px;max-width:880px;">
+      <div style="display:grid;gap:12px;">
+        <label style="display:flex;gap:10px;align-items:center;">
+          <span style="min-width:180px;">Default batch size</span>
+          <input id="cfg-batch" type="number" min="1" step="1" value="1" style="flex:1;padding:8px;">
+        </label>
+        <label style="display:flex;gap:10px;align-items:center;">
+          <span style="min-width:180px;">Default gas limit</span>
+          <input id="cfg-gas" type="number" min="0" step="1000" placeholder="optional" style="flex:1;padding:8px;">
+        </label>
+        <label style="display:flex;gap:8px;align-items:center;">
+          <input id="cfg-confirm" type="checkbox" checked>
+          <span>Dangerous actions require confirm()</span>
+        </label>
+        <div>
+          <b>Admin allow-list (local mirror)</b>
+          <textarea id="cfg-admins" rows="3" placeholder="0x… one per line"></textarea>
+          <button id="cfg-admins-save" class="btn" style="margin-top:8px;">Save mirror (local)</button>
+          <small class="muted">Source of truth still the hard-coded set in JS.</small>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1786,146 +1956,562 @@ subscribeSpotlight();
     window.open(shareUrl, '_blank','noopener');
   }
 
-  /* ========= Admin wiring ========= */
-function isAdmin(addr){
-  if (!addr) return false;
-  return ADMIN_WALLETS.has(addr) || ADMIN_WALLETS.has(addr.toLowerCase());
-}
+/* ========= Admin wiring (Pro Panel) ========= */
+(function adminPanel(){
+  const $ = (id)=>document.getElementById(id);
+  const setLog = (msg) => { const el=$('ad-log'); if(!el) return; el.value += (msg+'\n'); el.scrollTop=el.scrollHeight; };
+  const setStatus = (s) => { const el=$('ad-status'); if(el) el.textContent = 'Status: ' + s; };
 
-function showAdminUI(on){
-  const link = document.getElementById('adminLink');
-  const panel = document.getElementById('admin');
-  if (link)  link.style.display  = on ? 'inline-block' : 'none';
-  if (panel) panel.style.display = on ? 'block' : 'none';
-}
+  // Show/hide admin entry points
+  function isAdmin(addr){
+    if (!addr) return false;
+    // hard-coded set from your existing code:
+    const ADMIN_WALLETS = new Set([
+      '0x69b6c23e59f9fd56fa3de3edf624d5c2c67c05f0'
+    ]);
+    return ADMIN_WALLETS.has(addr) || ADMIN_WALLETS.has((addr||'').toLowerCase());
+  }
+  function showAdminUI(on){
+    const link = $('adminLink'); const panel = $('admin');
+    if (link)  link.style.display  = on ? 'inline-block' : 'none';
+    if (panel) panel.style.display = on ? 'block' : 'none';
+  }
+  // Expose (kept same names)
+  window.isAdmin = isAdmin;
+  window.showAdminUI = showAdminUI;
 
-(function wireAdmin(){
-  const logEl = document.getElementById('ad-log');
-  const setLog = (msg) => { if (logEl){ logEl.value += (msg + '\n'); logEl.scrollTop = logEl.scrollHeight; } };
-  const setField = (id, v) => { const n=document.getElementById(id); if(n) n.textContent=v; };
+  // Token defaults
+  $('ad-token')?.appendChild(document.createTextNode((LAUNCH.token.address)));
+  $('ad-token-input')?.setAttribute('placeholder', LAUNCH.token.address);
 
-  setField('ad-token', LAUNCH.token.address);
-
-  // Reveal admin link/panel after wallet connects
-  const origConnect = window.connectWallet;
-  // If you didn’t expose connectWallet, hook after your connectBtn click success:
-  // we already update connectBtn in connectWallet, so just extend that flow:
-  const patchConnectUI = () => {
-    if (window.userAddress && isAdmin(window.userAddress)) showAdminUI(true);
+  // Tabs
+  const tabBtns = Array.from(document.querySelectorAll('button[data-tab]'));
+  const tabPanels = {
+    airdrop: $('tab-airdrop'),
+    audit:   $('tab-audit'),
+    tools:   $('tab-tools'),
+    settings:$('tab-settings')
   };
-  // If your connectWallet isn’t globally exposed, we still call after you set window.userAddress:
-  // We already do that; so add:
-  setTimeout(patchConnectUI, 1000);
-  // and also after accounts change
-  if (window.ethereum?.on){
-    window.ethereum.on('accountsChanged', () => setTimeout(patchConnectUI, 300));
+  tabBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.getAttribute('data-tab');
+      Object.entries(tabPanels).forEach(([k,p])=> p.style.display = (k===t?'block':'none'));
+      if(t==='audit') refreshAudit();
+    }, { passive:true });
+  });
+  // mark default tab
+  tabBtns[0]?.classList.add('active');
+
+  // Populate country filter whenever counts change
+  function populateAdminCountryFilter(){
+    const sel = $('ad-country'); if(!sel) return;
+    const keys = Array.from((window.countryCounts||new Map()).keys()).sort();
+    sel.innerHTML = `<option value="">All countries</option>` + keys.map(k=>`<option value="${k}">${k}</option>`).join('');
   }
+  // call once at boot and again after stats update hook
+  populateAdminCountryFilter();
+  // Hook your existing live snapshot updater
+  const _renderStats = window.renderStats;
+  window.renderStats = function(){
+    try { if (typeof _renderStats === 'function') _renderStats(); } finally { populateAdminCountryFilter(); }
+  };
 
-  // Load first 10 citizens (oldest)
-  async function loadFirst10(){
-    const rows = [];
-    try{
-      setLog('Loading first 10 citizens…');
-      const qs = await db.collection('passports')
-        .orderBy('created','asc')
-        .limit(10)
-        .get();
-
-      qs.forEach(doc => {
-        const d = doc.data();
-        if (!d?.address) return;
-        rows.push({
-          address: String(d.address).trim(),
-          nick: d.nick || '',
-          country: d.country || ''
-        });
-      });
-
-      if (rows.length === 0) setLog('No citizens found.');
-      else {
-        setLog(`Loaded ${rows.length} wallet(s):`);
-        rows.forEach((r,i)=> setLog(` ${i+1}. ${r.address} — ${r.nick} (${r.country})`));
-      }
-    }catch(e){
-      console.error(e);
-      setLog('Failed to load citizens: ' + (e?.message||e));
-    }
-    return rows;
-  }
+  /* ---------- Helpers ---------- */
+  const E = window.ethers;
+  const DECIMALS = LAUNCH.token.decimals || 18;
+  const parseUnits = (v, d=DECIMALS) => E.utils.parseUnits(String(v), d);
+  const formatUnits = (v, d=DECIMALS) => E.utils.formatUnits(v, d);
+  const isAddr = (a)=> /^0x[a-fA-F0-9]{40}$/.test(a||'');
 
   async function ensureCronosChain(){
+    if (!window.provider) return; // you already switch at connect
+    const current = await provider.send('eth_chainId', []);
+    if ((current||'').toLowerCase() !== (LAUNCH.token.chainIdHex||'').toLowerCase()){
+      await provider.send('wallet_switchEthereumChain', [{ chainId: LAUNCH.token.chainIdHex }]);
+    }
+  }
+
+  function normalizeToken(){
+    const manual = ($('ad-token-input')?.value||'').trim();
+    return manual || LAUNCH.token.address;
+  }
+
+  // Build recipient list from Firestore (filters)
+  async function recipientsFromPassports({ country, limit }){
+    let q = db.collection('passports').orderBy('created','asc');
+    if (country) q = q.where('country','==',country);
+    if (limit) q = q.limit(Number(limit));
+    const rows = [];
+    const qs = await q.get();
+    qs.forEach(d=>{
+      const x = d.data(); if (!x?.address) return;
+      rows.push({ address:String(x.address).trim(), country:x.country||'', nick:x.nick||'' });
+    });
+    // de-dupe by address
+    const seen=new Set(), out=[];
+    for(const r of rows){ const k=r.address.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(r); } }
+    return out;
+  }
+
+  // Tier rules UI
+  function addTierRow(country='', amount=''){
+    const wrap = $('ad-tier-rows'); if(!wrap) return;
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;gap:8px;align-items:center;padding:6px;border-bottom:1px solid var(--line);';
+    row.innerHTML = `
+      <input class="tier-country" placeholder="Country or * (else)" value="${country}" style="flex:2;padding:8px;">
+      <input class="tier-amount"  placeholder="Amount" value="${amount}"  style="flex:1;padding:8px;">
+      <button class="btn" type="button">Remove</button>
+    `;
+    row.querySelector('button')?.addEventListener('click', ()=> row.remove());
+    wrap.appendChild(row);
+  }
+  $('ad-tier-add')?.addEventListener('click', ()=> addTierRow('', ''));
+
+  // Mode switcher
+  function showMode(mode){
+    ['simple','tiered','csv'].forEach(m=>{
+      document.querySelectorAll('.ad-mode-'+m).forEach(n=> n.style.display = (m===mode?'block':'none'));
+    });
+  }
+  $('ad-mode')?.addEventListener('change', (e)=> showMode(e.target.value));
+  showMode(($('ad-mode')?.value)||'simple');
+
+  // CSV upload
+  $('ad-csv-file')?.addEventListener('change', async (e)=>{
+    const file = e.target.files?.[0]; if(!file) return;
+    const txt = await file.text();
+    const box = $('ad-csv'); if (box) box.value = (box.value?box.value.trim()+'\n':'') + txt.trim();
+  });
+
+  /* ---------- Plan builders ---------- */
+  async function buildRecipientList({ mode, filters, csv, tierRules }){
+    // returns: [ { address, amountHuman } ]
+    if (mode === 'csv'){
+      const rows = [];
+      (csv||'').split(/\r?\n/).forEach(line=>{
+        line = line.trim(); if(!line) return;
+        const [addr, amt] = line.split(',').map(s=>s.trim());
+        if (isAddr(addr) && !isNaN(Number(amt))) rows.push({ address: addr, amountHuman: amt });
+      });
+      return rows;
+    }
+
+    const base = await recipientsFromPassports(filters);
+    if (mode === 'simple'){
+      const amt = String(($('ad-amount')?.value||'0')).trim();
+      return base.map(r=> ({ address: r.address, amountHuman: amt }));
+    }
+
+    if (mode === 'tiered'){
+      const rules = (tierRules||[]).filter(r=>r.amount && (r.country || r.country==='*'));
+      const elseRule = rules.find(r=> r.country==='*');
+      return base.map(r=>{
+        const hit = rules.find(t => t.country && t.country !== '*' && t.country === r.country);
+        const amt = hit?.amount || elseRule?.amount || '0';
+        return { address: r.address, amountHuman: amt };
+      });
+    }
+
+    // simulated modes
+    if (mode === 'erc721' || mode === 'erc1155'){
+      // produce zero-amount recipients for dry-run visualization
+      return base.map(r=> ({ address: r.address, amountHuman: '0' }));
+    }
+
+    return [];
+  }
+
+  function planToCSV(plan){
+    return ['address,amount'].concat(plan.recipients.map(r=>`${r.address},${r.amountHuman}`)).join('\n');
+  }
+  function planAddresses(plan){
+    return plan.recipients.map(r=>r.address).join('\n');
+  }
+
+  function keccakText(s){
+    return E.utils.keccak256(E.utils.toUtf8Bytes(s||''));
+  }
+
+  function planHashOf(recipients){
+    const body = recipients.map(r=>`${r.address}|${r.amountHuman}`).join('\n');
+    return keccakText(body);
+  }
+
+  function currentCampaignId(plan){
+    // token::mode::planHash::countryKey::hourBucket
+    const token = normalizeToken().toLowerCase();
+    const mode  = plan.mode;
+    const hash  = plan.planHash.slice(0,10);
+    const key   = (plan.filter?.country || 'all');
+    const hour  = new Date();
+    hour.setMinutes(0,0,0);
+    return `${token}::${mode}::${hash}::${key}::${hour.toISOString()}`;
+  }
+
+  function estimateTotals(plan){
+    // totals in human + BigNumber
+    let totalHuman = 0;
+    for(const r of plan.recipients) totalHuman += Number(r.amountHuman||0);
+    const totalUnits = parseUnits(String(totalHuman || 0), DECIMALS);
+    // rough gas estimate (transfer ~ 50k-80k): recipients * 80k by default
+    const estGas = plan.recipients.length * 80000;
+    return { totalAmountHuman: totalHuman, totalAmountUnits: totalUnits, estGas };
+  }
+
+  async function alreadyPaidSet(campaign){
+    const set = new Set();
     try{
-      const current = await provider.send('eth_chainId', []);
-      if ((current||'').toLowerCase() !== (LAUNCH.token.chainIdHex||'').toLowerCase()){
-        await provider.send('wallet_switchEthereumChain', [{ chainId: LAUNCH.token.chainIdHex }]);
-      }
-    }catch(e){ throw new Error('Switch to Cronos failed'); }
+      const q = await db.collection('airdropsPaid').doc(campaign).get();
+      const rows = q.exists ? (q.data()?.recipients || []) : [];
+      rows.forEach(a=> set.add(String(a).toLowerCase()));
+    }catch(_){}
+    return set;
+  }
+
+  async function recordAudit(refId, partial){
+    try{
+      await db.collection('airdrops').doc(refId).set(partial, { merge:true });
+    }catch(e){ console.warn('audit write failed', e); }
+  }
+
+  async function preview(){
+    setStatus('Building plan…');
+    setLog('— preview start —');
+
+    const mode = $('ad-mode')?.value || 'simple';
+    const filters = {
+      country: ($('ad-country')?.value||'').trim(),
+      limit:   Number(($('ad-limit')?.value||'0')) || undefined
+    };
+    const tierRules = Array.from(document.querySelectorAll('#ad-tier-rows .tier-country')).map((_,i)=>null)
+      .map((_,i)=>({
+        country: (document.querySelectorAll('#ad-tier-rows .tier-country')[i].value||'').trim() || '*',
+        amount:  (document.querySelectorAll('#ad-tier-rows .tier-amount')[i].value||'').trim()
+      }));
+    const csv = $('ad-csv')?.value || '';
+
+    const recipients = await buildRecipientList({ mode, filters, csv, tierRules });
+    if (!recipients.length){ setLog('No recipients.'); setStatus('No recipients'); return null; }
+
+    // Uniqueness filter
+    let uniqNote = '';
+    if (($('ad-unique')?.checked)){
+      const fakePlan = { mode, recipients, filter: { country: filters.country }, planHash: planHashOf(recipients) };
+      const campaign = currentCampaignId(fakePlan);
+      const paid = await alreadyPaidSet(campaign);
+      const filtered = recipients.filter(r=> !paid.has(r.address.toLowerCase()));
+      uniqNote = ` (unique: ${recipients.length-filtered.length} skipped)`;
+      recipients.length = 0; recipients.push(...filtered);
+    }
+
+    const plan = {
+      token: normalizeToken(),
+      decimals: DECIMALS,
+      mode,
+      filter: { country: filters.country, limit: filters.limit||null },
+      recipients,
+      planHash: planHashOf(recipients)
+    };
+    const totals = estimateTotals(plan);
+    setLog(`Recipients: ${recipients.length}${uniqNote}`);
+    setLog(`Total (human): ${totals.totalAmountHuman}`);
+    setLog(`Plan hash: ${plan.planHash}`);
+    setStatus('Preview ready');
+    return { plan, totals };
   }
 
   async function startAirdrop(){
-    if (!window.userAddress){ toast('Connect admin wallet first'); return; }
-    if (!isAdmin(window.userAddress)){ toast('Not an admin wallet'); return; }
-
     try{
-      setBusy(true);
+      if (!window.userAddress){ toast('Connect admin wallet'); return; }
+      if (!isAdmin(window.userAddress)){ toast('Not an admin wallet'); return; }
       await ensureCronosChain();
 
-      const list = await loadFirst10();
-      if (list.length === 0){ toast('No recipients'); return; }
+      const pv = await preview();
+      if (!pv) return;
+      const { plan, totals } = pv;
 
-      const amountStr = (document.getElementById('ad-amount')?.value || '0').trim();
-      const dry = !!document.getElementById('ad-dry')?.checked;
+      const dry   = !!$('ad-dry')?.checked;
+      const batch = Math.max(1, Number(($('ad-batch')?.value||'1')));
+      const gasOv = Number(($('ad-gas')?.value||'0')) || undefined;
 
-      const amt = ethers.utils.parseUnits(amountStr, LAUNCH.token.decimals);
-      const erc20 = new ethers.Contract(LAUNCH.token.address, [
-        'function balanceOf(address) view returns (uint256)',
-        'function transfer(address to, uint256 value) returns (bool)'
-      ], signer || provider.getSigner());
-
-      // Check token balance
-      const selfBal = await erc20.balanceOf(window.userAddress);
-      if (selfBal.lt(amt.mul(list.length))){
-        setLog(`✖ Insufficient CRON8 balance for ${list.length} transfers`);
-        toast('Not enough CRON8 in admin wallet');
-        return;
-      }
-
-      setLog(`Airdrop: ${amountStr} CRON8 to ${list.length} wallets (${dry ? 'DRY RUN' : 'LIVE'})`);
-      if (dry){
-        list.forEach((r,i)=> setLog(`(dry) ${i+1}/${list.length} -> ${r.address}`));
-        toast('Dry run complete');
-        return;
-      }
-
-      // Live transfers (sequential for nonce sanity)
-      for (let i=0;i<list.length;i++){
-        const to = list[i].address;
-        try{
-          const tx = await erc20.transfer(to, amt, { gasLimit: 120000 });
-          setLog(`→ ${i+1}/${list.length} ${to}  tx: ${tx.hash}`);
-          await tx.wait(1);
-        }catch(err){
-          console.error(err);
-          setLog(`✖ ${i+1}/${list.length} ${to}  ${err?.message || err}`);
+      // safety confirm
+      const ask = ($('cfg-confirm')?.checked)!==false;
+      if (ask){
+        if (!confirm(`Proceed?\nMode: ${plan.mode}\nRecipients: ${plan.recipients.length}\nTotal (human): ${totals.totalAmountHuman}\nDry run: ${dry ? 'YES' : 'NO'}`)){
+          return;
         }
       }
 
-      setLog('✔ Done');
+      setBusy?.(true);
+      setStatus(dry ? 'Running (dry-run)' : 'Running');
+
+      // ERC-20 transfer path (others simulated only)
+      const tokenAddr = plan.token;
+      const erc20 = new E.Contract(tokenAddr, [
+        'function balanceOf(address) view returns (uint256)',
+        'function transfer(address to, uint256 value) returns (bool)'
+      ], (window.signer || window.provider.getSigner()));
+
+      // preflight balance
+      if (!dry){
+        const bal = await erc20.balanceOf(window.userAddress);
+        if (bal.lt(totals.totalAmountUnits)){
+          setLog('✖ Insufficient token balance for total planned amount');
+          setStatus('Error: insufficient balance');
+          setBusy?.(false);
+          return;
+        }
+      }
+
+      // Write-ahead audit
+      const auditRef = db.collection('airdrops').doc(); // auto id
+      const campaign = currentCampaignId(plan);
+      await recordAudit(auditRef.id, {
+        created: firebase.firestore.FieldValue.serverTimestamp(),
+        admin: window.userAddress,
+        token: tokenAddr,
+        decimals: DECIMALS,
+        mode: plan.mode,
+        campaign,
+        filter: plan.filter,
+        dry,
+        batch,
+        gasLimit: gasOv||null,
+        plan: {
+          totalRecipients: plan.recipients.length,
+          totalAmount: totals.totalAmountHuman,
+          recipients: plan.recipients,
+          planHash: plan.planHash
+        },
+        status: 'running',
+        successes: [],
+        failures: []
+      });
+
+      // Execute
+      const successes=[], failures=[];
+      const sendOne = async ({ address, amountHuman })=>{
+        if (dry){ setLog(`(dry) -> ${address} : ${amountHuman}`); return { hash: 'dry-run' }; }
+        const amount = parseUnits(String(amountHuman||0), DECIMALS);
+        const tx = await erc20.transfer(address, amount, gasOv ? { gasLimit: gasOv } : {});
+        setLog(`→ ${address}  tx: ${tx.hash}`);
+        await tx.wait(1);
+        return { hash: tx.hash };
+      };
+
+      for (let i=0;i<plan.recipients.length;i+=batch){
+        const chunk = plan.recipients.slice(i, i+batch);
+        for (const r of chunk){
+          let tries=0, ok=false;
+          while(tries<3 && !ok){
+            try{
+              const { hash } = await sendOne(r);
+              successes.push({ address:r.address, tx: hash });
+              ok=true;
+              await recordAudit(auditRef.id, { successes });
+            }catch(e){
+              tries++;
+              if (tries>=3){
+                const err = String(e?.message||e);
+                failures.push({ address:r.address, error: err });
+                setLog(`✖ ${r.address}  ${err}`);
+                await recordAudit(auditRef.id, { failures });
+              }else{
+                setLog(`… retry ${tries} for ${r.address}`);
+                await new Promise(res=>setTimeout(res, 1200));
+              }
+            }
+          }
+        }
+      }
+
+      // finalize
+      await recordAudit(auditRef.id, {
+        status: dry ? 'dry-complete' : 'complete',
+        finished: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // mark paid set (for fast uniqueness next time)
+      if (!dry && successes.length){
+        await db.collection('airdropsPaid').doc(campaign).set({
+          recipients: successes.map(s=>s.address.toLowerCase()), status:'success',
+          updated: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge:true });
+      }
+
+      setLog(`✔ Done — ${successes.length} success, ${failures.length} failed`);
+      setStatus('Complete');
       toast('Airdrop finished');
     }catch(e){
       console.error(e);
-      toast('Airdrop error');
-      const logEl = document.getElementById('ad-log');
-      if (logEl) logEl.value += `\n✖ ${e?.message||e}\n`;
+      setLog('✖ ' + (e?.message||e));
+      setStatus('Error');
     }finally{
-      setBusy(false);
+      setBusy?.(false);
     }
   }
 
-  const btnLoad = document.getElementById('ad-load');
-  const btnGo   = document.getElementById('ad-go');
-  if (btnLoad) btnLoad.addEventListener('click', loadFirst10);
-  if (btnGo)   btnGo.addEventListener('click', startAirdrop);
+  // Wire buttons
+  $('ad-preview')?.addEventListener('click', preview);
+  $('ad-go')?.addEventListener('click', startAirdrop);
+  $('ad-copy-plan')?.addEventListener('click', async ()=>{
+    const pv = await preview(); if(!pv) return;
+    await navigator.clipboard.writeText(planToCSV(pv.plan));
+    toast('Plan CSV copied');
+  });
+  $('ad-copy-addrs')?.addEventListener('click', async ()=>{
+    const pv = await preview(); if(!pv) return;
+    await navigator.clipboard.writeText(planAddresses(pv.plan));
+    toast('Addresses copied');
+  });
+
+  /* ---------- AUDIT TAB ---------- */
+  function renderAuditTable(rows){
+    if (!rows || !rows.length){ $('audit-table').innerHTML = `<div class="muted">No campaigns yet.</div>`; return; }
+    const html = [
+      `<table class="table">`,
+      `<thead><tr><th>ID</th><th>Created</th><th>Admin</th><th>Token</th><th>Mode</th><th>Filter</th><th>Recips</th><th>Status</th></tr></thead><tbody>`
+    ];
+    rows.forEach(r=>{
+      const f = r.filter ? (r.filter.country || 'all') : '—';
+      const created = r.created?.toDate ? r.created.toDate().toLocaleString() : '—';
+      html.push(`<tr data-id="${r._id}">
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r._id}</td>
+        <td>${created}</td>
+        <td>${(r.admin||'').slice(0,6)}…${(r.admin||'').slice(-4)}</td>
+        <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">${r.token}</td>
+        <td>${r.mode}</td>
+        <td>${f}</td>
+        <td>${r.plan?.totalRecipients||0}</td>
+        <td>${r.status}</td>
+      </tr>`);
+    });
+    html.push(`</tbody></table>`);
+    $('audit-table').innerHTML = html.join('');
+
+    // row click -> detail
+    $('audit-table').querySelectorAll('tr[data-id]').forEach(tr=>{
+      tr.addEventListener('click', async ()=>{
+        const id = tr.getAttribute('data-id');
+        const doc = await db.collection('airdrops').doc(id).get();
+        if (!doc.exists) return;
+        const data = doc.data();
+        const blob = new Blob([JSON.stringify(data,null,2)], { type:'application/json' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank','noopener');
+        setTimeout(()=>URL.revokeObjectURL(url), 30000);
+      }, { passive:true });
+    });
+  }
+
+  async function refreshAudit(){
+    const qs = await db.collection('airdrops').orderBy('created','desc').limit(50).get();
+    const rows = [];
+    qs.forEach(d=> rows.push({ _id: d.id, ...d.data() }));
+    renderAuditTable(rows);
+    window.__lastAudit = rows;
+  }
+  $('audit-refresh')?.addEventListener('click', refreshAudit);
+  $('audit-export-csv')?.addEventListener('click', ()=>{
+    const rows = window.__lastAudit||[];
+    const header = ['id','created','admin','token','mode','country','recipients','success','fail','status'];
+    const body = rows.map(r=>[
+      r._id,
+      r.created?.toDate ? r.created.toDate().toISOString() : '',
+      r.admin||'',
+      r.token||'',
+      r.mode||'',
+      r.filter?.country||'',
+      r.plan?.totalRecipients||0,
+      (r.successes||[]).length,
+      (r.failures||[]).length,
+      r.status||''
+    ].join(','));
+    const csv = [header.join(','), ...body].join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='airdrops.csv'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  });
+  $('audit-export-json')?.addEventListener('click', ()=>{
+    const rows = window.__lastAudit||[];
+    const blob = new Blob([JSON.stringify(rows,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='airdrops.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  });
+
+  /* ---------- TOOLS ---------- */
+  $('tool-balance-go')?.addEventListener('click', async ()=>{
+    try{
+      const addr = ($('tool-balance-addr')?.value||'').trim();
+      if(!isAddr(addr)){ toast('Bad address'); return; }
+      const token = normalizeToken();
+      const c = new E.Contract(token, ['function balanceOf(address) view returns (uint256)'], (window.provider||new E.providers.Web3Provider(window.ethereum)));
+      const bal = await c.balanceOf(addr);
+      $('tool-balance-out').textContent = `${formatUnits(bal, DECIMALS)} tokens`;
+    }catch(e){ $('tool-balance-out').textContent = 'Error'; }
+  });
+
+  $('tool-snapshot')?.addEventListener('click', async ()=>{
+    const qs = await db.collection('passports').orderBy('created','asc').get();
+    const head = 'address,country,nick,created';
+    const lines = [];
+    qs.forEach(d=>{
+      const x=d.data();
+      const t=x.created?.toDate ? x.created.toDate().toISOString() : '';
+      lines.push([x.address||'', x.country||'', (x.nick||'').replace(/,/g,';'), t].join(','));
+    });
+    const csv = [head, ...lines].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    const a = document.createElement('a'); a.href=url; a.download='passports_snapshot.csv'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  });
+
+  $('tool-dedupe-go')?.addEventListener('click', ()=>{
+    const raw = ($('tool-dedupe-in')?.value||'').trim().split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const set = new Set(); const out=[];
+    for(const a of raw){ const k=a.toLowerCase(); if(isAddr(k) && !set.has(k)){ set.add(k); out.push(k); } }
+    $('tool-dedupe-out').value = out.join('\n');
+    $('tool-dedupe-count').textContent = `Unique: ${out.length}`;
+  });
+
+  /* ---------- SETTINGS ---------- */
+  // load/save local mirrors
+  (function loadSettings(){
+    const cfg = JSON.parse(localStorage.getItem('cronation_admin_cfg')||'{}');
+    if (cfg.batch) $('cfg-batch').value = cfg.batch;
+    if (cfg.gas) $('cfg-gas').value = cfg.gas;
+    if (typeof cfg.confirm === 'boolean') $('cfg-confirm').checked = cfg.confirm;
+    if (cfg.admins) $('cfg-admins').value = (cfg.admins||[]).join('\n');
+    // apply defaults to run options if empty
+    if (!$('ad-batch').value) $('ad-batch').value = cfg.batch || 1;
+    if (!$('ad-gas').value)   $('ad-gas').value   = cfg.gas   || '';
+  })();
+
+  function saveSettings(){
+    const cfg = {
+      batch: Math.max(1, Number(($('cfg-batch')?.value||'1'))),
+      gas: Number(($('cfg-gas')?.value||'0')) || undefined,
+      confirm: !!$('cfg-confirm')?.checked,
+      admins: ($('cfg-admins')?.value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean)
+    };
+    localStorage.setItem('cronation_admin_cfg', JSON.stringify(cfg));
+    toast('Settings saved');
+  }
+  $('cfg-batch')?.addEventListener('change', saveSettings);
+  $('cfg-gas')?.addEventListener('change', saveSettings);
+  $('cfg-confirm')?.addEventListener('change', saveSettings);
+  $('cfg-admins-save')?.addEventListener('click', saveSettings);
+
+  // Reveal admin UI after wallet connect
+  setTimeout(()=>{ if (window.userAddress && isAdmin(window.userAddress)) showAdminUI(true); }, 1000);
+  if (window.ethereum?.on){
+    window.ethereum.on('accountsChanged', ()=> setTimeout(()=>{ if (window.userAddress && isAdmin(window.userAddress)) showAdminUI(true); }, 300));
+  }
 })();
 
   <!-- SECTION 7.F START: Boot sequence and closing -->
