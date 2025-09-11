@@ -1633,6 +1633,25 @@ function detectTier(balance){
   box.style.display = 'block';
 }
 
+  function subscribeSpotlight(){
+  try{
+    db.collection('countries')
+      .orderBy('created', 'desc')
+      .limit(1)
+      .onSnapshot((qs)=>{
+        let latest = null;
+        qs.forEach(doc=>{
+          const d = doc.data();
+          if (d?.name) latest = d.name;
+        });
+        renderSpotlight(latest);
+      }, (err)=> console.warn('spotlight sub err', err));
+  }catch(e){
+    console.warn('spotlight init failed', e);
+  }
+}
+
+
   // recolor after counts change
   countryLayers.forEach((_, name) => updateCountryStyle(name));
 
