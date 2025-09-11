@@ -1635,16 +1635,32 @@ function detectTier(balance){
 
   function subscribeSpotlight(){
   try{
-    db.collection('countries')
-      .orderBy('created', 'desc')
+    // Primary: most recently created passport => its country
+    db.collection('passports')
+      .orderBy('created','desc')
       .limit(1)
       .onSnapshot((qs)=>{
-        let latest = null;
+        let name = null;
         qs.forEach(doc=>{
           const d = doc.data();
-          if (d?.name) latest = d.name;
+          if (d?.country) name = d.country;
         });
-        renderSpotlight(latest);
+        if (name) {
+          renderSpotlight(name);
+          return;
+        }
+
+        // Fallback: countries collection (in case you keep it)
+        db.collection('countries')
+          .orderBy('created','desc')
+          .limit(1)
+          .get()
+          .then(q2=>{
+            let latest = null;
+            q2.forEach(doc=>{ const d=doc.data(); if(d?.name) latest = d.name; });
+            renderSpotlight(latest);
+          })
+          .catch(()=> renderSpotlight(null));
       }, (err)=> console.warn('spotlight sub err', err));
   }catch(e){
     console.warn('spotlight init failed', e);
