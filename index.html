@@ -1781,15 +1781,29 @@ subscribeSpotlight();
 
   /**** Share to X ****/
   async function shareToX(){
-  const country = (document.getElementById('passport-country')?.textContent || '').trim();
-  const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
-  const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
-  const serial  = String(serialT || '000000').padStart(6,'0');
-
-  if (!country){
-    alert('Open your passport (or mint) first, then share again.');
+  const addr = (window.userAddress || '').toLowerCase();
+  if (!addr){
+    alert('Connect your wallet and mint your passport first.');
     return;
   }
+
+  // Always load fresh passport from Firestore
+  let p = null;
+  try{
+    const snap = await db.collection('passports').doc(addr).get();
+    if (snap.exists) p = snap.data();
+  }catch(e){
+    console.error('Firestore lookup failed', e);
+  }
+
+  if (!p || !p.country){
+    alert('Could not find your passport in Firestore. Mint first, then share again.');
+    return;
+  }
+
+  const country = (p.country || '').trim();
+  const nick    = (p.nick    || 'Citizen').trim();
+  const serial  = String(p.serial || '000000').padStart(6,'0');
 
   const text = `🌍 I just joined CROnation!
 Passport #${serial} — ${nick} from ${country}
@@ -1797,21 +1811,19 @@ Passport #${serial} — ${nick} from ${country}
 One World. One CROnation.
 
 @cronation8`;
+
   const url  = 'https://cronation.netlify.app';
   const tags = 'Cronos,CROnation,CRON8,crofam';
-
   const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
 
-  // Detect if mobile or desktop
+  // Detect platform
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (isMobile){
-    // Mobile → replace current tab (avoids loops)
-    window.location.href = shareUrl;
+    window.location.href = shareUrl;  // replace current tab (avoids loops)
   } else {
-    // Desktop → open in new tab
-    const w = window.open(shareUrl, '_blank', 'noopener');
-    if (!w) location.href = shareUrl; // fallback if popup blocked
+    const w = window.open(shareUrl, '_blank','noopener');
+    if (!w) location.href = shareUrl;
   }
 }
 
