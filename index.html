@@ -791,27 +791,57 @@ const ADMIN_WALLETS = new Set([
   const fetchAsDataUrl = async (url) => { const r = await fetch(url,{mode:'cors',cache:'force-cache'}); const b=await r.blob(); return blobToDataUrl(b); };
 
   // Render a PNG of the passport without DOM snapshot (CORS-safe)
+// PATCH START: renderPassportPNGViaCanvas with robust flag loading + fallback
+
 async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier = (window.__cron8Tier || 0) }) {
   const W = 1200, H = 480, DPR = Math.min(2, window.devicePixelRatio || 1.5);
   const c = document.createElement('canvas'); c.width=W*DPR; c.height=H*DPR;
   const ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
 
-  // Rounded backdrop
+  // Helpers (scoped)
+  function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
+  function drawCover(img,W,H,ctx){ const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr); const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2; ctx.drawImage(img,dx,dy,dw,dh); }
+  function wrapBig(c, text, x, y, maxW){ const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84; for (const w of words){ const t=(line?line+' ':'')+w; if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; } else { line=t; } } if(line) c.fillText(line,x,yy); }
+
+  // Background card
   const bg = '#0d203a', radius = 24;
   roundRect(ctx, 0, 0, W, H, radius); ctx.fillStyle = bg; ctx.fill();
 
-  // Flag background (fetch as data URL to avoid taint)
-  const iso2 = countryToISO2(country);
-  if (iso2){
-    try{
-      const flagUrl = await fetchAsDataUrl(`https://flagcdn.com/w320/${iso2}.png`);
-      const flagImg = await loadImg(flagUrl);
+  // Flag background (CORS-safe: fetch -> blob -> dataURL). If it fails, draw emoji fallback.
+  let flagDrawn = false;
+  try{
+    const iso2 = countryToISO2(country);
+    if (iso2){
+      const bust = Date.now();
+      const url = `https://flagcdn.com/w320/${iso2}.png?v=${bust}`;
+      const r = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+      if (!r.ok) throw new Error('flagcdn status ' + r.status);
+      const b = await r.blob();
+      const dataUrl = await (new Promise(res => { const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);} ));
+      const img = await (new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl; }));
       ctx.save();
       try{ ctx.filter = 'blur(0.8px) saturate(1.25)'; }catch(_){}
       ctx.globalAlpha = 0.42;
-      drawCover(flagImg, W, H, ctx);
+      drawCover(img, W, H, ctx);
       ctx.restore();
-    }catch(_){}
+      flagDrawn = true;
+    }
+  }catch(_e){
+    flagDrawn = false;
+  }
+
+  // Emoji fallback if we couldn't draw the flag image
+  if (!flagDrawn){
+    const iso2 = countryToISO2(country);
+    const em = iso2 ? iso2ToEmoji(iso2) : '';
+    if (em){
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.font = '800 180px Inter, system-ui, -apple-system, emoji';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(em, 32, 200); // subtle watermark-style emoji
+      ctx.restore();
+    }
   }
 
   // Subtle diagonal sheen
@@ -822,15 +852,19 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   grad.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle = grad; roundRect(ctx,0,0,W,H,radius); ctx.fill();
 
-  // Emblem/PFP (convert current <img> to data URL if needed)
+  // Emblem/PFP (fetch as dataURL if cross-origin)
   const pfpEl = document.getElementById('passport-pfp');
   let pfpSrc = pfpEl?.src || '';
   if (pfpSrc && !pfpSrc.startsWith('data:')) {
-    try { pfpSrc = await fetchAsDataUrl(pfpSrc); } catch(_){ pfpSrc = null; }
+    try {
+      const r = await fetch(pfpSrc, { mode: 'cors', cache: 'force-cache' });
+      const b = await r.blob();
+      pfpSrc = await (new Promise(res => { const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);} ));
+    } catch { pfpSrc = null; }
   }
   if (pfpSrc){
     const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
-    const p = await loadImg(pfpSrc);
+    const p = await new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=pfpSrc; });
     ctx.fillStyle='rgba(15,18,25,.7)'; roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r); ctx.fill();
     roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.save(); ctx.clip();
     ctx.drawImage(p, EMB.x, EMB.y, EMB.w, EMB.h); ctx.restore();
@@ -862,26 +896,23 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   ctx.font='800 96px Inter, system-ui, -apple-system';
   wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
 
-    // --- Holder tier pill (just under the address chip) ---
+  // Holder tier pill
   if (tier > 0){
     const label = tier === 3 ? '👑 CRON8 Elite Diplomat'
                 : tier === 2 ? '◆ CRON8 Nation Builder'
                 : '◈ CRON8 Citizen Holder';
 
-    // Anchor to the same x as the info column and just below the address chip
     const INFO_X = 188;
-    const CHIP_Y = 220;     // where we drew the address chip
-    const GAP    = 22;      // space between chip and tier
-    const PILL_Y = CHIP_Y + 40 /*chip h*/ + GAP;
+    const CHIP_Y = 220;
+    const GAP    = 22;
+    const PILL_Y = CHIP_Y + 40 + GAP;
 
-    // Measure / fit
     const padX = 18, r = 20, pillH = 48;
     ctx.font = '700 28px Inter, system-ui, -apple-system';
-    let textW = Math.ceil(ctx.measureText(label).width);
-    const maxW = 1200 - INFO_X - 36; // keep inside right edge
+    const maxW = 1200 - INFO_X - 36;
+    const textW = Math.ceil(ctx.measureText(label).width);
     const pillW = Math.min(textW + padX*2, maxW);
 
-    // Background gradient by tier
     const g = ctx.createLinearGradient(INFO_X, PILL_Y, INFO_X + pillW, PILL_Y + pillH);
     if (tier === 3){ g.addColorStop(0,'rgba(251,191,36,.28)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
     else if (tier === 2){ g.addColorStop(0,'rgba(125,211,252,.26)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
@@ -893,7 +924,6 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
                     : 'rgba(96,165,250,.45)';
     ctx.lineWidth = 2; roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.stroke();
 
-    // Text (truncate if needed)
     ctx.fillStyle = '#e5e7eb';
     let shown = label;
     while (ctx.measureText(shown).width > pillW - padX*2 && shown.length > 3) {
@@ -901,13 +931,15 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     }
     ctx.fillText(shown, INFO_X + padX, PILL_Y + (pillH - 28)/2 - 2);
 
-    // Subtle outer glow
     ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 10;
     roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.stroke();
     ctx.shadowBlur = 0;
   }
 
   return c.toDataURL('image/png', 0.95);
+}
+
+// PATCH END: renderPassportPNGViaCanvas
 
   // --- helpers ---
   function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
@@ -1024,38 +1056,44 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     sel.appendChild(frag);
   }
 
-  (async function initMap(){
-  let data;
+  // PATCH START: initMap with stronger fallbacks + readiness
+
+(async function initMap(){
+  const REMOTE_GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+  const LOCAL_FALLBACK_URL = '/assets/data/countries.geojson';
+
+  async function loadGeojson(url, label='geojson'){
+    const r = await fetch(url, { cache: 'force-cache' });
+    if (!r.ok) throw new Error(`${label} fetch failed: ${r.status}`);
+    return r.json();
+  }
+
+  let data = null;
+
   try{
-    // --- Remote GeoJSON
-    data = await loadGeojson(REMOTE_GEOJSON_URL);
-    await buildCountryIndexFromGeoJSON(data);
-
-    // 🔧 add Kosovo mapping here (remote path)
-    NAME_TO_ISO2.set('Kosovo', 'xk');
-    CANON_NAMES.add('Kosovo');
-
+    // Try remote first
+    data = await loadGeojson(REMOTE_GEOJSON_URL, 'remote');
   }catch(e1){
-    console.warn('Remote GeoJSON failed, using local fallback', e1);
+    console.warn('[geojson] remote failed, trying local fallback →', e1?.message || e1);
     try{
-      // --- Local fallback
-      data = await loadGeojson(LOCAL_FALLBACK_URL);
-      await buildCountryIndexFromGeoJSON(data);
-
-      // 🔧 add Kosovo mapping here (fallback path)
-      NAME_TO_ISO2.set('Kosovo', 'xk');
-      CANON_NAMES.add('Kosovo');
-
+      data = await loadGeojson(LOCAL_FALLBACK_URL, 'local');
     }catch(e2){
-      console.error('Fallback GeoJSON failed', e2);
-      el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
-        Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
-      </div>`;
+      console.error('[geojson] local fallback also failed →', e2?.message || e2);
+      document.getElementById('map').innerHTML = `
+        <div style="padding:16px;color:var(--muted)">
+          Unable to load world map data. 
+          <div style="margin-top:8px">
+            <button class="btn" onclick="location.reload()">Retry</button>
+          </div>
+        </div>`;
       return;
     }
   }
 
-  // Build country list for dropdown
+  // Build the ISO2 index from the GeoJSON (includes Kosovo injection)
+  await buildCountryIndexFromGeoJSON(data);
+
+  // Populate dropdown from features actually present
   (data.features||[]).forEach(f => {
     const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
     countryList.push(name);
@@ -1090,9 +1128,12 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     window.addEventListener(ev, invalidate, { passive: true })
   );
 
-  // ✅ Now that NAME_TO_ISO2 is populated, start the Firestore spotlight feed
+  // ✅ Defer spotlight subscription until ISO index is ready
+  await window.COUNTRY_INDEX_READY.promise;
   subscribeSpotlight();
 })();
+
+// PATCH END: initMap
 
   
   /**** Modal ****/
@@ -1436,17 +1477,29 @@ function detectTier(balance){
 
 // ===== Dynamic country ↔ ISO2 mapping (covers all countries in your GeoJSON) =====
 
-// These are only for odd naming differences you might encounter in Firestore/UX.
-// Everything else comes from the GeoJSON itself.
+// PATCH START: country mapping helpers (aliases, index, flag helpers)
+
+// A tiny readiness gate so anything that needs ISO2 waits until the GeoJSON index is built.
+window.COUNTRY_INDEX_READY = (function(){
+  let _res = null;
+  const promise = new Promise(r => (_res = r));
+  return { promise, resolve: () => _res?.(), done: false };
+})();
+
+// These are only for odd naming differences you'll encounter via Firestore/UX.
+// Everything else is learned from the GeoJSON itself.
 const COUNTRY_ALIASES = new Map(Object.entries({
+  // Common variants
   'United States' : 'United States of America',
   'USA'           : 'United States of America',
   'US'            : 'United States of America',
+  'U.S.'          : 'United States of America',
   'UK'            : 'United Kingdom',
   'Russia'        : 'Russian Federation',
   'South Korea'   : 'Republic of Korea',
   'North Korea'   : "Democratic People's Republic of Korea",
   'Ivory Coast'   : "Côte d'Ivoire",
+  "Cote d'Ivoire" : "Côte d'Ivoire",
   'Czechia'       : 'Czech Republic',
   'Syria'         : 'Syrian Arab Republic',
   'Iran'          : 'Iran, Islamic Republic of',
@@ -1458,6 +1511,7 @@ const COUNTRY_ALIASES = new Map(Object.entries({
   'Venezuela'     : 'Venezuela (Bolivarian Republic of)',
   'Congo (Kinshasa)'    : 'Democratic Republic of the Congo',
   'DR Congo'            : 'Democratic Republic of the Congo',
+  'D.R. Congo'          : 'Democratic Republic of the Congo',
   'Congo (Brazzaville)' : 'Republic of the Congo',
   'Cape Verde'          : 'Cabo Verde',
   'Swaziland'           : 'Eswatini',
@@ -1466,44 +1520,59 @@ const COUNTRY_ALIASES = new Map(Object.entries({
   'Micronesia'          : 'Micronesia (Federated States of)',
   'Palestine'           : 'Palestine, State of',
   'Vatican City'        : 'Holy See',
-  // ⬇ use the canonical names the GeoJSON actually uses
+  // Kosovo (not in many datasets)
+  'Kosovo'              : 'Kosovo',
+  'Republic of Kosovo'  : 'Kosovo',
+  'Kosova'              : 'Kosovo',
+  // Ensure canonical short forms used by GeoJSON are preserved
   'Bahamas'             : 'Bahamas',
   'Gambia'              : 'Gambia',
 }));
 
-// Filled after GeoJSON loads:
+// Filled once the GeoJSON loads:
 const NAME_TO_ISO2 = new Map();
 const CANON_NAMES  = new Set(); // canonical names from GeoJSON for fuzzy matching
 
-// Normalize strings for robust comparison (strip accents/case/extra spaces)
+// Normalize strings (strip accents/case/extra spaces/apostrophes) for robust comparison
 function norm(s){
   return String(s||'')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // remove diacritics
-    .replace(/[\u2019']/g,"'")                       // normalize apostrophes
+    .replace(/[\u2019’]/g,"'")                       // normalize apostrophes
     .replace(/\s+/g,' ')
     .trim()
     .toLowerCase();
 }
 
-// Build the name → iso2 map from the GeoJSON you already fetch
+// Build the name → iso2 map from your GeoJSON
 async function buildCountryIndexFromGeoJSON(geojson){
-  NAME_TO_ISO2.clear(); CANON_NAMES.clear();
+  NAME_TO_ISO2.clear();
+  CANON_NAMES.clear();
+
   (geojson.features||[]).forEach(f=>{
     const props = f.properties||{};
     const name = props.ADMIN || props.name || props.COUNTRY || '';
-    // The dataset usually contains ISO_A2 or ISO_A2_EH; any of these will do.
+    // Common fields in the dataset
     const iso2 = (props.ISO_A2_EH || props.ISO_A2 || props.ISO2 || '').toLowerCase();
     if (name && iso2 && iso2 !== '-99'){
       NAME_TO_ISO2.set(name, iso2);
       CANON_NAMES.add(name);
     }
   });
+
+  // Manual add: Kosovo (widely used code "xk" on FLAGCDN)
+  NAME_TO_ISO2.set('Kosovo', 'xk');
+  CANON_NAMES.add('Kosovo');
+
+  if (!window.COUNTRY_INDEX_READY.done){
+    window.COUNTRY_INDEX_READY.done = true;
+    window.COUNTRY_INDEX_READY.resolve();
+  }
 }
 
-// Resolve any incoming display name to the correct iso2.
-// 1) direct match
-// 2) alias → canonical → iso2
-// 3) fuzzy: case/diacritics-insensitive sweep over canonical names
+// Resolve any incoming display name to the correct ISO2.
+// 1) direct canonical match
+// 2) alias → canonical
+// 3) fuzzy exact (case/diacritics) and partial fallback
 function countryToISO2(name){
   if (!name) return null;
 
@@ -1514,17 +1583,21 @@ function countryToISO2(name){
   const aliased = COUNTRY_ALIASES.get(name) || COUNTRY_ALIASES.get(name.trim());
   if (aliased && NAME_TO_ISO2.has(aliased)) return NAME_TO_ISO2.get(aliased);
 
-  // 3) fuzzy
+  // 3a) fuzzy exact
   const n = norm(name);
   for (const canon of CANON_NAMES){
     if (norm(canon) === n) return NAME_TO_ISO2.get(canon);
   }
-  // last-resort partial (e.g., "Congo" picks the first match; adjust if desired)
+
+  // 3b) partial fallback (e.g., "Congo")
   for (const canon of CANON_NAMES){
-    if (norm(canon).includes(n) || n.includes(norm(canon))){
-      return NAME_TO_ISO2.get(canon);
-    }
+    const cn = norm(canon);
+    if (cn.includes(n) || n.includes(cn)) return NAME_TO_ISO2.get(canon);
   }
+
+  // Final: known off-dataset Kosovo singletons
+  if (n === 'kosovo' || n === 'republic of kosovo' || n === 'kosova') return 'xk';
+
   return null;
 }
 
@@ -1536,13 +1609,17 @@ function iso2ToEmoji(iso2){
   );
 }
 
-// Use these everywhere flags are needed:
+// Use these anywhere the DOM shows flags:
+
 function setPassportFlag(country){
   const layer = document.getElementById('passport-flag');
   if(!layer) return;
+
   const iso2 = countryToISO2(country);
   if (iso2){
-    layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
+    // cache-bust to avoid sticky 404s/cached errors
+    const url = `https://flagcdn.com/w320/${iso2}.png?v=${Date.now()}`;
+    layer.style.backgroundImage = `url("${url}")`;
     layer.style.filter = (country === "Germany" || country === "China")
       ? "brightness(1.25) contrast(1.1)"
       : "brightness(1.05) contrast(1.15)";
@@ -1550,20 +1627,24 @@ function setPassportFlag(country){
     layer.style.backgroundImage = '';
   }
 }
+
 function setPassportFlagIcon(country){
   const icon = document.getElementById('passport-flag-icon');
   if(!icon) return;
+
   const iso2 = countryToISO2(country);
   if (iso2){
-    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+    icon.src = `https://flagcdn.com/24x18/${iso2}.png?v=${Date.now()}`;
     icon.style.display = 'inline-block';
-    icon.alt = country + ' flag';
+    icon.alt = `${country} flag`;
   } else {
     icon.removeAttribute('src');
     icon.style.display = 'none';
     icon.alt = '';
   }
 }
+
+// PATCH END: country mapping helpers
 
   // --- PFP persistence (per-wallet, local only) ---
   function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
@@ -1768,85 +1849,108 @@ if (shareBtn){
     });
   }
 
+  // PATCH START: spotlight (buffers until index is ready, graceful fallbacks)
+
+(function(){
+  let _bufferedName = null;
+  function ready(){ return !!(NAME_TO_ISO2 && NAME_TO_ISO2.size); }
+
   function renderSpotlight(name){
-  const n   = el('stat-spotlight');
-  if (n) n.textContent = name || '—';
+    const n   = el('stat-spotlight');
+    if (n) n.textContent = name || '—';
 
-  const box  = el('spotlight-banner');
-  const text = el('spotlight-text');
-  const flag = el('spotlight-flag');
-  if (!box || !text || !flag) return;
+    const box  = el('spotlight-banner');
+    const text = el('spotlight-text');
+    const flag = el('spotlight-flag');
+    if (!box || !text || !flag) return;
 
-  if (!name){
-    box.style.display = 'none';
-    return;
-  }
+    if (!name){
+      box.style.display = 'none';
+      return;
+    }
 
-  const trimmed = (name || '').trim();
-  const iso2 = countryToISO2(trimmed);
-  console.debug('[spotlight]', { name: trimmed, iso2, indexSize: NAME_TO_ISO2.size });
+    const trimmed = (name || '').trim();
 
-  text.textContent = `New country joined: ${trimmed}!`;
-  flag.alt = `${trimmed} flag`;
-  flag.removeAttribute('src');           // reset before setting
-  flag.loading = 'eager';
-  flag.decoding = 'sync';
+    if (!ready()){
+      // Buffer once; when the index is ready we'll render
+      _bufferedName = trimmed;
+      box.style.display = 'none';
+      return;
+    }
 
-  // Fallback to emoji if the image can’t load for any reason
-  flag.onerror = () => {
-    console.warn('[spotlight] flag image failed', { iso2, url: flag.src });
+    const iso2 = countryToISO2(trimmed);
+
+    text.textContent = `New country joined: ${trimmed}!`;
+    flag.alt = `${trimmed} flag`;
     flag.removeAttribute('src');
-    // prepend emoji as a graceful fallback
-    const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
-    text.textContent = `${em}New country joined: ${trimmed}!`;
-  };
+    flag.loading = 'eager';
+    flag.decoding = 'sync';
 
-  if (iso2){
-    // cache-bust just in case a bad cached response is hanging around
-    flag.src = `https://flagcdn.com/24x18/${iso2}.png?v=${Date.now()}`;
-  } else {
-    // no code -> emoji fallback
-    const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
-    text.textContent = `${em}New country joined: ${trimmed}!`;
+    flag.onerror = () => {
+      // Emoji fallback if the image fails for any reason
+      const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
+      text.textContent = `${em}New country joined: ${trimmed}!`;
+    };
+
+    if (iso2){
+      flag.src = `https://flagcdn.com/24x18/${iso2}.png?v=${Date.now()}`;
+    } else {
+      const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
+      text.textContent = `${em}New country joined: ${trimmed}!`;
+    }
+
+    box.style.display = 'block';
+    box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
   }
 
-  box.style.display = 'block';
-  box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
-}
+  window.renderSpotlight = renderSpotlight;
 
-  function subscribeSpotlight(){
-  try{
-    // Primary: most recently created passport => its country
-    db.collection('passports')
-      .orderBy('created','desc')
-      .limit(1)
-      .onSnapshot((qs)=>{
-        let name = null;
-        qs.forEach(doc=>{
-          const d = doc.data();
-          if (d?.country) name = d.country;
-        });
-        if (name) {
-          renderSpotlight(name);
-          return;
-        }
+  async function subscribeSpotlight(){
+    // Ensure ISO index readiness before first render. Snapshot can start now;
+    // we’ll buffer any first value until the index finishes.
+    window.COUNTRY_INDEX_READY.promise.then(() => {
+      if (_bufferedName){
+        renderSpotlight(_bufferedName);
+        _bufferedName = null;
+      }
+    });
 
-        // Fallback: countries collection (in case you keep it)
-        db.collection('countries')
-          .orderBy('created','desc')
-          .limit(1)
-          .get()
-          .then(q2=>{
-            let latest = null;
-            q2.forEach(doc=>{ const d=doc.data(); if(d?.name) latest = d.name; });
-            renderSpotlight(latest);
-          })
-          .catch(()=> renderSpotlight(null));
-      }, (err)=> console.warn('spotlight sub err', err));
-  }catch(e){
-    console.warn('spotlight init failed', e);
+    try{
+      db.collection('passports')
+        .orderBy('created','desc')
+        .limit(1)
+        .onSnapshot((qs)=>{
+          let name = null;
+          qs.forEach(doc=>{
+            const d = doc.data();
+            if (d?.country) name = d.country;
+          });
+          if (name) {
+            renderSpotlight(name);
+            return;
+          }
+
+          // Fallback: countries collection
+          db.collection('countries')
+            .orderBy('created','desc')
+            .limit(1)
+            .get()
+            .then(q2=>{
+              let latest = null;
+              q2.forEach(doc=>{ const d=doc.data(); if(d?.name) latest = d.name; });
+              renderSpotlight(latest);
+            })
+            .catch(()=> renderSpotlight(null));
+        }, (err)=> console.warn('spotlight sub err', err));
+    }catch(e){
+      console.warn('spotlight init failed', e);
+    }
   }
-}
+
+  window.subscribeSpotlight = subscribeSpotlight;
+})();
+
+// PATCH END: spotlight
 
 
   // recolor after counts change
