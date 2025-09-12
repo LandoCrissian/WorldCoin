@@ -1034,6 +1034,12 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     try{
       data = await loadGeojson(LOCAL_FALLBACK_URL);
       await buildCountryIndexFromGeoJSON(data);       // ✅ index built for fallback
+
+      // after await buildCountryIndexFromGeoJSON(data)
+NAME_TO_ISO2.set('Kosovo', 'xk');
+CANON_NAMES.add('Kosovo');
+
+      
     }catch(e2){
       console.error('Fallback GeoJSON failed', e2);
       el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
@@ -1427,35 +1433,36 @@ function detectTier(balance){
 // These are only for odd naming differences you might encounter in Firestore/UX.
 // Everything else comes from the GeoJSON itself.
 const COUNTRY_ALIASES = new Map(Object.entries({
-  'United States'                     : 'United States of America',
-  'USA'                               : 'United States of America',
-  'US'                                : 'United States of America',
-  'UK'                                : 'United Kingdom',
-  'Russia'                            : 'Russian Federation',
-  'South Korea'                       : 'Republic of Korea',
-  'North Korea'                       : "Democratic People's Republic of Korea",
-  'Ivory Coast'                       : "Côte d'Ivoire",
-  'Czechia'                           : 'Czech Republic',
-  'Syria'                             : 'Syrian Arab Republic',
-  'Iran'                              : 'Iran, Islamic Republic of',
-  'Vietnam'                           : 'Viet Nam',
-  'Laos'                              : "Lao People's Democratic Republic",
-  'Moldova'                           : 'Moldova, Republic of',
-  'Tanzania'                          : 'Tanzania, United Republic of',
-  'Bolivia'                           : 'Bolivia (Plurinational State of)',
-  'Venezuela'                         : 'Venezuela (Bolivarian Republic of)',
-  'Congo (Kinshasa)'                  : 'Democratic Republic of the Congo',
-  'DR Congo'                          : 'Democratic Republic of the Congo',
-  'Congo (Brazzaville)'               : 'Republic of the Congo',
-  'Cape Verde'                        : 'Cabo Verde',
-  'Swaziland'                         : 'Eswatini',
-  'Macedonia'                         : 'North Macedonia',
-  'East Timor'                        : 'Timor-Leste',
-  'Micronesia'                        : 'Micronesia (Federated States of)',
-  'Palestine'                         : 'Palestine, State of',
-  'Vatican City'                      : 'Holy See',
-  'Bahamas'                           : 'Bahamas, The',
-  'Gambia'                            : 'Gambia, The'
+  'United States' : 'United States of America',
+  'USA'           : 'United States of America',
+  'US'            : 'United States of America',
+  'UK'            : 'United Kingdom',
+  'Russia'        : 'Russian Federation',
+  'South Korea'   : 'Republic of Korea',
+  'North Korea'   : "Democratic People's Republic of Korea",
+  'Ivory Coast'   : "Côte d'Ivoire",
+  'Czechia'       : 'Czech Republic',
+  'Syria'         : 'Syrian Arab Republic',
+  'Iran'          : 'Iran, Islamic Republic of',
+  'Vietnam'       : 'Viet Nam',
+  'Laos'          : "Lao People's Democratic Republic",
+  'Moldova'       : 'Moldova, Republic of',
+  'Tanzania'      : 'Tanzania, United Republic of',
+  'Bolivia'       : 'Bolivia (Plurinational State of)',
+  'Venezuela'     : 'Venezuela (Bolivarian Republic of)',
+  'Congo (Kinshasa)'    : 'Democratic Republic of the Congo',
+  'DR Congo'            : 'Democratic Republic of the Congo',
+  'Congo (Brazzaville)' : 'Republic of the Congo',
+  'Cape Verde'          : 'Cabo Verde',
+  'Swaziland'           : 'Eswatini',
+  'Macedonia'           : 'North Macedonia',
+  'East Timor'          : 'Timor-Leste',
+  'Micronesia'          : 'Micronesia (Federated States of)',
+  'Palestine'           : 'Palestine, State of',
+  'Vatican City'        : 'Holy See',
+  // ⬇ use the canonical names the GeoJSON actually uses
+  'Bahamas'             : 'Bahamas',
+  'Gambia'              : 'Gambia',
 }));
 
 // Filled after GeoJSON loads:
@@ -1756,15 +1763,12 @@ if (shareBtn){
   }
 
   function renderSpotlight(name){
-  // small stat tile
   const n = el('stat-spotlight');
   if (n) n.textContent = name || '—';
 
-  // wide banner above the map
   const box  = el('spotlight-banner');
   const text = el('spotlight-text');
   const flag = el('spotlight-flag');
-
   if (!box || !text || !flag) return;
 
   if (!name){
@@ -1772,22 +1776,24 @@ if (shareBtn){
     return;
   }
 
-  text.textContent = `New country joined: ${name}!`;
+  // 🔎 debug: see mapping results live in the console
   const iso2 = countryToISO2(name);
+  console.debug('[spotlight]', { name, iso2, indexSize: NAME_TO_ISO2.size });
+
+  text.textContent = `New country joined: ${name}!`;
+
   if (iso2){
     flag.src = `https://flagcdn.com/24x18/${iso2}.png`;
     flag.alt = `${name} flag`;
   } else {
+    // show banner without flag, but make it obvious in the console
+    console.warn('[spotlight] no ISO2 for country:', name);
     flag.removeAttribute('src');
     flag.alt = '';
   }
 
   box.style.display = 'block';
-
-  // 👇 reset + retrigger the pulse every time
-  box.classList.remove('pulse');
-  void box.offsetWidth; // force reflow
-  box.classList.add('pulse');
+  box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
 }
 
   function subscribeSpotlight(){
