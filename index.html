@@ -1780,37 +1780,15 @@ subscribeSpotlight();
   window.mintFromModal = mintFromModal;
 
   /**** Share to X ****/
-  async function shareToX(){
-  // 👉 Pre-open a tab *synchronously* (still in the click handler tick)
-  const newTab = window.open('about:blank', '_blank', 'noopener,noreferrer');
-
-  // (optional) tiny placeholder so it’s not a blank page
-  try{ if (newTab) newTab.document.write('<p style="font:16px system-ui">Preparing your post…</p>'); }catch(_){}
-
-  // 1) Try Firestore (authoritative)
-  let p = null;
-  try{
-    const addr = (window.userAddress || '').toLowerCase();
-    if (addr) {
-      const snap = await db.collection('passports').doc(addr).get();
-      if (snap.exists) p = snap.data();
-    }
-  }catch(e){ /* fall back to DOM */ }
-
-  // 2) DOM fallbacks
-  const dom = {
-    country: (document.getElementById('passport-country')?.textContent || '').trim(),
-    nick:    (document.getElementById('passport-nick')?.textContent    || '').trim(),
-    serial:  (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim()
-  };
-
-  const country = (p?.country || dom.country || '').trim();
-  const nick    = (p?.nick    || dom.nick    || 'Citizen').trim();
-  const serial  = (p?.serial  || dom.serial  || '000000').toString().padStart(6,'0');
+  function shareToX(){
+  // Read straight from the DOM (already set when the passport is visible)
+  const country = (document.getElementById('passport-country')?.textContent || '').trim();
+  const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
+  const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
+  const serial  = String(serialT || '000000').padStart(6,'0');
 
   if (!country){
-    alert('Could not determine your country yet. Please open your passport (or mint) and try again.');
-    if (newTab) newTab.close();
+    alert('Open your passport (or mint) first, then share again.');
     return;
   }
 
@@ -1819,27 +1797,38 @@ Passport #${serial} — ${nick} from ${country}
 
 One World. One CROnation.
 
-@${LAUNCH.xHandle}`;
-  const url  = LAUNCH.siteUrl;
+@cronation8`;
+  const url  = 'https://cronation.netlify.app';
   const tags = 'Cronos,CROnation,CRON8,crofam';
 
-  // Use modern X endpoints; both work, but /post is the newest.
+  // 1) Mobile-first: use OS share sheet when available (opens X nicely)
+  if (navigator.share){
+    navigator.share({ text: `${text}\n\n${url}\n#${tags.replace(/,/g,' #')}` })
+      .catch(() => {
+        // Fall back to intent URL if user cancels or share fails
+        const shareUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+        openShareUrl(shareUrl);
+      });
+    return;
+  }
+
+  // 2) Desktop / no share-sheet: open X intent directly (no about:blank)
   const shareUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+  openShareUrl(shareUrl);
 
-  toast('Opening 𝕏 to share…');
-
-  if (newTab) {
-    // we already have a user-gesture tab — just navigate it
-    newTab.location.href = shareUrl;
-  } else {
-    // fallback (rare): programmatically click an <a>
-    const a = document.createElement('a');
-    a.href = shareUrl;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  function openShareUrl(u){
+    // Try pop-up first (still within the click gesture)
+    const win = window.open(u, '_blank');
+    if (!win) {
+      // Pop-up blocked → simulate a link click
+      const a = document.createElement('a');
+      a.href = u;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
   }
 }
 
