@@ -1566,9 +1566,9 @@ function detectTier(balance){
     if (controls) controls.style.display = 'flex';
 
     const shareBtn = document.getElementById('shareBtn');
-    if (shareBtn){
-      shareBtn.onclick = () => shareToX({ country, nick, serial });
-    }
+if (shareBtn){
+  shareBtn.onclick = () => shareToX();  // ← no args; it will fetch fresh data
+}
 
     const pfpInput = document.getElementById('pfpInput');
     if (pfpInput && !pfpInput._wired){
@@ -1780,14 +1780,46 @@ subscribeSpotlight();
   window.mintFromModal = mintFromModal;
 
   /**** Share to X ****/
-  function shareToX({country, nick, serial}){
-    const text = `🌍 I just joined CROnation!\nPassport #${serial} — ${nick} from ${country}\n\nOne World. One CROnation.\n\n @${LAUNCH.xHandle}`;
-    const url = LAUNCH.siteUrl;
-    const tags = 'Cronos,CROnation,CRON8,crofam';
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-    toast('Opening 𝕏 to share…');
-    window.open(shareUrl, '_blank','noopener');
+  async function shareToX(){
+  // 1) Try to read from Firestore (authoritative)
+  let p = null;
+  try{
+    const addr = (window.userAddress || '').toLowerCase();
+    if (addr) {
+      const snap = await db.collection('passports').doc(addr).get();
+      if (snap.exists) p = snap.data();
+    }
+  }catch(e){ /* ignore; will fallback to DOM */ }
+
+  // 2) Fallbacks from DOM if needed
+  const dom = {
+    country: (document.getElementById('passport-country')?.textContent || '').trim(),
+    nick:    (document.getElementById('passport-nick')?.textContent    || '').trim(),
+    serial:  (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim()
+  };
+
+  const country = (p?.country || dom.country || '').trim();
+  const nick    = (p?.nick    || dom.nick    || 'Citizen').trim();
+  const serial  = (p?.serial  || dom.serial  || '000000').toString().padStart(6,'0');
+
+  if (!country){
+    alert('Could not determine your country yet. Please open your passport (or mint) and try again.');
+    return;
   }
+
+  const text = `🌍 I just joined CROnation!
+Passport #${serial} — ${nick} from ${country}
+
+One World. One CROnation.
+
+@${LAUNCH.xHandle}`;
+  const url  = LAUNCH.siteUrl;
+  const tags = 'Cronos,CROnation,CRON8,crofam';
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
+
+  toast('Opening 𝕏 to share…');
+  window.open(shareUrl, '_blank','noopener');
+}
 
   /* ========= Admin wiring ========= */
 function isAdmin(addr){
