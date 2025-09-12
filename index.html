@@ -1780,14 +1780,7 @@ subscribeSpotlight();
   window.mintFromModal = mintFromModal;
 
   /**** Share to X ****/
-  function isInAppBrowser(){
-  const ua = navigator.userAgent || '';
-  // broad list of common embedded browsers/webviews
-  return /MetaMask|CoinbaseWallet|Trust|Phantom|OKX|BitKeep|Rabby|Crypto\.com|DeFiWallet|Line|FBAN|FBAV|Instagram|Twitter|X\/|Telegram|WeChat|MiuiBrowser|SamsungBrowser|DuckDuckGo|GSA|SafariViewService|WebView|wv/i.test(ua);
-}
-
-function shareToX(){
-  // collect data from the visible passport (DOM fallbacks)
+  function shareToX(){
   const country = (document.getElementById('passport-country')?.textContent || '').trim();
   const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
   const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
@@ -1807,24 +1800,11 @@ One World. One CROnation.
   const url = 'https://cronation.netlify.app';
   const hashtags = ['Cronos','CROnation','CRON8','crofam'];
 
-  // Web composer only — NO twitter:// deep link
-  const webUrl =
-    `https://x.com/intent/post?` +
-    `text=${encodeURIComponent(text)}&` +
-    `url=${encodeURIComponent(url)}&` +
-    `hashtags=${encodeURIComponent(hashtags.join(','))}`;
+  const shareUrl =
+    `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(hashtags.join(','))}`;
 
-  const inApp = isInAppBrowser();
-
-  // If we’re in an embedded browser or popups are blocked, navigate in-place.
-  if (inApp) {
-    window.location.assign(webUrl); // same tab, avoids the “Open in Safari?” loop
-    return;
-  }
-
-  // Otherwise try a new tab; if blocked, fall back to same-tab.
-  const w = window.open(webUrl, '_blank', 'noopener');
-  if (!w) window.location.assign(webUrl);
+  // Always same-tab, works everywhere, no Safari loop.
+  window.location.href = shareUrl;
 }
 
   /* ========= Admin wiring ========= */
