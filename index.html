@@ -1780,7 +1780,7 @@ subscribeSpotlight();
   window.mintFromModal = mintFromModal;
 
   /**** Share to X ****/
-  function shareToX(){
+  async function shareToX(){
   const country = (document.getElementById('passport-country')?.textContent || '').trim();
   const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
   const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
@@ -1797,14 +1797,22 @@ Passport #${serial} — ${nick} from ${country}
 One World. One CROnation.
 
 @cronation8`;
-  const url = 'https://cronation.netlify.app';
-  const hashtags = ['Cronos','CROnation','CRON8','crofam'];
+  const url  = 'https://cronation.netlify.app';
+  const tags = 'Cronos,CROnation,CRON8,crofam';
 
-  const shareUrl =
-    `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(hashtags.join(','))}`;
+  const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
 
-  // Always same-tab, works everywhere, no Safari loop.
-  window.location.href = shareUrl;
+  // Detect if mobile or desktop
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile){
+    // Mobile → replace current tab (avoids loops)
+    window.location.href = shareUrl;
+  } else {
+    // Desktop → open in new tab
+    const w = window.open(shareUrl, '_blank', 'noopener');
+    if (!w) location.href = shareUrl; // fallback if popup blocked
+  }
 }
 
   /* ========= Admin wiring ========= */
