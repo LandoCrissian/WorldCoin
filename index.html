@@ -1781,16 +1781,12 @@ subscribeSpotlight();
 
   /**** Share to X ****/
   function shareToX(){
-  // Read straight from the DOM (already set when the passport is visible)
+  // Pull from the visible passport
   const country = (document.getElementById('passport-country')?.textContent || '').trim();
   const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
   const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
   const serial  = String(serialT || '000000').padStart(6,'0');
-
-  if (!country){
-    alert('Open your passport (or mint) first, then share again.');
-    return;
-  }
+  if (!country){ alert('Open your passport (or mint) first, then share again.'); return; }
 
   const text = `🌍 I just joined CROnation!
 Passport #${serial} — ${nick} from ${country}
@@ -1801,34 +1797,28 @@ One World. One CROnation.
   const url  = 'https://cronation.netlify.app';
   const tags = 'Cronos,CROnation,CRON8,crofam';
 
-  // 1) Mobile-first: use OS share sheet when available (opens X nicely)
-  if (navigator.share){
-    navigator.share({ text: `${text}\n\n${url}\n#${tags.replace(/,/g,' #')}` })
-      .catch(() => {
-        // Fall back to intent URL if user cancels or share fails
-        const shareUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-        openShareUrl(shareUrl);
-      });
-    return;
-  }
+  // Deep link to the X app; fallback to web intent
+  const appUrl = `twitter://post?message=${encodeURIComponent(`${text}\n\n${url}\n#${tags.replace(/,/g,' #')}`)}`;
+  const webUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
 
-  // 2) Desktop / no share-sheet: open X intent directly (no about:blank)
-  const shareUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
-  openShareUrl(shareUrl);
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/i.test(ua);
 
-  function openShareUrl(u){
-    // Try pop-up first (still within the click gesture)
-    const win = window.open(u, '_blank');
-    if (!win) {
-      // Pop-up blocked → simulate a link click
-      const a = document.createElement('a');
-      a.href = u;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
+  if (isIOS) {
+    // Open the X app directly if installed
+    const t0 = Date.now();
+    window.location.href = appUrl;                      // try the app
+    setTimeout(() => {                                  // app didn’t catch → open web intent
+      if (Date.now() - t0 < 1200) {
+        const a = document.createElement('a');
+        a.href = webUrl; a.target = '_blank'; a.rel = 'noopener';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+    }, 600);
+  } else {
+    // Desktop/Android: open web intent in a new tab (no about:blank)
+    const win = window.open(webUrl, '_blank');
+    if (!win) location.href = webUrl; // popup blocked → same tab
   }
 }
 
