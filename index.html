@@ -1025,58 +1025,62 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   }
 
   (async function initMap(){
-    let data;
+  let data;
+  try{
+    data = await loadGeojson(REMOTE_GEOJSON_URL);
+    await buildCountryIndexFromGeoJSON(data);         // ✅ index built for remote
+  }catch(e1){
+    console.warn('Remote GeoJSON failed, using local fallback', e1);
     try{
-      data = await loadGeojson(REMOTE_GEOJSON_URL);
-      await buildCountryIndexFromGeoJSON(data);
-    }catch(e1){
-      console.warn('Remote GeoJSON failed, using local fallback', e1);
-      try{
-        data = await loadGeojson(LOCAL_FALLBACK_URL);
-      }catch(e2){
-        console.error('Fallback GeoJSON failed', e2);
-        el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
-          Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
-        </div>`;
-        return;
-      }
+      data = await loadGeojson(LOCAL_FALLBACK_URL);
+      await buildCountryIndexFromGeoJSON(data);       // ✅ index built for fallback
+    }catch(e2){
+      console.error('Fallback GeoJSON failed', e2);
+      el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+        Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+      </div>`;
+      return;
     }
+  }
 
-    // Build country list for dropdown
-    (data.features||[]).forEach(f => {
-      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-      countryList.push(name);
-    });
-    countryList.sort((a,b)=>a.localeCompare(b));
-    populateCountryDropdown(countryList);
+  // Build country list for dropdown
+  (data.features||[]).forEach(f => {
+    const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+    countryList.push(name);
+  });
+  countryList.sort((a,b)=>a.localeCompare(b));
+  populateCountryDropdown(countryList);
 
-    const layer = L.geoJSON(data, {
-      style: (feature) => {
-        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-        const count = countryCounts.get(name) || 0;
-        return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
-      },
-      onEachFeature: (feature, l) => {
-        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-        countryLayers.set(name, l);
-        l.on({
-          mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
-          mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
-          click:     () => openModal(name)
-        });
-        l.bindTooltip(name, { sticky: true });
-      }
-    }).addTo(map);
+  const layer = L.geoJSON(data, {
+    style: (feature) => {
+      const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+      const count = countryCounts.get(name) || 0;
+      return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+    },
+    onEachFeature: (feature, l) => {
+      const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+      countryLayers.set(name, l);
+      l.on({
+        mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
+        mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
+        click:     () => openModal(name)
+      });
+      l.bindTooltip(name, { sticky: true });
+    }
+  }).addTo(map);
 
-    try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
+  try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
 
-    const invalidate = () => { try { map.invalidateSize(); } catch(_) {} };
-    requestAnimationFrame(invalidate);
-    setTimeout(invalidate, 300);
-    ['orientationchange','resize'].forEach(ev =>
-      window.addEventListener(ev, invalidate, { passive: true })
-    );
-  })();
+  const invalidate = () => { try { map.invalidateSize(); } catch(_) {} };
+  requestAnimationFrame(invalidate);
+  setTimeout(invalidate, 300);
+  ['orientationchange','resize'].forEach(ev =>
+    window.addEventListener(ev, invalidate, { passive: true })
+  );
+
+  // ✅ Now that NAME_TO_ISO2 is populated, start the Firestore spotlight feed
+  subscribeSpotlight();
+})();
 
   
   /**** Modal ****/
@@ -1850,9 +1854,6 @@ if (shareBtn){
     countryLayers.forEach((_, name) => updateCountryStyle(name));
   });
 
-  /* Start Country Spotlight subscription */
-subscribeSpotlight();
-
   // Form submit
   el('join-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
@@ -1896,7 +1897,11 @@ subscribeSpotlight();
     return;
   }
 
-  const iso2  = countryToISO2(country);
+const country = (p.country || '').trim();
+const nick    = (p.nick    || 'Citizen').trim();
+const serial  = String(p.serial || '000000').padStart(6,'0');
+
+const iso2  = countryToISO2(country);
 const flag  = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
 
 const text = `${flag}I just joined CROnation!
