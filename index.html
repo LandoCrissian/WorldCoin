@@ -1028,6 +1028,7 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     let data;
     try{
       data = await loadGeojson(REMOTE_GEOJSON_URL);
+      await buildCountryIndexFromGeoJSON(data);
     }catch(e1){
       console.warn('Remote GeoJSON failed, using local fallback', e1);
       try{
@@ -1416,42 +1417,136 @@ function detectTier(balance){
 })();
 
   /* === Flag mapping (strict/common names only) === */
-  const ISO2 = {
-    "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
-    "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
-    "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
-    "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
-    "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
-    "Nigeria":"ng","Kenya":"ke","Brazil":"br"
-  };
-  const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
 
-  function setPassportFlag(country){
-    const layer = document.getElementById('passport-flag');
-    if(!layer) return;
-    const iso2 = countryToISO2(country);
-    if (iso2){
-      layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
-      layer.style.filter = (country === "Germany" || country === "China")
-        ? "brightness(1.25) contrast(1.1)"
-        : "brightness(1.05) contrast(1.15)";
+// ===== Dynamic country ↔ ISO2 mapping (covers all countries in your GeoJSON) =====
+
+// These are only for odd naming differences you might encounter in Firestore/UX.
+// Everything else comes from the GeoJSON itself.
+const COUNTRY_ALIASES = new Map(Object.entries({
+  'United States'                     : 'United States of America',
+  'USA'                               : 'United States of America',
+  'US'                                : 'United States of America',
+  'UK'                                : 'United Kingdom',
+  'Russia'                            : 'Russian Federation',
+  'South Korea'                       : 'Republic of Korea',
+  'North Korea'                       : "Democratic People's Republic of Korea",
+  'Ivory Coast'                       : "Côte d'Ivoire",
+  'Czechia'                           : 'Czech Republic',
+  'Syria'                             : 'Syrian Arab Republic',
+  'Iran'                              : 'Iran, Islamic Republic of',
+  'Vietnam'                           : 'Viet Nam',
+  'Laos'                              : "Lao People's Democratic Republic",
+  'Moldova'                           : 'Moldova, Republic of',
+  'Tanzania'                          : 'Tanzania, United Republic of',
+  'Bolivia'                           : 'Bolivia (Plurinational State of)',
+  'Venezuela'                         : 'Venezuela (Bolivarian Republic of)',
+  'Congo (Kinshasa)'                  : 'Democratic Republic of the Congo',
+  'DR Congo'                          : 'Democratic Republic of the Congo',
+  'Congo (Brazzaville)'               : 'Republic of the Congo',
+  'Cape Verde'                        : 'Cabo Verde',
+  'Swaziland'                         : 'Eswatini',
+  'Macedonia'                         : 'North Macedonia',
+  'East Timor'                        : 'Timor-Leste',
+  'Micronesia'                        : 'Micronesia (Federated States of)',
+  'Palestine'                         : 'Palestine, State of',
+  'Vatican City'                      : 'Holy See',
+  'Bahamas'                           : 'Bahamas, The',
+  'Gambia'                            : 'Gambia, The'
+}));
+
+// Filled after GeoJSON loads:
+const NAME_TO_ISO2 = new Map();
+const CANON_NAMES  = new Set(); // canonical names from GeoJSON for fuzzy matching
+
+// Normalize strings for robust comparison (strip accents/case/extra spaces)
+function norm(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // remove diacritics
+    .replace(/[\u2019']/g,"'")                       // normalize apostrophes
+    .replace(/\s+/g,' ')
+    .trim()
+    .toLowerCase();
+}
+
+// Build the name → iso2 map from the GeoJSON you already fetch
+async function buildCountryIndexFromGeoJSON(geojson){
+  NAME_TO_ISO2.clear(); CANON_NAMES.clear();
+  (geojson.features||[]).forEach(f=>{
+    const props = f.properties||{};
+    const name = props.ADMIN || props.name || props.COUNTRY || '';
+    // The dataset usually contains ISO_A2 or ISO_A2_EH; any of these will do.
+    const iso2 = (props.ISO_A2_EH || props.ISO_A2 || props.ISO2 || '').toLowerCase();
+    if (name && iso2 && iso2 !== '-99'){
+      NAME_TO_ISO2.set(name, iso2);
+      CANON_NAMES.add(name);
+    }
+  });
+}
+
+// Resolve any incoming display name to the correct iso2.
+// 1) direct match
+// 2) alias → canonical → iso2
+// 3) fuzzy: case/diacritics-insensitive sweep over canonical names
+function countryToISO2(name){
+  if (!name) return null;
+
+  // 1) exact canonical
+  if (NAME_TO_ISO2.has(name)) return NAME_TO_ISO2.get(name);
+
+  // 2) alias → canonical
+  const aliased = COUNTRY_ALIASES.get(name) || COUNTRY_ALIASES.get(name.trim());
+  if (aliased && NAME_TO_ISO2.has(aliased)) return NAME_TO_ISO2.get(aliased);
+
+  // 3) fuzzy
+  const n = norm(name);
+  for (const canon of CANON_NAMES){
+    if (norm(canon) === n) return NAME_TO_ISO2.get(canon);
+  }
+  // last-resort partial (e.g., "Congo" picks the first match; adjust if desired)
+  for (const canon of CANON_NAMES){
+    if (norm(canon).includes(n) || n.includes(norm(canon))){
+      return NAME_TO_ISO2.get(canon);
     }
   }
+  return null;
+}
 
-  function setPassportFlagIcon(country){
-    const icon = document.getElementById('passport-flag-icon');
-    if(!icon) return;
-    const iso2 = countryToISO2(country);
-    if (iso2){
-      icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
-      icon.style.display = 'inline-block';
-      icon.alt = country + ' flag';
-    } else {
-      icon.removeAttribute('src');
-      icon.style.display = 'none';
-      icon.alt = '';
-    }
+// ISO2 → flag emoji ("us" → 🇺🇸)
+function iso2ToEmoji(iso2){
+  if (!iso2) return '';
+  return iso2.toUpperCase().replace(/./g, c =>
+    String.fromCodePoint(127397 + c.charCodeAt(0))
+  );
+}
+
+// Use these everywhere flags are needed:
+function setPassportFlag(country){
+  const layer = document.getElementById('passport-flag');
+  if(!layer) return;
+  const iso2 = countryToISO2(country);
+  if (iso2){
+    layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
+    layer.style.filter = (country === "Germany" || country === "China")
+      ? "brightness(1.25) contrast(1.1)"
+      : "brightness(1.05) contrast(1.15)";
+  } else {
+    layer.style.backgroundImage = '';
   }
+}
+function setPassportFlagIcon(country){
+  const icon = document.getElementById('passport-flag-icon');
+  if(!icon) return;
+  const iso2 = countryToISO2(country);
+  if (iso2){
+    icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+    icon.style.display = 'inline-block';
+    icon.alt = country + ' flag';
+  } else {
+    icon.removeAttribute('src');
+    icon.style.display = 'none';
+    icon.alt = '';
+  }
+}
 
   // --- PFP persistence (per-wallet, local only) ---
   function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
@@ -1801,16 +1896,15 @@ subscribeSpotlight();
     return;
   }
 
-  const country = (p.country || '').trim();
-  const nick    = (p.nick    || 'Citizen').trim();
-  const serial  = String(p.serial || '000000').padStart(6,'0');
+  const iso2  = countryToISO2(country);
+const flag  = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
 
-  const text = `🌍 I just joined CROnation!
+const text = `${flag}I just joined CROnation!
 Passport #${serial} — ${nick} from ${country}
 
 One World. One CROnation.
 
-@cronation8`;
+@${LAUNCH.xHandle}`;
 
   const url  = 'https://cronation.netlify.app';
   const tags = 'Cronos,CROnation,CRON8,crofam';
