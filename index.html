@@ -791,57 +791,27 @@ const ADMIN_WALLETS = new Set([
   const fetchAsDataUrl = async (url) => { const r = await fetch(url,{mode:'cors',cache:'force-cache'}); const b=await r.blob(); return blobToDataUrl(b); };
 
   // Render a PNG of the passport without DOM snapshot (CORS-safe)
-// PATCH START: renderPassportPNGViaCanvas with robust flag loading + fallback
-
 async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier = (window.__cron8Tier || 0) }) {
   const W = 1200, H = 480, DPR = Math.min(2, window.devicePixelRatio || 1.5);
   const c = document.createElement('canvas'); c.width=W*DPR; c.height=H*DPR;
   const ctx = c.getContext('2d'); ctx.scale(DPR, DPR);
 
-  // Helpers (scoped)
-  function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
-  function drawCover(img,W,H,ctx){ const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr); const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2; ctx.drawImage(img,dx,dy,dw,dh); }
-  function wrapBig(c, text, x, y, maxW){ const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84; for (const w of words){ const t=(line?line+' ':'')+w; if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; } else { line=t; } } if(line) c.fillText(line,x,yy); }
-
-  // Background card
+  // Rounded backdrop
   const bg = '#0d203a', radius = 24;
   roundRect(ctx, 0, 0, W, H, radius); ctx.fillStyle = bg; ctx.fill();
 
-  // Flag background (CORS-safe: fetch -> blob -> dataURL). If it fails, draw emoji fallback.
-  let flagDrawn = false;
-  try{
-    const iso2 = countryToISO2(country);
-    if (iso2){
-      const bust = Date.now();
-      const url = `https://flagcdn.com/w320/${iso2}.png?v=${bust}`;
-      const r = await fetch(url, { mode: 'cors', cache: 'no-cache' });
-      if (!r.ok) throw new Error('flagcdn status ' + r.status);
-      const b = await r.blob();
-      const dataUrl = await (new Promise(res => { const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);} ));
-      const img = await (new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl; }));
+  // Flag background (fetch as data URL to avoid taint)
+  const iso2 = countryToISO2(country);
+  if (iso2){
+    try{
+      const flagUrl = await fetchAsDataUrl(`https://flagcdn.com/w320/${iso2}.png`);
+      const flagImg = await loadImg(flagUrl);
       ctx.save();
       try{ ctx.filter = 'blur(0.8px) saturate(1.25)'; }catch(_){}
       ctx.globalAlpha = 0.42;
-      drawCover(img, W, H, ctx);
+      drawCover(flagImg, W, H, ctx);
       ctx.restore();
-      flagDrawn = true;
-    }
-  }catch(_e){
-    flagDrawn = false;
-  }
-
-  // Emoji fallback if we couldn't draw the flag image
-  if (!flagDrawn){
-    const iso2 = countryToISO2(country);
-    const em = iso2 ? iso2ToEmoji(iso2) : '';
-    if (em){
-      ctx.save();
-      ctx.globalAlpha = 0.18;
-      ctx.font = '800 180px Inter, system-ui, -apple-system, emoji';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(em, 32, 200); // subtle watermark-style emoji
-      ctx.restore();
-    }
+    }catch(_){}
   }
 
   // Subtle diagonal sheen
@@ -852,19 +822,15 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   grad.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle = grad; roundRect(ctx,0,0,W,H,radius); ctx.fill();
 
-  // Emblem/PFP (fetch as dataURL if cross-origin)
+  // Emblem/PFP (convert current <img> to data URL if needed)
   const pfpEl = document.getElementById('passport-pfp');
   let pfpSrc = pfpEl?.src || '';
   if (pfpSrc && !pfpSrc.startsWith('data:')) {
-    try {
-      const r = await fetch(pfpSrc, { mode: 'cors', cache: 'force-cache' });
-      const b = await r.blob();
-      pfpSrc = await (new Promise(res => { const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);} ));
-    } catch { pfpSrc = null; }
+    try { pfpSrc = await fetchAsDataUrl(pfpSrc); } catch(_){ pfpSrc = null; }
   }
   if (pfpSrc){
     const EMB = { x: 36, y: 36, w: 128, h: 128, r: 18 };
-    const p = await new Promise((res, rej) => { const i = new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=pfpSrc; });
+    const p = await loadImg(pfpSrc);
     ctx.fillStyle='rgba(15,18,25,.7)'; roundRect(ctx, EMB.x-2, EMB.y-2, EMB.w+4, EMB.h+4, EMB.r); ctx.fill();
     roundRect(ctx, EMB.x, EMB.y, EMB.w, EMB.h, EMB.r); ctx.save(); ctx.clip();
     ctx.drawImage(p, EMB.x, EMB.y, EMB.w, EMB.h); ctx.restore();
@@ -896,23 +862,26 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   ctx.font='800 96px Inter, system-ui, -apple-system';
   wrapBig(ctx, (country||'').toUpperCase(), 36, H-140, W-72); ctx.restore();
 
-  // Holder tier pill
+    // --- Holder tier pill (just under the address chip) ---
   if (tier > 0){
     const label = tier === 3 ? '👑 CRON8 Elite Diplomat'
                 : tier === 2 ? '◆ CRON8 Nation Builder'
                 : '◈ CRON8 Citizen Holder';
 
+    // Anchor to the same x as the info column and just below the address chip
     const INFO_X = 188;
-    const CHIP_Y = 220;
-    const GAP    = 22;
-    const PILL_Y = CHIP_Y + 40 + GAP;
+    const CHIP_Y = 220;     // where we drew the address chip
+    const GAP    = 22;      // space between chip and tier
+    const PILL_Y = CHIP_Y + 40 /*chip h*/ + GAP;
 
+    // Measure / fit
     const padX = 18, r = 20, pillH = 48;
     ctx.font = '700 28px Inter, system-ui, -apple-system';
-    const maxW = 1200 - INFO_X - 36;
-    const textW = Math.ceil(ctx.measureText(label).width);
+    let textW = Math.ceil(ctx.measureText(label).width);
+    const maxW = 1200 - INFO_X - 36; // keep inside right edge
     const pillW = Math.min(textW + padX*2, maxW);
 
+    // Background gradient by tier
     const g = ctx.createLinearGradient(INFO_X, PILL_Y, INFO_X + pillW, PILL_Y + pillH);
     if (tier === 3){ g.addColorStop(0,'rgba(251,191,36,.28)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
     else if (tier === 2){ g.addColorStop(0,'rgba(125,211,252,.26)'); g.addColorStop(1,'rgba(2,6,23,.55)'); }
@@ -924,6 +893,7 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
                     : 'rgba(96,165,250,.45)';
     ctx.lineWidth = 2; roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.stroke();
 
+    // Text (truncate if needed)
     ctx.fillStyle = '#e5e7eb';
     let shown = label;
     while (ctx.measureText(shown).width > pillW - padX*2 && shown.length > 3) {
@@ -931,21 +901,19 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     }
     ctx.fillText(shown, INFO_X + padX, PILL_Y + (pillH - 28)/2 - 2);
 
+    // Subtle outer glow
     ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 10;
     roundRect(ctx, INFO_X, PILL_Y, pillW, pillH, r); ctx.stroke();
     ctx.shadowBlur = 0;
   }
 
   return c.toDataURL('image/png', 0.95);
-}
-
-// PATCH END: renderPassportPNGViaCanvas
 
   // --- helpers ---
   function roundRect(c,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); c.beginPath(); c.moveTo(x+rr,y); c.arcTo(x+w,y,x+w,y+h,rr); c.arcTo(x+w,y+h,x,y+h,rr); c.arcTo(x,y+h,x,y,rr); c.arcTo(x,y,x+w,y,rr); c.closePath(); }
   function drawCover(img,W,H,ctx){ const wr=W/img.width, hr=H/img.height, r=Math.max(wr,hr); const dw=img.width*r, dh=img.height*r, dx=(W-dw)/2, dy=(H-dh)/2; ctx.drawImage(img,dx,dy,dw,dh); }
   function wrapBig(c, text, x, y, maxW){ const words=(text||'').split(/\s+/); let line='', yy=y; const lh=84; for (const w of words){ const t=(line?line+' ':'')+w; if(c.measureText(t).width>maxW && line){ c.fillText(line,x,yy); line=w; yy+=lh; } else { line=t; } } if(line) c.fillText(line,x,yy); }
-
+}
 
   /* Firestore: get citizens for a country */
   async function fetchCitizens(country){
@@ -1056,84 +1024,58 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
     sel.appendChild(frag);
   }
 
-  // PATCH START: initMap with stronger fallbacks + readiness
-
-(async function initMap(){
-  const REMOTE_GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
-  const LOCAL_FALLBACK_URL = '/assets/data/countries.geojson';
-
-  async function loadGeojson(url, label='geojson'){
-    const r = await fetch(url, { cache: 'force-cache' });
-    if (!r.ok) throw new Error(`${label} fetch failed: ${r.status}`);
-    return r.json();
-  }
-
-  let data = null;
-
-  try{
-    // Try remote first
-    data = await loadGeojson(REMOTE_GEOJSON_URL, 'remote');
-  }catch(e1){
-    console.warn('[geojson] remote failed, trying local fallback →', e1?.message || e1);
+  (async function initMap(){
+    let data;
     try{
-      data = await loadGeojson(LOCAL_FALLBACK_URL, 'local');
-    }catch(e2){
-      console.error('[geojson] local fallback also failed →', e2?.message || e2);
-      document.getElementById('map').innerHTML = `
-        <div style="padding:16px;color:var(--muted)">
-          Unable to load world map data. 
-          <div style="margin-top:8px">
-            <button class="btn" onclick="location.reload()">Retry</button>
-          </div>
+      data = await loadGeojson(REMOTE_GEOJSON_URL);
+    }catch(e1){
+      console.warn('Remote GeoJSON failed, using local fallback', e1);
+      try{
+        data = await loadGeojson(LOCAL_FALLBACK_URL);
+      }catch(e2){
+        console.error('Fallback GeoJSON failed', e2);
+        el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+          Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
         </div>`;
-      return;
+        return;
+      }
     }
-  }
 
-  // Build the ISO2 index from the GeoJSON (includes Kosovo injection)
-  await buildCountryIndexFromGeoJSON(data);
+    // Build country list for dropdown
+    (data.features||[]).forEach(f => {
+      const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
+      countryList.push(name);
+    });
+    countryList.sort((a,b)=>a.localeCompare(b));
+    populateCountryDropdown(countryList);
 
-  // Populate dropdown from features actually present
-  (data.features||[]).forEach(f => {
-    const name = f.properties.ADMIN || f.properties.name || f.properties.COUNTRY || 'Unknown';
-    countryList.push(name);
-  });
-  countryList.sort((a,b)=>a.localeCompare(b));
-  populateCountryDropdown(countryList);
+    const layer = L.geoJSON(data, {
+      style: (feature) => {
+        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+        const count = countryCounts.get(name) || 0;
+        return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
+      },
+      onEachFeature: (feature, l) => {
+        const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
+        countryLayers.set(name, l);
+        l.on({
+          mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
+          mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
+          click:     () => openModal(name)
+        });
+        l.bindTooltip(name, { sticky: true });
+      }
+    }).addTo(map);
 
-  const layer = L.geoJSON(data, {
-    style: (feature) => {
-      const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-      const count = countryCounts.get(name) || 0;
-      return { color:'#cbd5e1', weight:1, fillColor:colorFor(count), fillOpacity:1 };
-    },
-    onEachFeature: (feature, l) => {
-      const name = feature.properties.ADMIN || feature.properties.name || feature.properties.COUNTRY || 'Unknown';
-      countryLayers.set(name, l);
-      l.on({
-        mouseover: () => { l.setStyle({ fillOpacity: 1, weight: 1.2 }); },
-        mouseout:  () => { updateCountryStyle(name); l.setStyle({ weight: 1 }); },
-        click:     () => openModal(name)
-      });
-      l.bindTooltip(name, { sticky: true });
-    }
-  }).addTo(map);
+    try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
 
-  try { map.fitBounds(layer.getBounds(), {padding:[10,10]}); } catch(e){}
-
-  const invalidate = () => { try { map.invalidateSize(); } catch(_) {} };
-  requestAnimationFrame(invalidate);
-  setTimeout(invalidate, 300);
-  ['orientationchange','resize'].forEach(ev =>
-    window.addEventListener(ev, invalidate, { passive: true })
-  );
-
-  // ✅ Defer spotlight subscription until ISO index is ready
-  await window.COUNTRY_INDEX_READY.promise;
-  subscribeSpotlight();
-})();
-
-// PATCH END: initMap
+    const invalidate = () => { try { map.invalidateSize(); } catch(_) {} };
+    requestAnimationFrame(invalidate);
+    setTimeout(invalidate, 300);
+    ['orientationchange','resize'].forEach(ev =>
+      window.addEventListener(ev, invalidate, { passive: true })
+    );
+  })();
 
   
   /**** Modal ****/
@@ -1474,282 +1416,42 @@ function detectTier(balance){
 })();
 
   /* === Flag mapping (strict/common names only) === */
-
-// ===== Dynamic country ↔ ISO2 mapping (covers all countries in your GeoJSON) =====
-
-// PATCH START: country mapping helpers (aliases, index, flag helpers)
-
-// A tiny readiness gate so anything that needs ISO2 waits until the GeoJSON index is built.
-window.COUNTRY_INDEX_READY = (function(){
-  let _res = null;
-  const promise = new Promise(r => (_res = r));
-  return { promise, resolve: () => _res?.(), done: false };
-})();
-
-// These are only for odd naming differences you'll encounter via Firestore/UX.
-// Everything else is learned from the GeoJSON itself.
-const COUNTRY_ALIASES = new Map(Object.entries({
-  // Common variants
-  'United States' : 'United States of America',
-  'USA'           : 'United States of America',
-  'US'            : 'United States of America',
-  'U.S.'          : 'United States of America',
-  'UK'            : 'United Kingdom',
-  'Russia'        : 'Russian Federation',
-  'South Korea'   : 'Republic of Korea',
-  'North Korea'   : "Democratic People's Republic of Korea",
-  'Ivory Coast'   : "Côte d'Ivoire",
-  "Cote d'Ivoire" : "Côte d'Ivoire",
-  'Czechia'       : 'Czech Republic',
-  'Syria'         : 'Syrian Arab Republic',
-  'Iran'          : 'Iran, Islamic Republic of',
-  'Vietnam'       : 'Viet Nam',
-  'Laos'          : "Lao People's Democratic Republic",
-  'Moldova'       : 'Moldova, Republic of',
-  'Tanzania'      : 'Tanzania, United Republic of',
-  'Bolivia'       : 'Bolivia (Plurinational State of)',
-  'Venezuela'     : 'Venezuela (Bolivarian Republic of)',
-  'Congo (Kinshasa)'    : 'Democratic Republic of the Congo',
-  'DR Congo'            : 'Democratic Republic of the Congo',
-  'D.R. Congo'          : 'Democratic Republic of the Congo',
-  'Congo (Brazzaville)' : 'Republic of the Congo',
-  'Cape Verde'          : 'Cabo Verde',
-  'Swaziland'           : 'Eswatini',
-  'Macedonia'           : 'North Macedonia',
-  'East Timor'          : 'Timor-Leste',
-  'Micronesia'          : 'Micronesia (Federated States of)',
-  'Palestine'           : 'Palestine, State of',
-  'Vatican City'        : 'Holy See',
-  // Kosovo (not in many datasets)
-  'Kosovo'              : 'Kosovo',
-  'Republic of Kosovo'  : 'Kosovo',
-  'Kosova'              : 'Kosovo',
-  // Ensure canonical short forms used by GeoJSON are preserved
-  'Bahamas'             : 'Bahamas',
-  'Gambia'              : 'Gambia',
-}));
-
-// Filled once the GeoJSON loads:
-const NAME_TO_ISO2 = new Map();
-const CANON_NAMES  = new Set(); // canonical names from GeoJSON for fuzzy matching
-
-// Normalize strings (strip accents/case/extra spaces/apostrophes) for robust comparison
-function norm(s){
-  return String(s||'')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // remove diacritics
-    .replace(/[\u2019’]/g,"'")                       // normalize apostrophes
-    .replace(/\s+/g,' ')
-    .trim()
-    .toLowerCase();
-}
-
-// Build the name → iso2 map from your GeoJSON
-async function buildCountryIndexFromGeoJSON(geojson){
-  NAME_TO_ISO2.clear();
-  CANON_NAMES.clear();
-
-  (geojson.features||[]).forEach(f=>{
-    const props = f.properties||{};
-    const name = props.ADMIN || props.name || props.COUNTRY || '';
-    // Common fields in the dataset
-    const iso2 = (props.ISO_A2_EH || props.ISO_A2 || props.ISO2 || '').toLowerCase();
-    if (name && iso2 && iso2 !== '-99'){
-      NAME_TO_ISO2.set(name, iso2);
-      CANON_NAMES.add(name);
-    }
-  });
-
-  // Manual add: Kosovo (widely used code "xk" on FLAGCDN)
-  NAME_TO_ISO2.set('Kosovo', 'xk');
-  CANON_NAMES.add('Kosovo');
-
-  if (!window.COUNTRY_INDEX_READY.done){
-    window.COUNTRY_INDEX_READY.done = true;
-    window.COUNTRY_INDEX_READY.resolve();
-  }
-}
-
-// Resolve any incoming display name to the correct ISO2.
-// 1) direct canonical match
-// 2) alias → canonical
-// 3) fuzzy exact (case/diacritics) and partial fallback
-function countryToISO2(name){
-  if (!name) return null;
-
-  // 1) exact canonical
-  if (NAME_TO_ISO2.has(name)) return NAME_TO_ISO2.get(name);
-
-  // 2) alias → canonical
-  const aliased = COUNTRY_ALIASES.get(name) || COUNTRY_ALIASES.get(name.trim());
-  if (aliased && NAME_TO_ISO2.has(aliased)) return NAME_TO_ISO2.get(aliased);
-
-  // 3a) fuzzy exact
-  const n = norm(name);
-  for (const canon of CANON_NAMES){
-    if (norm(canon) === n) return NAME_TO_ISO2.get(canon);
-  }
-
-  // 3b) partial fallback (e.g., "Congo")
-  for (const canon of CANON_NAMES){
-    const cn = norm(canon);
-    if (cn.includes(n) || n.includes(cn)) return NAME_TO_ISO2.get(canon);
-  }
-
-  // Final: known off-dataset Kosovo singletons
-  if (n === 'kosovo' || n === 'republic of kosovo' || n === 'kosova') return 'xk';
-
-  return null;
-}
-
-// ISO2 → flag emoji ("us" → 🇺🇸)
-function iso2ToEmoji(iso2){
-  if (!iso2) return '';
-  return iso2.toUpperCase().replace(/./g, c =>
-    String.fromCodePoint(127397 + c.charCodeAt(0))
-  );
-}
-
-// Use these anywhere the DOM shows flags:
-
-function setPassportFlag(country){
-  const layer = document.getElementById('passport-flag');
-  if(!layer) return;
-
-  const iso2 = countryToISO2(country);
-  if (iso2){
-    // cache-bust to avoid sticky 404s/cached errors
-    const url = `https://flagcdn.com/w320/${iso2}.png?v=${Date.now()}`;
-    layer.style.backgroundImage = `url("${url}")`;
-    layer.style.filter = (country === "Germany" || country === "China")
-      ? "brightness(1.25) contrast(1.1)"
-      : "brightness(1.05) contrast(1.15)";
-  } else {
-    layer.style.backgroundImage = '';
-  }
-}
-
-function setPassportFlagIcon(country){
-  const icon = document.getElementById('passport-flag-icon');
-  if(!icon) return;
-
-  const iso2 = countryToISO2(country);
-  if (iso2){
-    icon.src = `https://flagcdn.com/24x18/${iso2}.png?v=${Date.now()}`;
-    icon.style.display = 'inline-block';
-    icon.alt = `${country} flag`;
-  } else {
-    icon.removeAttribute('src');
-    icon.style.display = 'none';
-    icon.alt = '';
-  }
-}
-
-// PATCH END: country mapping helpers
-
-// Turn "in" -> Twemoji CDN PNG (used as fallback when FlagCDN fails)
-function iso2ToTwemojiUrl(iso2, size=72){
-  // Twemoji uses Unicode regional-indicator emoji filenames
-  const emoji = iso2ToEmoji(iso2);
-  // Build the codepoint filename (e.g., 🇮🇳 -> 1f1ee-1f1f3)
-  const cps = [];
-  for (const ch of emoji){
-    const code = ch.codePointAt(0).toString(16);
-    cps.push(code);
-  }
-  const file = cps.join('-');
-  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${file}.png`;
-}
-
-// Core image <img> loader with CDN->Twemoji fallback
-function loadFlag(imgEl, iso2, size='24x18'){
-  if (!imgEl) return;
-  if (!iso2){
-    imgEl.removeAttribute('src');
-    imgEl.style.display = 'none';
-    return;
-  }
-  const primary  = `https://flagcdn.com/${size}/${iso2}.png?v=${Date.now()}`;
-  const fallback = iso2ToTwemojiUrl(iso2);
-
-  imgEl.style.display = 'inline-block';
-  imgEl.alt = `${iso2.toUpperCase()} flag`;
-  imgEl.onerror = () => { imgEl.onerror = null; imgEl.src = fallback; };
-  imgEl.src = primary;
-}
-
-// Core background loader with CDN->Twemoji fallback
-function loadFlagBg(el, iso2){
-  if (!el) return;
-  if (!iso2){ el.style.backgroundImage = ''; return; }
-
-  const primary  = `https://flagcdn.com/w320/${iso2}.png?v=${Date.now()}`;
-  const fallback = iso2ToTwemojiUrl(iso2);
-
-  const probe = new Image();
-  probe.onload  = () => { el.style.backgroundImage = `url("${primary}")`; };
-  probe.onerror = () => { el.style.backgroundImage = `url("${fallback}")`; };
-  probe.src = primary;
-}
-
-// Safe wrappers you can call anywhere
-async function safeSetFlags(country){
-  if (window.COUNTRY_INDEX_READY?.promise){
-    try { await window.COUNTRY_INDEX_READY.promise; } catch(_) {}
-  }
-  setPassportFlag(country);
-  setPassportFlagIcon(country);
-}
-
-// Replace your old setPassportFlag/setPassportFlagIcon with these:
-function setPassportFlag(country){
-  const layer = document.getElementById('passport-flag');
-  const iso2 = countryToISO2(country);
-  loadFlagBg(layer, iso2);
-  // Optional polish per country if you like:
-  if (layer){
-    layer.style.filter = (country === "Germany" || country === "China")
-      ? "brightness(1.25) contrast(1.1)"
-      : "brightness(1.05) contrast(1.15)";
-  }
-}
-
-function setPassportFlagIcon(country){
-  const icon = document.getElementById('passport-flag-icon');
-  const iso2 = countryToISO2(country);
-  loadFlag(icon, iso2, '24x18');
-}
-
-// ---- Spotlight: drop-in replacement that uses the unified loaders
-(function(){
-  // Overwrite (or define) renderSpotlight to use loadFlag
-  window.renderSpotlight = function(name){
-    const n    = document.getElementById('stat-spotlight');
-    const box  = document.getElementById('spotlight-banner');
-    const text = document.getElementById('spotlight-text');
-    const flag = document.getElementById('spotlight-flag');
-
-    if (n)   n.textContent = name || '—';
-    if (!box || !text || !flag) return;
-
-    if (!name){
-      box.style.display = 'none';
-      return;
-    }
-
-    const trimmed = String(name).trim();
-    const iso2 = countryToISO2(trimmed);
-
-    text.textContent = `New country joined: ${trimmed}!`;
-    flag.alt = `${trimmed} flag`;
-    // Try FlagCDN first; fall back to Twemoji automatically
-    loadFlag(flag, iso2, '24x18');
-
-    box.style.display = 'block';
-    box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
+  const ISO2 = {
+    "United States of America":"us","United Kingdom":"gb","Canada":"ca","Mexico":"mx","Brazil":"br","Argentina":"ar","Chile":"cl","Colombia":"co",
+    "Germany":"de","France":"fr","Spain":"es","Italy":"it","Portugal":"pt","Netherlands":"nl","Belgium":"be","Switzerland":"ch","Austria":"at","Poland":"pl",
+    "Ireland":"ie","Greece":"gr","Sweden":"se","Norway":"no","Denmark":"dk","Finland":"fi","Turkey":"tr","Russia":"ru","Ukraine":"ua","Israel":"il",
+    "Saudi Arabia":"sa","United Arab Emirates":"ae","India":"in","Pakistan":"pk","Bangladesh":"bd","Singapore":"sg","Malaysia":"my","Indonesia":"id",
+    "Philippines":"ph","Vietnam":"vn","Thailand":"th","China":"cn","Japan":"jp","South Korea":"kr","Australia":"au","New Zealand":"nz","South Africa":"za",
+    "Nigeria":"ng","Kenya":"ke","Brazil":"br"
   };
-})();
+  const countryToISO2 = (name)=> (name && ISO2[name.trim()]) || null;
 
-<!-- ===== PATCH END ===== -->
+  function setPassportFlag(country){
+    const layer = document.getElementById('passport-flag');
+    if(!layer) return;
+    const iso2 = countryToISO2(country);
+    if (iso2){
+      layer.style.backgroundImage = `url(https://flagcdn.com/w320/${iso2}.png)`;
+      layer.style.filter = (country === "Germany" || country === "China")
+        ? "brightness(1.25) contrast(1.1)"
+        : "brightness(1.05) contrast(1.15)";
+    }
+  }
+
+  function setPassportFlagIcon(country){
+    const icon = document.getElementById('passport-flag-icon');
+    if(!icon) return;
+    const iso2 = countryToISO2(country);
+    if (iso2){
+      icon.src = `https://flagcdn.com/24x18/${iso2}.png`;
+      icon.style.display = 'inline-block';
+      icon.alt = country + ' flag';
+    } else {
+      icon.removeAttribute('src');
+      icon.style.display = 'none';
+      icon.alt = '';
+    }
+  }
 
   // --- PFP persistence (per-wallet, local only) ---
   function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
@@ -1954,108 +1656,74 @@ if (shareBtn){
     });
   }
 
-  // PATCH START: spotlight (buffers until index is ready, graceful fallbacks)
-
-(function(){
-  let _bufferedName = null;
-  function ready(){ return !!(NAME_TO_ISO2 && NAME_TO_ISO2.size); }
-
   function renderSpotlight(name){
-    const n   = el('stat-spotlight');
-    if (n) n.textContent = name || '—';
+  // small stat tile
+  const n = el('stat-spotlight');
+  if (n) n.textContent = name || '—';
 
-    const box  = el('spotlight-banner');
-    const text = el('spotlight-text');
-    const flag = el('spotlight-flag');
-    if (!box || !text || !flag) return;
+  // wide banner above the map
+  const box  = el('spotlight-banner');
+  const text = el('spotlight-text');
+  const flag = el('spotlight-flag');
 
-    if (!name){
-      box.style.display = 'none';
-      return;
-    }
+  if (!box || !text || !flag) return;
 
-    const trimmed = (name || '').trim();
+  if (!name){
+    box.style.display = 'none';
+    return;
+  }
 
-    if (!ready()){
-      // Buffer once; when the index is ready we'll render
-      _bufferedName = trimmed;
-      box.style.display = 'none';
-      return;
-    }
-
-    const iso2 = countryToISO2(trimmed);
-
-    text.textContent = `New country joined: ${trimmed}!`;
-    flag.alt = `${trimmed} flag`;
+  text.textContent = `New country joined: ${name}!`;
+  const iso2 = countryToISO2(name);
+  if (iso2){
+    flag.src = `https://flagcdn.com/24x18/${iso2}.png`;
+    flag.alt = `${name} flag`;
+  } else {
     flag.removeAttribute('src');
-    flag.loading = 'eager';
-    flag.decoding = 'sync';
-
-    flag.onerror = () => {
-      // Emoji fallback if the image fails for any reason
-      const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
-      text.textContent = `${em}New country joined: ${trimmed}!`;
-    };
-
-    if (iso2){
-      flag.src = `https://flagcdn.com/24x18/${iso2}.png?v=${Date.now()}`;
-    } else {
-      const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
-      text.textContent = `${em}New country joined: ${trimmed}!`;
-    }
-
-    box.style.display = 'block';
-    box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
+    flag.alt = '';
   }
 
-  window.renderSpotlight = renderSpotlight;
+  box.style.display = 'block';
 
-  async function subscribeSpotlight(){
-    // Ensure ISO index readiness before first render. Snapshot can start now;
-    // we’ll buffer any first value until the index finishes.
-    window.COUNTRY_INDEX_READY.promise.then(() => {
-      if (_bufferedName){
-        renderSpotlight(_bufferedName);
-        _bufferedName = null;
-      }
-    });
+  // 👇 reset + retrigger the pulse every time
+  box.classList.remove('pulse');
+  void box.offsetWidth; // force reflow
+  box.classList.add('pulse');
+}
 
-    try{
-      db.collection('passports')
-        .orderBy('created','desc')
-        .limit(1)
-        .onSnapshot((qs)=>{
-          let name = null;
-          qs.forEach(doc=>{
-            const d = doc.data();
-            if (d?.country) name = d.country;
-          });
-          if (name) {
-            renderSpotlight(name);
-            return;
-          }
+  function subscribeSpotlight(){
+  try{
+    // Primary: most recently created passport => its country
+    db.collection('passports')
+      .orderBy('created','desc')
+      .limit(1)
+      .onSnapshot((qs)=>{
+        let name = null;
+        qs.forEach(doc=>{
+          const d = doc.data();
+          if (d?.country) name = d.country;
+        });
+        if (name) {
+          renderSpotlight(name);
+          return;
+        }
 
-          // Fallback: countries collection
-          db.collection('countries')
-            .orderBy('created','desc')
-            .limit(1)
-            .get()
-            .then(q2=>{
-              let latest = null;
-              q2.forEach(doc=>{ const d=doc.data(); if(d?.name) latest = d.name; });
-              renderSpotlight(latest);
-            })
-            .catch(()=> renderSpotlight(null));
-        }, (err)=> console.warn('spotlight sub err', err));
-    }catch(e){
-      console.warn('spotlight init failed', e);
-    }
+        // Fallback: countries collection (in case you keep it)
+        db.collection('countries')
+          .orderBy('created','desc')
+          .limit(1)
+          .get()
+          .then(q2=>{
+            let latest = null;
+            q2.forEach(doc=>{ const d=doc.data(); if(d?.name) latest = d.name; });
+            renderSpotlight(latest);
+          })
+          .catch(()=> renderSpotlight(null));
+      }, (err)=> console.warn('spotlight sub err', err));
+  }catch(e){
+    console.warn('spotlight init failed', e);
   }
-
-  window.subscribeSpotlight = subscribeSpotlight;
-})();
-
-// PATCH END: spotlight
+}
 
 
   // recolor after counts change
@@ -2086,6 +1754,9 @@ if (shareBtn){
     renderLeaderboard();
     countryLayers.forEach((_, name) => updateCountryStyle(name));
   });
+
+  /* Start Country Spotlight subscription */
+subscribeSpotlight();
 
   // Form submit
   el('join-form').addEventListener('submit', async (e)=>{
@@ -2130,19 +1801,16 @@ if (shareBtn){
     return;
   }
 
-const country = (p.country || '').trim();
-const nick    = (p.nick    || 'Citizen').trim();
-const serial  = String(p.serial || '000000').padStart(6,'0');
+  const country = (p.country || '').trim();
+  const nick    = (p.nick    || 'Citizen').trim();
+  const serial  = String(p.serial || '000000').padStart(6,'0');
 
-const iso2  = countryToISO2(country);
-const flag  = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
-
-const text = `${flag}I just joined CROnation!
+  const text = `🌍 I just joined CROnation!
 Passport #${serial} — ${nick} from ${country}
 
 One World. One CROnation.
 
-@${LAUNCH.xHandle}`;
+@cronation8`;
 
   const url  = 'https://cronation.netlify.app';
   const tags = 'Cronos,CROnation,CRON8,crofam';
