@@ -1780,8 +1780,15 @@ subscribeSpotlight();
   window.mintFromModal = mintFromModal;
 
   /**** Share to X ****/
-  function shareToX(){
-  // Pull from the visible passport
+  function isInAppBrowser(){
+  const ua = navigator.userAgent || '';
+  // common in-app/wallet browsers
+  return /MetaMask|CoinbaseWallet|Trust|Phantom|OKX|BitKeep|Brave|Rabby|Crypto\.com|DeFiWallet|Line|FBAN|FBAV|Instagram/i.test(ua)
+         || /\bwv\b|WebView|CriOS\/[0-9].*Mobile/i.test(ua); // generic webviews
+}
+
+function shareToX(){
+  // read current passport
   const country = (document.getElementById('passport-country')?.textContent || '').trim();
   const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
   const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
@@ -1797,29 +1804,36 @@ One World. One CROnation.
   const url  = 'https://cronation.netlify.app';
   const tags = 'Cronos,CROnation,CRON8,crofam';
 
-  // Deep link to the X app; fallback to web intent
   const appUrl = `twitter://post?message=${encodeURIComponent(`${text}\n\n${url}\n#${tags.replace(/,/g,' #')}`)}`;
   const webUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags)}`;
 
   const ua = navigator.userAgent || '';
   const isIOS = /iPad|iPhone|iPod/i.test(ua);
 
-  if (isIOS) {
-    // Open the X app directly if installed
+  // iOS + in-app browser → use web intent in SAME TAB (no deep link, no popup)
+  if (isIOS && isInAppBrowser()){
+    location.href = webUrl;
+    return;
+  }
+
+  // iOS Safari → try app then fallback once to web intent
+  if (isIOS){
+    let fellBack = false;
     const t0 = Date.now();
-    window.location.href = appUrl;                      // try the app
-    setTimeout(() => {                                  // app didn’t catch → open web intent
-      if (Date.now() - t0 < 1200) {
-        const a = document.createElement('a');
-        a.href = webUrl; a.target = '_blank'; a.rel = 'noopener';
-        document.body.appendChild(a); a.click(); a.remove();
+    // try open X app
+    location.href = appUrl;
+    setTimeout(() => {
+      if (!fellBack && Date.now() - t0 < 1200){
+        fellBack = true;
+        location.href = webUrl; // single fallback, prevents loop
       }
     }, 600);
-  } else {
-    // Desktop/Android: open web intent in a new tab (no about:blank)
-    const win = window.open(webUrl, '_blank');
-    if (!win) location.href = webUrl; // popup blocked → same tab
+    return;
   }
+
+  // Android / desktop: open web intent in new tab, fallback to same tab if blocked
+  const w = window.open(webUrl, '_blank', 'noopener');
+  if (!w) location.href = webUrl;
 }
 
   /* ========= Admin wiring ========= */
