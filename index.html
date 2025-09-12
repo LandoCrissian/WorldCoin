@@ -1782,13 +1782,11 @@ subscribeSpotlight();
   /**** Share to X ****/
   function isInAppBrowser(){
   const ua = navigator.userAgent || '';
-  // common in-app/wallet browsers
   return /MetaMask|CoinbaseWallet|Trust|Phantom|OKX|BitKeep|Brave|Rabby|Crypto\.com|DeFiWallet|Line|FBAN|FBAV|Instagram/i.test(ua)
-         || /\bwv\b|WebView|CriOS\/[0-9].*Mobile/i.test(ua); // generic webviews
+         || /\bwv\b|WebView|CriOS\/[0-9].*Mobile/i.test(ua);
 }
 
 function shareToX(){
-  // read current passport
   const country = (document.getElementById('passport-country')?.textContent || '').trim();
   const nick    = (document.getElementById('passport-nick')?.textContent    || 'Citizen').trim();
   const serialT = (document.getElementById('passport-serial')?.textContent  || '').replace('#','').trim();
@@ -1809,31 +1807,33 @@ One World. One CROnation.
 
   const ua = navigator.userAgent || '';
   const isIOS = /iPad|iPhone|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
 
-  // iOS + in-app browser → use web intent in SAME TAB (no deep link, no popup)
-  if (isIOS && isInAppBrowser()){
-    location.href = webUrl;
-    return;
-  }
-
-  // iOS Safari → try app then fallback once to web intent
   if (isIOS){
-    let fellBack = false;
-    const t0 = Date.now();
-    // try open X app
-    location.href = appUrl;
-    setTimeout(() => {
-      if (!fellBack && Date.now() - t0 < 1200){
-        fellBack = true;
-        location.href = webUrl; // single fallback, prevents loop
-      }
-    }, 600);
-    return;
+    if (isInAppBrowser()){
+      // Wallet/embedded → web intent in same tab
+      location.href = webUrl;
+    } else {
+      // Safari → try app then fallback once to web intent
+      let fellBack = false;
+      const t0 = Date.now();
+      location.href = appUrl;
+      setTimeout(() => {
+        if (!fellBack && Date.now() - t0 < 1200){
+          fellBack = true;
+          location.href = webUrl;
+        }
+      }, 600);
+    }
+  } else if (isAndroid){
+    // Android → open web composer in new tab
+    const w = window.open(webUrl, '_blank', 'noopener');
+    if (!w) location.href = webUrl;
+  } else {
+    // Desktop → web composer new tab
+    const w = window.open(webUrl, '_blank', 'noopener');
+    if (!w) location.href = webUrl;
   }
-
-  // Android / desktop: open web intent in new tab, fallback to same tab if blocked
-  const w = window.open(webUrl, '_blank', 'noopener');
-  if (!w) location.href = webUrl;
 }
 
   /* ========= Admin wiring ========= */
