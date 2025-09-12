@@ -1646,6 +1646,111 @@ function setPassportFlagIcon(country){
 
 // PATCH END: country mapping helpers
 
+// Turn "in" -> Twemoji CDN PNG (used as fallback when FlagCDN fails)
+function iso2ToTwemojiUrl(iso2, size=72){
+  // Twemoji uses Unicode regional-indicator emoji filenames
+  const emoji = iso2ToEmoji(iso2);
+  // Build the codepoint filename (e.g., 🇮🇳 -> 1f1ee-1f1f3)
+  const cps = [];
+  for (const ch of emoji){
+    const code = ch.codePointAt(0).toString(16);
+    cps.push(code);
+  }
+  const file = cps.join('-');
+  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${file}.png`;
+}
+
+// Core image <img> loader with CDN->Twemoji fallback
+function loadFlag(imgEl, iso2, size='24x18'){
+  if (!imgEl) return;
+  if (!iso2){
+    imgEl.removeAttribute('src');
+    imgEl.style.display = 'none';
+    return;
+  }
+  const primary  = `https://flagcdn.com/${size}/${iso2}.png?v=${Date.now()}`;
+  const fallback = iso2ToTwemojiUrl(iso2);
+
+  imgEl.style.display = 'inline-block';
+  imgEl.alt = `${iso2.toUpperCase()} flag`;
+  imgEl.onerror = () => { imgEl.onerror = null; imgEl.src = fallback; };
+  imgEl.src = primary;
+}
+
+// Core background loader with CDN->Twemoji fallback
+function loadFlagBg(el, iso2){
+  if (!el) return;
+  if (!iso2){ el.style.backgroundImage = ''; return; }
+
+  const primary  = `https://flagcdn.com/w320/${iso2}.png?v=${Date.now()}`;
+  const fallback = iso2ToTwemojiUrl(iso2);
+
+  const probe = new Image();
+  probe.onload  = () => { el.style.backgroundImage = `url("${primary}")`; };
+  probe.onerror = () => { el.style.backgroundImage = `url("${fallback}")`; };
+  probe.src = primary;
+}
+
+// Safe wrappers you can call anywhere
+async function safeSetFlags(country){
+  if (window.COUNTRY_INDEX_READY?.promise){
+    try { await window.COUNTRY_INDEX_READY.promise; } catch(_) {}
+  }
+  setPassportFlag(country);
+  setPassportFlagIcon(country);
+}
+
+// Replace your old setPassportFlag/setPassportFlagIcon with these:
+function setPassportFlag(country){
+  const layer = document.getElementById('passport-flag');
+  const iso2 = countryToISO2(country);
+  loadFlagBg(layer, iso2);
+  // Optional polish per country if you like:
+  if (layer){
+    layer.style.filter = (country === "Germany" || country === "China")
+      ? "brightness(1.25) contrast(1.1)"
+      : "brightness(1.05) contrast(1.15)";
+  }
+}
+
+function setPassportFlagIcon(country){
+  const icon = document.getElementById('passport-flag-icon');
+  const iso2 = countryToISO2(country);
+  loadFlag(icon, iso2, '24x18');
+}
+
+// ---- Spotlight: drop-in replacement that uses the unified loaders
+(function(){
+  // Overwrite (or define) renderSpotlight to use loadFlag
+  window.renderSpotlight = function(name){
+    const n    = document.getElementById('stat-spotlight');
+    const box  = document.getElementById('spotlight-banner');
+    const text = document.getElementById('spotlight-text');
+    const flag = document.getElementById('spotlight-flag');
+
+    if (n)   n.textContent = name || '—';
+    if (!box || !text || !flag) return;
+
+    if (!name){
+      box.style.display = 'none';
+      return;
+    }
+
+    const trimmed = String(name).trim();
+    const iso2 = countryToISO2(trimmed);
+
+    text.textContent = `New country joined: ${trimmed}!`;
+    flag.alt = `${trimmed} flag`;
+    // Try FlagCDN first; fall back to Twemoji automatically
+    loadFlag(flag, iso2, '24x18');
+
+    box.style.display = 'block';
+    box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
+  };
+})();
+
+<!-- ===== PATCH END ===== -->
+
   // --- PFP persistence (per-wallet, local only) ---
   function pfpKey(addr){ return addr ? `cronation_pfp:${addr.toLowerCase()}` : null; }
   function restorePfpIfAny(addr){
