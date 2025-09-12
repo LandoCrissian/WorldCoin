@@ -1027,19 +1027,25 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   (async function initMap(){
   let data;
   try{
+    // --- Remote GeoJSON
     data = await loadGeojson(REMOTE_GEOJSON_URL);
-    await buildCountryIndexFromGeoJSON(data);         // ✅ index built for remote
+    await buildCountryIndexFromGeoJSON(data);
+
+    // 🔧 add Kosovo mapping here (remote path)
+    NAME_TO_ISO2.set('Kosovo', 'xk');
+    CANON_NAMES.add('Kosovo');
+
   }catch(e1){
     console.warn('Remote GeoJSON failed, using local fallback', e1);
     try{
+      // --- Local fallback
       data = await loadGeojson(LOCAL_FALLBACK_URL);
-      await buildCountryIndexFromGeoJSON(data);       // ✅ index built for fallback
+      await buildCountryIndexFromGeoJSON(data);
 
-      // after await buildCountryIndexFromGeoJSON(data)
-NAME_TO_ISO2.set('Kosovo', 'xk');
-CANON_NAMES.add('Kosovo');
+      // 🔧 add Kosovo mapping here (fallback path)
+      NAME_TO_ISO2.set('Kosovo', 'xk');
+      CANON_NAMES.add('Kosovo');
 
-      
     }catch(e2){
       console.error('Fallback GeoJSON failed', e2);
       el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
@@ -1763,7 +1769,7 @@ if (shareBtn){
   }
 
   function renderSpotlight(name){
-  const n = el('stat-spotlight');
+  const n   = el('stat-spotlight');
   if (n) n.textContent = name || '—';
 
   const box  = el('spotlight-banner');
@@ -1776,20 +1782,32 @@ if (shareBtn){
     return;
   }
 
-  // 🔎 debug: see mapping results live in the console
-  const iso2 = countryToISO2(name);
-  console.debug('[spotlight]', { name, iso2, indexSize: NAME_TO_ISO2.size });
+  const trimmed = (name || '').trim();
+  const iso2 = countryToISO2(trimmed);
+  console.debug('[spotlight]', { name: trimmed, iso2, indexSize: NAME_TO_ISO2.size });
 
-  text.textContent = `New country joined: ${name}!`;
+  text.textContent = `New country joined: ${trimmed}!`;
+  flag.alt = `${trimmed} flag`;
+  flag.removeAttribute('src');           // reset before setting
+  flag.loading = 'eager';
+  flag.decoding = 'sync';
+
+  // Fallback to emoji if the image can’t load for any reason
+  flag.onerror = () => {
+    console.warn('[spotlight] flag image failed', { iso2, url: flag.src });
+    flag.removeAttribute('src');
+    // prepend emoji as a graceful fallback
+    const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
+    text.textContent = `${em}New country joined: ${trimmed}!`;
+  };
 
   if (iso2){
-    flag.src = `https://flagcdn.com/24x18/${iso2}.png`;
-    flag.alt = `${name} flag`;
+    // cache-bust just in case a bad cached response is hanging around
+    flag.src = `https://flagcdn.com/24x18/${iso2}.png?v=${Date.now()}`;
   } else {
-    // show banner without flag, but make it obvious in the console
-    console.warn('[spotlight] no ISO2 for country:', name);
-    flag.removeAttribute('src');
-    flag.alt = '';
+    // no code -> emoji fallback
+    const em = iso2 ? iso2ToEmoji(iso2) + ' ' : '';
+    text.textContent = `${em}New country joined: ${trimmed}!`;
   }
 
   box.style.display = 'block';
