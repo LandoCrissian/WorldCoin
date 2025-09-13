@@ -277,21 +277,46 @@
     }
 
     async function buyPaid(){
-      if(!addr) return alert('Connect wallet first');
-      const qty = Math.max(1, parseInt(($('qty').value||'1'),10));
-      // V1 preview: generate quick picks and store as paid (no CRO transfer here)
-      const batch = [];
-      for(let i=0;i<qty;i++){
-        const picks = quick();
-        batch.push(db.collection('tickets').add({
-          drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
-          isFree:false, created: firebase.firestore.FieldValue.serverTimestamp()
-        }));
-      }
-      await Promise.all(batch);
-      await loadMine();
-      alert(`Reserved ${qty} paid ticket(s). In full V1 this will charge 15 CRO each and update ledger.`);
-    }
+  if(!addr) return alert('Connect wallet first');
+  await ensureCronos();
+
+  const qty = Math.max(1, parseInt(($('qty').value||'1'),10));
+  const totalCro = ethers.utils.parseEther(String(15 * qty)); // 15 CRO per ticket
+
+  try{
+    await ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from: addr, to: '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0', value: totalCro.toHexString() }]
+    });
+  }catch(err){
+    console.error('Payment cancelled/failed:', err);
+    return alert('Payment cancelled or failed.');
+  }
+
+  // After payment succeeds: issue tickets + ledger writes
+  const batch = [];
+  for(let i=0;i<qty;i++){
+    const picks = quick();
+    batch.push(db.collection('tickets').add({
+      drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
+      isFree:false, created: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+  }
+
+  // Ledger entry (manual split later)
+  batch.push(
+    db.collection('ledger').add({
+      drawId: DRAW_ID, type: 'purchase',
+      wallet: addr, qty, priceCro: 15,
+      to: '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0',
+      at: firebase.firestore.FieldValue.serverTimestamp()
+    })
+  );
+
+  await Promise.all(batch);
+  await loadMine();
+  alert(`Purchased ${qty} ticket(s). CRO sent to dev wallet.`);
+}
 
     $('quick-claim').onclick = claimQuick;
     $('manual-claim').onclick = claimManual;
