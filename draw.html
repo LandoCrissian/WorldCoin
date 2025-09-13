@@ -1,17 +1,15 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>CROnation Draw — Mega Jackpot</title>
-
-  <!-- Force dark before paint -->
   <script>document.documentElement.setAttribute('data-theme','dark');</script>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- ethers + firebase (compat) -->
+  <!-- Ethers v5.7.2 + Firebase compat -->
   <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
@@ -22,6 +20,8 @@
     body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--text); background:var(--bg); }
     .container{ width:min(1120px,92vw); margin-inline:auto; padding:20px 0 60px; }
     .nav{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,13,18,.75); backdrop-filter:blur(8px); z-index:10; }
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:800;}
+    .brand img{width:32px;height:32px;border-radius:50%}
     .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; transition:.12s; }
     .btn:hover{ transform:translateY(-1px) }
     .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
@@ -31,33 +31,28 @@
     .two{ grid-template-columns:1.2fr 1fr; } @media (max-width:920px){ .two{ grid-template-columns:1fr } }
     .card{ border:1px solid var(--line); border-radius:14px; background:var(--soft); box-shadow:0 2px 16px rgba(0,0,0,.08); }
     .card .body{ padding:16px; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:12px; font-weight:700; }
     .h1{ font-size:clamp(28px,3vw+12px,40px); font-weight:800; margin:10px 0; }
     .muted{ color:var(--muted) }
-    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:12px; font-weight:700; }
-    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .numbers{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .n{ width:40px; height:40px; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; cursor:pointer; }
-    .n.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
-    .n.mega{ border-color:#b45309; }
-    .n.mega.on{ background:#f59e0b; color:#111827; border-color:#f59e0b; }
     .tickets{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
-    small.helper{ display:inline-block;color:var(--muted); }
-
-    /* Debug panel */
-    #debug { display:none; margin-top:14px; }
+    /* Debug */
+    #debug{ display:none; }
     #debug pre{ white-space:pre-wrap; word-break:break-word; background:#0e1117; border:1px solid var(--line); padding:12px; border-radius:10px; }
-    .warn{ color:#fde68a; }
-    .err{ color:#fca5a5; }
+    .warn{ color:#fde68a } .err{ color:#fca5a5 }
   </style>
 </head>
 <body>
   <header class="container nav">
-    <a href="/" class="row" style="text-decoration:none;color:inherit;font-weight:800;">CROnation</a>
+    <a href="/" class="brand">
+      <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation"/>
+      CROnation
+    </a>
     <div class="row">
       <a href="/" class="btn ghost">Home</a>
       <button id="connect" class="btn">Connect Wallet</button>
-      <button id="showDebug" class="btn ghost" aria-pressed="false" title="Toggle debug">Show debug</button>
+      <button id="toggleDebug" class="btn ghost" aria-pressed="false">Show debug</button>
     </div>
   </header>
 
@@ -75,84 +70,43 @@
             </div>
           </div>
           <div class="row">
+            <span class="pill" id="addr-pill">—</span>
+            <span class="pill" id="chain-pill">—</span>
             <span class="pill" id="tier-pill">Tier: —</span>
             <span class="pill" id="free-pill">Free left: —</span>
-            <span class="pill" id="passport-pill" title="Your CROnation Passport">Passport: —</span>
           </div>
         </div>
-
-        <div id="envWarn" class="muted warn" style="margin-top:6px; display:none;"></div>
+        <div id="envWarn" class="muted warn" style="margin-top:6px;display:none;"></div>
       </div>
     </section>
 
-    <!-- Admin (dev wallet only) -->
-    <section class="card" id="admin-card" style="display:none;">
-      <div class="body">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <h3>Admin — Draw Controls</h3>
-          <span class="pill" id="admin-status">status: —</span>
-        </div>
-
-        <div class="row" style="margin:8px 0;">
-          <label class="row">
-            Close at:
-            <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-          </label>
-          <label class="row">
-            Start pots — CRON8:
-            <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-          </label>
-          <label class="row">
-            CRO:
-            <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-          </label>
-        </div>
-
-        <div class="row" style="margin:8px 0;">
-          <button class="btn primary" id="admin-open">Open Draw (commit)</button>
-          <button class="btn" id="admin-close">Close & Reveal</button>
-          <button class="btn ghost" id="admin-refresh">Refresh</button>
-        </div>
-
-        <div class="mono muted" style="margin-top:6px;">
-          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
-          Reveal seed (stored client-side until reveal): <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
-        </div>
-        <small class="muted">Commit–reveal uses browser crypto: we post the <b>hash</b> at open; at close we post the secret seed so anyone can verify.</small>
-      </div>
-    </section>
-
-    <section class="grid two">
+    <!-- Tickets + actions (stay hidden until connected) -->
+    <section id="app" class="grid two" style="display:none;">
       <div class="card">
         <div class="body">
           <h3>Claim your free entries</h3>
-          <p class="muted">Passport holders get free tickets every draw. Quick Pick is instant; Manual lets you choose.</p>
-
+          <p class="muted">Passport holders get free tickets every draw.</p>
           <div class="row" style="margin:10px 0;">
             <button class="btn primary" id="quick-claim">Claim — Quick Pick</button>
             <button class="btn" id="manual-claim">Claim — Manual</button>
           </div>
-
-          <!-- Manual picker -->
           <div id="picker" style="margin-top:6px;">
             <div class="muted" style="margin-bottom:6px;">Pick 5 numbers (1–69)</div>
-            <div id="prim" class="numbers"></div>
+            <div id="prim" class="row" style="flex-wrap:wrap;"></div>
             <div class="muted" style="margin:10px 0 6px;">Mega (1–26)</div>
-            <div id="mega" class="numbers"></div>
+            <div id="mega" class="row" style="flex-wrap:wrap;"></div>
           </div>
         </div>
       </div>
-
       <aside class="card">
         <div class="body">
           <h3>Buy more</h3>
-          <p class="muted">Tickets are <b>15 CRO</b> each. v1 sends CRO to the dev wallet for manual distribution (buybacks, jackpot, ops).</p>
+          <p class="muted">Tickets are <b>15 CRO</b> each. v1 sends CRO to the dev wallet.</p>
           <div class="row">
             <input id="qty" type="number" min="1" value="1" style="width:80px;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0b0d12;color:var(--text)">
             <button class="btn primary" id="buy">Buy</button>
           </div>
-          <small class="muted">Sends CRO → dev wallet and records tickets + ledger entry.</small><br/>
-          <small class="helper">Anti-spam: 3s cooldown between buys.</small>
+          <small class="muted">Anti-spam: 3s cooldown.</small>
         </div>
       </aside>
     </section>
@@ -164,19 +118,37 @@
       </div>
     </section>
 
-    <section class="card">
+    <!-- Admin -->
+    <section id="admin" class="card" style="display:none;">
       <div class="body">
-        <h3>Fairness</h3>
-        <p class="muted">We use commit–reveal. At open we publish a hash; at close we reveal the seed. Anyone can verify.</p>
-        <div class="mono muted">Commit: <span id="commit">—</span></div>
-        <div class="row" style="margin-top:8px;">
-          <button class="btn" id="verify">Verify</button>
-          <span id="verify-status" class="pill">—</span>
+        <div class="row" style="justify-content:space-between;">
+          <h3>Admin — Draw Controls</h3>
+          <span class="pill" id="admin-status">status: —</span>
+        </div>
+        <div class="row" style="margin:8px 0;">
+          <label class="row">Close at:
+            <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+          </label>
+          <label class="row">Start pots — CRON8:
+            <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+          </label>
+          <label class="row">CRO:
+            <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+          </label>
+        </div>
+        <div class="row" style="margin:8px 0;">
+          <button class="btn primary" id="admin-open">Open Draw (commit)</button>
+          <button class="btn" id="admin-close">Close & Reveal</button>
+          <button class="btn ghost" id="admin-refresh">Refresh</button>
+        </div>
+        <div class="mono muted" style="margin-top:6px;">
+          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
+          Reveal seed: <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
         </div>
       </div>
     </section>
 
-    <!-- Debug panel -->
+    <!-- Debug -->
     <section id="debug" class="card">
       <div class="body">
         <h3>Debug</h3>
@@ -186,459 +158,347 @@
   </main>
 
   <script>
-    /* --- Config (exactly as provided) --- */
-    const FB = {
-      apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
-      authDomain: "cronation-6058b.firebaseapp.com",
-      projectId: "cronation-6058b",
-      storageBucket: "cronation-6058b.appspot.com",
-      appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
-    };
-    const CHAIN = { rpc: 'https://evm.cronos.org', chainIdHex: '0x19' };
-    const CRON8 = {
-      address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
-      decimals: 18,
-      abi: [{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]
-    };
-    const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
-    const TIER = [
-      { tier:3, min:'25000000', label:'T3' },
-      { tier:2, min:'5000000',  label:'T2' },
-      { tier:1, min:'1000000',  label:'T1' },
-      { tier:0, min:'0',        label:'Basic' }
-    ];
-    const FREE = { 0:1, 1:2, 2:3, 3:5 };
-    const DRAW_ID = 'current';
+    /* ======= CONSTANTS (exact per your spec) ======= */
+    const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
     const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
     const ADMIN_WALLET = DEV_WALLET;
+    const DRAW_ID = 'current';
+    const CRON8 = {
+      address:'0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
+      decimals:18,
+      abi:[{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]
+    };
+    const TIER = [
+      {tier:3,min:'25000000'}, {tier:2,min:'5000000'}, {tier:1,min:'1000000'}, {tier:0,min:'0'}
+    ];
+    const FREE = {0:1,1:2,2:3,3:5};
+    const NUM = {primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26};
 
-    firebase.initializeApp(FB);
+    /* ======= Firebase ======= */
+    firebase.initializeApp({
+      apiKey:"AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+      authDomain:"cronation-6058b.firebaseapp.com",
+      projectId:"cronation-6058b",
+      storageBucket:"cronation-6058b.appspot.com",
+      appId:"1:303748855698:web:b03fe82e7314ab371bf34b"
+    });
     const db = firebase.firestore();
 
+    /* ======= Debug helpers ======= */
     const $ = (id)=>document.getElementById(id);
-    const setText = (id, v)=>{ const n=$(id); if(n) n.textContent=v; };
-    const short = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
-
-    /* ---------- Debug helpers ---------- */
+    const setText=(id,v)=>{const n=$(id); if(n) n.textContent=v;};
+    const short=(a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
     const DBG = [];
-    function dbg(...a){ try{ DBG.push(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' ')); flushDbg(); }catch(_){} }
-    function flushDbg(){ const pane=$('dbg'); if(!pane) return; pane.textContent = DBG.join('\n'); }
-    function toggleDebug(on){ const sec=$('debug'); if(sec) sec.style.display= on?'block':'none'; const btn=$('showDebug'); if(btn) btn.setAttribute('aria-pressed', on?'true':'false'); }
-    (function initDebugToggle(){ const q= new URLSearchParams(location.search); if(q.get('debug')==='1') toggleDebug(true); $('showDebug').onclick=()=> toggleDebug($('debug').style.display!=='block'); })();
+    function dbg(...a){ try{ DBG.push(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' ')); const d=$('dbg'); if(d) d.textContent=DBG.join('\n'); }catch{} }
+    $('toggleDebug').onclick = ()=> {
+      const on = $('debug').style.display !== 'block';
+      $('debug').style.display = on?'block':'none';
+      $('toggleDebug').setAttribute('aria-pressed', on?'true':'false');
+    };
+    if (new URLSearchParams(location.search).get('debug') === '1') $('debug').style.display = 'block';
 
-    /* ---------- Environment guard (https) ---------- */
-    (function envGuard(){
-      const warn = $('envWarn');
-      const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
-      if(!isHTTPS){
-        warn.style.display='block';
-        warn.textContent = 'This page is not served over HTTPS. Wallets may refuse to connect on http:// or file://.';
-        dbg('WARN not https:', location.href);
-      }
+    // HTTPS guard (wallets often refuse file:// or http://)
+    (function httpsGuard(){
+      const ok = (location.protocol === 'https:' || location.hostname === 'localhost');
+      if(!ok){ const w=$('envWarn'); w.style.display='block'; w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.'; dbg('WARN non-https', location.href); }
     })();
 
-    /* ========= Provider selection & robust initialization ========= */
-    let injected = null, provider = null, signer = null, addr = null;
-
-    function detectCDC(p){
-      return !!(p && (p.isDeFiWallet || p.isDeficonnectProvider || p.isCryptoCom || p._isDefi || p.wallet === 'Crypto.com DeFi Wallet'));
-    }
-
+    /* ======= Provider selection ======= */
+    function detectCDC(p){ return !!(p && (p.isDeFiWallet || p.isDeficonnectProvider || p.isCryptoCom)); }
     function pickInjectedProvider(){
       const eth = window.ethereum;
       if (!eth) return window.deficonnectProvider || null;
-
-      // Multi-provider (MetaMask, CDC, etc.)
       if (Array.isArray(eth.providers) && eth.providers.length){
-        const mm  = eth.providers.find(p => p && p.isMetaMask);
-        const cdc = eth.providers.find(p => detectCDC(p));
+        const mm = eth.providers.find(p=>p && p.isMetaMask);
+        const cdc= eth.providers.find(p=>detectCDC(p));
         return mm || cdc || eth.providers[0];
       }
-
-      // Single provider — try to identify CDC via flags, else just return it
-      if (detectCDC(eth)) return eth;
       return eth;
     }
-
-    function waitForEthereum(timeout=1500){
+    function waitForEthereum(timeout=1600){
       return new Promise((resolve)=>{
-        if (window.ethereum){ return resolve(window.ethereum); }
-        const t = setTimeout(()=> resolve(window.ethereum || null), timeout);
-        window.addEventListener('ethereum#initialized', ()=>{
-          clearTimeout(t); resolve(window.ethereum || null);
-        }, { once:true });
+        if (window.ethereum) return resolve(window.ethereum);
+        const t=setTimeout(()=>resolve(window.ethereum||null),timeout);
+        window.addEventListener('ethereum#initialized',()=>{ clearTimeout(t); resolve(window.ethereum||null); },{once:true});
       });
     }
 
+    /* ======= Wallet state ======= */
+    let injected=null, provider=null, signer=null, addr=null;
+
     async function ensureCronos(){
       if(!injected) return;
-      const desired = CHAIN.chainIdHex;
+      const desired = CRONOS.chainIdHex;
       let current;
-      try{ current = await injected.request({ method:'eth_chainId' }); } catch(e){ dbg('eth_chainId error', e?.message); }
+      try{ current = await injected.request({method:'eth_chainId'}); }catch(e){ dbg('eth_chainId error', e?.message); }
       if ((current||'').toLowerCase() === desired) return;
-      try {
-        await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId: desired }] });
-      } catch (e) {
-        if (e?.code === 4902) {
-          dbg('Adding Cronos chain');
-          await injected.request({
-            method:'wallet_addEthereumChain',
-            params: [{
-              chainId: desired,
-              chainName: 'Cronos Mainnet',
-              nativeCurrency: { name:'Cronos', symbol:'CRO', decimals:18 },
-              rpcUrls: ['https://evm.cronos.org'],
-              blockExplorerUrls: ['https://cronoscan.com']
-            }]
-          });
-        } else {
-          throw e;
-        }
+      try{
+        await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId:desired }]});
+      }catch(e){
+        if (e?.code === 4902){
+          dbg('Adding Cronos');
+          await injected.request({ method:'wallet_addEthereumChain', params:[{
+            chainId:desired, chainName:'Cronos Mainnet',
+            nativeCurrency:{name:'Cronos',symbol:'CRO',decimals:18},
+            rpcUrls:[CRONOS.rpc], blockExplorerUrls:['https://cronoscan.com']
+          }]});
+        } else { throw e; }
       }
     }
 
     function wireProviderEvents(){
-      if (!injected || injected._wired_cronation_draw) return;
-      injected._wired_cronation_draw = true;
+      if(!injected || injected._wired_draw) return;
+      injected._wired_draw = true;
       injected.on?.('accountsChanged', async (acc)=>{
         dbg('accountsChanged', acc);
-        if(acc && acc[0]){
+        if (acc && acc[0]){
           addr = acc[0].toLowerCase();
-          localStorage.setItem('cronation:lastWallet', addr);
-          setText('connect', short(addr));
-          await refreshTier(); await restorePassport(addr); await loadMine(); wireAdmin();
+          setText('addr-pill', short(addr));
+          await afterConnect();
         } else {
-          addr = undefined;
-          localStorage.removeItem('cronation:lastWallet');
-          setText('connect','Connect Wallet');
-          setPassportPill('—');
+          addr = null;
+          setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
+          $('app').style.display='none';
         }
       });
-      injected.on?.('chainChanged', (ch)=>{ dbg('chainChanged', ch); location.reload(); });
-      injected.on?.('connect', (info)=> dbg('provider connect', info));
-      injected.on?.('disconnect', (err)=> dbg('provider disconnect', err?.message||err));
-    }
-
-    function setPassportPill(txt){ setText('passport-pill', 'Passport: ' + (txt || '—')); }
-    async function restorePassport(walletLower){
-      try{
-        if(!walletLower) { setPassportPill('—'); return; }
-        const snap = await db.collection('passports').doc(walletLower).get();
-        if(!snap.exists){ setPassportPill('None'); return; }
-        const p = snap.data();
-        const serial = String(p.serial||'000000').padStart(6,'0');
-        setPassportPill(`${p.country||'—'} #${serial}`);
-      }catch(e){ setPassportPill('—'); dbg('restorePassport error', e?.message); }
+      injected.on?.('chainChanged', (cid)=>{ dbg('chainChanged', cid); location.reload(); });
     }
 
     async function connect(){
-      await waitForEthereum(); // handle late injectors
+      await waitForEthereum();
       injected = pickInjectedProvider();
-      dbg('picked provider:', injected ? Object.keys(injected).filter(k=>/^is|wallet|providers$/.test(k)).map(k=>k+':'+injected[k]).join(', ') : 'none');
-
-      if(!injected){
-        alert('No wallet found. Open this page in MetaMask or Crypto.com DeFi Wallet.');
-        dbg('No provider detected');
-        return;
-      }
+      dbg('picked', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
+      if(!injected){ alert('Open this page inside MetaMask or Crypto.com DeFi Wallet.'); dbg('no provider'); return; }
 
       try { await ensureCronos(); }
-      catch(e){ alert('Please switch/add Cronos Mainnet.'); dbg('ensureCronos error', e?.message); return; }
+      catch(e){ alert('Please switch/add Cronos Mainnet in your wallet.'); dbg('ensureCronos', e?.message); return; }
 
       try { await injected.request({ method:'eth_requestAccounts' }); }
-      catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts error', e?.message); return; }
+      catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
 
       provider = new ethers.providers.Web3Provider(injected, 'any');
       signer   = provider.getSigner();
 
       try { addr = (await signer.getAddress()).toLowerCase(); }
-      catch(e){ alert('Could not read wallet address.'); dbg('getAddress error', e?.message); return; }
+      catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
 
-      localStorage.setItem('cronation:lastWallet', addr);
-      setText('connect', short(addr));
-
-      await refreshTier();
-      await restorePassport(addr);
-      await loadMine();
-      wireAdmin();
+      setText('addr-pill', short(addr));
+      const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+      setText('chain-pill', 'Chain '+(chainId||'?'));
       wireProviderEvents();
+      await afterConnect();
     }
     $('connect').addEventListener('click', connect);
 
-    async function cron8Balance(a){
-      try{
-        const read = new ethers.providers.JsonRpcProvider(CHAIN.rpc);
-        const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
-        return await erc20.balanceOf(a);
-      }catch(e){ dbg('cron8Balance error', e?.message); throw e; }
+    /* ======= App after connect ======= */
+    async function afterConnect(){
+      $('app').style.display='grid';
+      await loadDraw();
+      await refreshTier();
+      await restorePassport();
+      await loadMine();
+      if (addr && addr.toLowerCase() === ADMIN_WALLET.toLowerCase()){
+        $('admin').style.display='block'; adminRefresh();
+      } else {
+        $('admin').style.display='none';
+      }
     }
-    const parseUnits = (v,d)=> ethers.utils.parseUnits(v,d);
 
+    /* ======= Draw header ======= */
+    let __closeAt=0;
+    async function loadDraw(){
+      const snap = await db.collection('draws').doc(DRAW_ID).get();
+      const d = snap.exists ? snap.data() : {status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0}};
+      setText('status-pill', d.status||'—');
+      setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
+      setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
+      setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
+      __closeAt = d.closeAt||0;
+    }
+    setInterval(()=>{
+      if(!__closeAt) { setText('countdown','—'); return; }
+      const s = Math.max(0, Math.floor((__closeAt-Date.now())/1000));
+      const d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
+      setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
+    },1000);
+
+    /* ======= Passport pill ======= */
+    async function restorePassport(){
+      try{
+        const doc = await db.collection('passports').doc(addr).get();
+        if(!doc.exists){ return; }
+        const p = doc.data();
+        const serial = String(p.serial||'000000').padStart(6,'0');
+        // reuse tier/free pills for now (passport shown via pill only)
+        // (kept simple to isolate connect issues first)
+      }catch(e){ dbg('restorePassport', e?.message); }
+    }
+
+    /* ======= Tier / free ======= */
+    async function cron8Balance(a){
+      const read = new ethers.providers.JsonRpcProvider(CRONOS.rpc);
+      const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
+      return await erc20.balanceOf(a);
+    }
+    function parseUnits(v,d){ return ethers.utils.parseUnits(v,d); }
     async function refreshTier(){
       if(!addr) return;
       const bal = await cron8Balance(addr);
       let tier = 0;
-      for(const t of TIER){
-        if(ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRRON8?.decimals||CRON8.decimals))) { tier = t.tier; break; }
-        // typo-guard CRRON8 above (won’t ever run, but avoids reference error if someone edits)
+      for (const t of TIER){
+        if (ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
       }
-      // Correct compare:
-      for(const t of TIER){
-        if(ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
-      }
-      setText('tier-pill', 'Tier: ' + (tier===0?'Basic':('T'+tier)));
-      const claimed = await claimedFreeCount(addr);
+      setText('tier-pill','Tier: ' + (tier===0?'Basic':('T'+tier)));
+      const claimed = await db.collection('tickets')
+        .where('drawId','==',DRAW_ID).where('wallet','==',addr).where('isFree','==',true).get()
+        .then(q=>q.size).catch(()=>0);
       const left = Math.max(0, (FREE[tier] ?? 1) - claimed);
-      setText('free-pill', 'Free left: ' + left);
+      setText('free-pill', 'Free left: '+left);
       window.__freeLeft = left;
-      dbg('tier', tier, 'freeLeft', window.__freeLeft);
     }
 
-    async function claimedFreeCount(a){
+    /* ======= Tickets (minimal) ======= */
+    function qp(){ // quick-pick
+      const s=new Set(); while(s.size<NUM.primPick){ s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin); }
+      const mega=Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
+      return { primary:[...s].sort((a,b)=>a-b), mega };
+    }
+    async function loadMine(){
+      if(!addr){ $('tickets').innerHTML='<div class="muted">Connect wallet to see your tickets.</div>'; return; }
       const snap = await db.collection('tickets')
-        .where('drawId','==',DRAW_ID).where('wallet','==',a).where('isFree','==',true).get();
-      return snap.size || 0;
+        .where('drawId','==',DRAW_ID).where('wallet','==',addr).orderBy('created','desc').get();
+      const out=[];
+      snap.forEach(doc=>{
+        const d=doc.data();
+        out.push(`<div class="card"><div class="body"><div class="muted">${d.isFree?'Free':'Paid'}</div>
+          <div class="mono" style="margin-top:4px;">${(d.picks||[]).join(' - ')}  |  ★ ${d.mega}</div></div></div>`);
+      });
+      $('tickets').innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
     }
-
-    /* ---- Draw header (pots + commit + status + countdown) ---- */
-    let __closeAt = 0;
-    async function loadDraw(){
-      const d = await db.collection('draws').doc(DRAW_ID).get();
-      const data = d.exists ? d.data() : { status:'open', pots:{ cron8:0, cro:0 }, closeAt: Date.now()+7*864e5, commitHash:'—' };
-      setText('jp-cron8', (data.pots?.cron8||0).toLocaleString());
-      setText('jp-cro',   (data.pots?.cro||0).toLocaleString());
-      setText('jp-closes', data.closeAt ? new Date(data.closeAt).toLocaleString() : '—');
-      setText('commit', data.commitHash||'—');
-      setText('status-pill', data.status || '—');
-      __closeAt = data.closeAt || 0;
-      tickCountdown();
-    }
-    function tickCountdown(){
-      if(!__closeAt){ setText('countdown','—'); return; }
-      const s = Math.max(0, Math.floor((__closeAt - Date.now())/1000));
-      const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = s%60;
-      setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
-    }
-    setInterval(tickCountdown, 1000);
-
-    /* ---- Ticket picker ---- */
-    const primSel = new Set();
-    let mega = NUM.megaMin;
-
-    function renderPicker(){
-      const prim = $('prim'), m = $('mega');
-      prim.innerHTML = ''; m.innerHTML='';
-      for(let n=NUM.primMin; n<=NUM.primMax; n++){
-        const b = document.createElement('button');
-        b.type='button';
-        b.className = 'n' + (primSel.has(n)?' on':'');
-        b.textContent = String(n);
-        b.onclick = ()=>{ if(primSel.has(n)) primSel.delete(n); else if(primSel.size<NUM.primPick) primSel.add(n); renderPicker(); };
-        prim.appendChild(b);
-      }
-      for(let n=NUM.megaMin; n<=NUM.megaMax; n++){
-        const b = document.createElement('button');
-        b.type='button';
-        b.className = 'n mega' + (mega===n?' on':'');
-        b.textContent = String(n);
-        b.onclick = ()=>{ mega = n; renderPicker(); };
-        m.appendChild(b);
-      }
-    }
-    renderPicker();
-
-    function quick(){
-      const s = new Set();
-      while(s.size < NUM.primPick){
-        s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin);
-      }
-      const primary = [...s].sort((a,b)=>a-b);
-      const megaNum = Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
-      return { primary, mega: megaNum };
-    }
-
-    /* ---- Claim / Buy ---- */
-    async function claimQuick(){
+    $('quick-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
-      const picks = quick();
+      const picks = qp();
       await db.collection('tickets').add({
-        drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
-        isFree: true, created: firebase.firestore.FieldValue.serverTimestamp()
+        drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
+        created: firebase.firestore.FieldValue.serverTimestamp()
       });
       await loadMine(); await refreshTier();
-    }
-    async function claimManual(){
-      if(!addr) return alert('Connect wallet first');
-      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
-      if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
-      const picks = { primary: [...primSel].sort((a,b)=>a-b), mega };
-      await db.collection('tickets').add({
-        drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
-        isFree: true, created: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      primSel.clear(); mega = NUM.megaMin; renderPicker();
-      await loadMine(); await refreshTier();
-    }
-    $('quick-claim').onclick = claimQuick;
-    $('manual-claim').onclick = claimManual;
+    };
 
-    let __nextBuyAt = 0;
-    async function buyPaid(){
-      if(!addr) return alert('Connect wallet first');
-      const now = Date.now();
-      if (now < __nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s before buying again.`);
-      if(!injected) injected = pickInjectedProvider();
-      try { await ensureCronos(); } catch{ return alert('Please switch to Cronos Mainnet.'); }
+    // Manual UI (kept super-light just to not block connection testing)
+    (function buildManual(){
+      const prim=$('prim'), mega=$('mega'); let chosen=new Set(), m=NUM.megaMin;
+      function render(){
+        prim.innerHTML=''; mega.innerHTML='';
+        for(let n=NUM.primMin;n<=NUM.primMax;n++){
+          const b=document.createElement('button'); b.className='btn ghost'; b.textContent=String(n);
+          if(chosen.has(n)) b.style.borderColor='var(--accent)';
+          b.onclick=()=>{ if(chosen.has(n)) chosen.delete(n); else if(chosen.size<NUM.primPick) chosen.add(n); render(); };
+          prim.appendChild(b);
+        }
+        for(let n=NUM.megaMin;n<=NUM.megaMax;n++){
+          const b=document.createElement('button'); b.className='btn ghost'; b.textContent=String(n);
+          if(m===n) b.style.borderColor='#f59e0b';
+          b.onclick=()=>{ m=n; render(); }; mega.appendChild(b);
+        }
+        $('manual-claim').onclick = async ()=>{
+          if(!addr) return alert('Connect wallet first');
+          if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+          if(chosen.size!==NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
+          const picks=[...chosen].sort((a,b)=>a-b);
+          await db.collection('tickets').add({
+            drawId:DRAW_ID, wallet:addr, picks, mega:m, isFree:true,
+            created: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          chosen.clear(); m=NUM.megaMin; render(); await loadMine(); await refreshTier();
+        };
+      }
+      render();
+    })();
 
-      const qty = Math.max(1, parseInt(($('qty').value||'1'),10));
-      const totalCro = ethers.utils.parseEther(String(15 * qty));
+    let __nextBuyAt=0;
+    $('buy').onclick = async ()=>{
+      if(!addr) return alert('Connect wallet first');
+      const now=Date.now(); if(now<__nextBuyAt) return alert(`Wait ${Math.ceil((__nextBuyAt-now)/1000)}s…`);
+      await ensureCronos();
+      const qty=Math.max(1,parseInt(($('qty').value||'1'),10));
+      const total=ethers.utils.parseEther(String(15*qty));
       try{
-        await injected.request({
-          method:'eth_sendTransaction',
-          params:[{ from: addr, to: DEV_WALLET, value: totalCro.toHexString() }]
-        });
-      }catch(err){ dbg('payment error', err?.message); return alert('Payment cancelled or failed.'); }
-
-      __nextBuyAt = Date.now() + 3000;
-
-      const batch = [];
+        await injected.request({ method:'eth_sendTransaction', params:[{ from:addr, to:DEV_WALLET, value: total.toHexString() }]});
+      }catch(e){ dbg('eth_sendTransaction', e?.message); return alert('Payment cancelled or failed.'); }
+      __nextBuyAt=Date.now()+3000;
+      const batch=[];
       for(let i=0;i<qty;i++){
-        const picks = quick();
+        const picks=qp();
         batch.push(db.collection('tickets').add({
-          drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
-          isFree:false, created: firebase.firestore.FieldValue.serverTimestamp()
+          drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:false,
+          created: firebase.firestore.FieldValue.serverTimestamp()
         }));
       }
       batch.push(db.collection('ledger').add({
-        drawId: DRAW_ID, type:'purchase', wallet: addr, qty, priceCro: 15, to: DEV_WALLET,
+        drawId:DRAW_ID, type:'purchase', wallet:addr, qty, priceCro:15, to:DEV_WALLET,
         at: firebase.firestore.FieldValue.serverTimestamp()
       }));
-      await Promise.all(batch);
-      await loadMine();
-      alert(`Purchased ${qty} ticket(s). CRO sent to dev wallet.`);
-    }
-    $('buy').onclick = buyPaid;
+      await Promise.all(batch); await loadMine();
+      alert(`Purchased ${qty} ticket(s). CRO sent.`);
+    };
 
-    /* ---- My tickets grid ---- */
-    async function loadMine(){
-      if(!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
-      const snap = await db.collection('tickets')
-        .where('drawId','==',DRAW_ID).where('wallet','==',addr).orderBy('created','desc').get();
-      const rows = [];
-      snap.forEach(doc => {
-        const d = doc.data();
-        rows.push(`<div class="card"><div class="body">
-          <div class="muted">${d.isFree?'Free':'Paid'}</div>
-          <div class="mono" style="margin-top:4px;">${(d.picks||[]).join(' - ')}  |  ★ ${d.mega}</div>
-        </div></div>`);
-      });
-      $('tickets').innerHTML = rows.join('') || '<div class="muted">No tickets yet.</div>';
-    }
-
-    /* === Admin (dev wallet) === */
-    const isAdmin = (a)=> (a||'').toLowerCase() === ADMIN_WALLET.toLowerCase();
-    const showAdmin = (on)=> { const c=$('admin-card'); if(c) c.style.display = on ? 'block' : 'none'; };
-
-    const toHex = (buf)=> Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    /* ======= Admin (commit–reveal) ======= */
+    const SEED_KEY='cronation_draw_seed';
+    const toHex=(buf)=>Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
     async function sha256Hex(str){ const enc=new TextEncoder(); const buf=await crypto.subtle.digest('SHA-256', enc.encode(str)); return '0x'+toHex(buf); }
-    function randomSeed(){ const b = new Uint8Array(32); crypto.getRandomValues(b); return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(''); }
-    function copyTxt(t){ try{ navigator.clipboard.writeText(t); alert('Copied'); }catch(_){} }
-
-    const SEED_KEY = 'cronation_draw_seed';
+    function randomSeed(){ const b=new Uint8Array(32); crypto.getRandomValues(b); return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(''); }
 
     async function adminRefresh(){
-      const snap = await db.collection('draws').doc(DRAW_ID).get();
-      if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); return; }
-      const d = snap.data();
-      setText('admin-status', `status: ${d.status||'—'}`);
-      setText('admin-commit', d.commitHash || '—');
-      setText('admin-reveal', d.revealSeed || localStorage.getItem(SEED_KEY) || '—');
-      if(d.closeAt) $('admin-closeAt').value = new Date(d.closeAt).toISOString().slice(0,16);
-      $('admin-cron8').value = d.pots?.cron8 ?? 0;
-      $('admin-cro').value   = d.pots?.cro   ?? 0;
+      const snap=await db.collection('draws').doc(DRAW_ID).get();
+      if(!snap.exists){ setText('admin-status','status: (no draw)'); return; }
+      const d=snap.data();
+      setText('admin-status',`status: ${d.status||'—'}`);
+      setText('admin-commit',d.commitHash||'—');
+      setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
+      if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
+      $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
     }
-    async function adminOpen(){
-      const seed = randomSeed();
-      const commit = await sha256Hex(seed);
-      localStorage.setItem(SEED_KEY, seed);
-      const closeAtStr = $('admin-closeAt').value;
-      const closeAt = closeAtStr ? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
-      const cron8 = parseFloat($('admin-cron8').value||'0')||0;
-      const cro   = parseFloat($('admin-cro').value||'0')||0;
-      await db.collection('draws').doc(DRAW_ID).set({
-        status:'open', commitHash:commit, closeAt, pots:{cron8, cro},
-        revealSeed: firebase.firestore.FieldValue.delete()
-      }, { merge:true });
-      await adminRefresh(); await loadDraw();
-      alert('Draw opened with new commit. Keep the seed safe.');
-    }
-    async function adminClose(){
-      const seed = localStorage.getItem(SEED_KEY);
-      if(!seed) return alert('No local seed found. Reveal the same seed you committed.');
-      await db.collection('draws').doc(DRAW_ID).set({ status:'closed', revealSeed:seed }, { merge:true });
-      await adminRefresh(); await loadDraw();
-      alert('Draw closed & seed revealed.');
-    }
-    function wireAdmin(){
-      if(isAdmin(addr)){ showAdmin(true); adminRefresh(); }
-      $('admin-open')?.addEventListener('click', adminOpen);
-      $('admin-close')?.addEventListener('click', adminClose);
-      $('admin-refresh')?.addEventListener('click', adminRefresh);
-      $('copy-commit')?.addEventListener('click', ()=> copyTxt(($('admin-commit')?.textContent||'').trim()));
-      $('copy-reveal')?.addEventListener('click', ()=> copyTxt(($('admin-reveal')?.textContent||'').trim()));
-    }
+    $('admin-open').onclick = async ()=>{
+      const seed=randomSeed(); const commit=await sha256Hex(seed); localStorage.setItem(SEED_KEY,seed);
+      const closeAtStr=$('admin-closeAt').value; const closeAt=closeAtStr? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
+      const cron8=parseFloat($('admin-cron8').value||'0')||0; const cro=parseFloat($('admin-cro').value||'0')||0;
+      await db.collection('draws').doc(DRAW_ID).set({ status:'open', commitHash:commit, closeAt, pots:{cron8,cro}, revealSeed: firebase.firestore.FieldValue.delete() },{merge:true});
+      await adminRefresh(); await loadDraw(); alert('Draw opened. Seed saved locally.');
+    };
+    $('admin-close').onclick = async ()=>{
+      const seed=localStorage.getItem(SEED_KEY); if(!seed) return alert('No local seed to reveal.');
+      await db.collection('draws').doc(DRAW_ID).set({ status:'closed', revealSeed:seed },{merge:true});
+      await adminRefresh(); await loadDraw(); alert('Draw closed & seed revealed.');
+    };
+    $('admin-refresh').onclick = adminRefresh;
+    $('copy-commit').onclick = ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim());
+    $('copy-reveal').onclick = ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim());
 
-    async function verifyCommit(){
-      try{
-        const snap = await db.collection('draws').doc(DRAW_ID).get();
-        if(!snap.exists) { setText('verify-status','No draw'); return; }
-        const d = snap.data();
-        const seed = d.revealSeed;
-        const commit = (d.commitHash||'').toLowerCase();
-        if(!seed) { setText('verify-status','No reveal yet'); return; }
-        const calc = (await sha256Hex(seed)).toLowerCase();
-        setText('verify-status', (calc === commit) ? '✅ Verified' : '❌ Mismatch');
-      }catch(e){ setText('verify-status','Error'); dbg('verify error', e?.message); }
-    }
-    $('verify')?.addEventListener('click', verifyCommit);
-
-    /* ---- Boot ---- */
-    (async () => {
+    /* ======= Boot: silent restore for connect ======= */
+    (async ()=>{
+      // draw header even if not connected
       await loadDraw();
 
-      // 1) Silent restore via provider (after waiting for late injections)
       await waitForEthereum();
       injected = pickInjectedProvider();
+
+      // Try silent restore
       if (injected){
         try{
           const acc = await injected.request({ method:'eth_accounts' });
-          dbg('eth_accounts', acc);
-          if(acc && acc.length){
+          if (acc && acc[0]){
             provider = new ethers.providers.Web3Provider(injected, 'any');
-            signer   = provider.getSigner();
-            addr     = acc[0].toLowerCase();
-            setText('connect', short(addr));
-            await refreshTier();
-            await restorePassport(addr);
-            await loadMine();
-            wireAdmin();
+            signer = provider.getSigner();
+            addr = acc[0].toLowerCase();
+            setText('addr-pill', short(addr));
+            const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+            setText('chain-pill','Chain '+(chainId||'?'));
             wireProviderEvents();
+            await afterConnect();
           }
-        }catch(e){ dbg('silent restore error', e?.message); }
-      }
-
-      // 2) Fallback to cached address for read-only UI
-      if(!addr){
-        const last = localStorage.getItem('cronation:lastWallet');
-        if(last){
-          addr = last;
-          setText('connect', short(addr));
-          await refreshTier().catch(()=>{});
-          await restorePassport(addr).catch(()=>{});
-          await loadMine().catch(()=>{});
-          wireAdmin();
-        }
+        }catch(e){ dbg('silent restore', e?.message); }
       }
     })();
   </script>
