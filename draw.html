@@ -429,63 +429,78 @@
     }
 
     async function connect(){
-      setBusy(true);
-      try{
-        await waitForEthereum();
-        injected = pickInjectedProvider();
-        dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
-        if(!injected){
-          alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.');
-          dbg('no injected provider found');
-          return;
-        }
-
-        await ensureCronos();
-
-        try { await injected.request({ method:'eth_requestAccounts' }); }
-        catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
-
-        provider = new ethers.providers.Web3Provider(injected, 'any');
-        signer   = provider.getSigner();
-
-        try { addr = (await signer.getAddress()).toLowerCase(); }
-        catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
-
-        setText('addr-pill', short(addr));
-        const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-        setText('chain-pill', 'Chain ' + (chainId||'?'));
-        wireProviderEvents();
-        await afterConnect();
-
-      }catch(e){
-        dbg('connect error', e?.message || e);
-        alert('Wallet connect failed — try in your wallet’s in-app browser.');
-      }finally{
-        setBusy(false);
-      }
+  setBusy(true);
+  try{
+    await waitForEthereum();
+    injected = pickInjectedProvider();
+    dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
+    if(!injected){
+      alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.');
+      dbg('no injected provider found');
+      return;
     }
+
+    // 1) Authorize FIRST
+    try {
+      await injected.request({ method:'eth_requestAccounts' });
+    } catch(e){
+      alert('Connection cancelled.');
+      dbg('eth_requestAccounts', e?.message);
+      return;
+    }
+
+    provider = new ethers.providers.Web3Provider(injected, 'any');
+    signer   = provider.getSigner();
+
+    try { addr = (await signer.getAddress()).toLowerCase(); }
+    catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
+
+    // 2) THEN ensure Cronos
+    try { await ensureCronos(); }
+    catch(e){ dbg('ensureCronos', e?.message); /* still proceed; user is authorized */ }
+
+    setText('addr-pill', short(addr));
+    const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+    setText('chain-pill', 'Chain ' + (chainId||'?'));
+    wireProviderEvents();
+    await afterConnect();
+
+  }catch(e){
+    dbg('connect error', e?.message || e);
+    alert('Wallet connect failed — try in your wallet’s in-app browser.');
+  }finally{
+    setBusy(false);
+  }
+}
     $('connect').addEventListener('click', connect);
 
     /* ===== Connect safety harness: bind, global fallback, error surfacing ===== */
 (function hardenConnectBinding(){
-  // 1) Surface any JS errors to the debug panel (and console)
-  window.addEventListener('error', (e)=>{ dbg('window.onerror', e.message || e); });
-  window.addEventListener('unhandledrejection', (e)=>{ dbg('unhandledrejection', (e.reason && e.reason.message) || String(e.reason)); });
+  // Surface any script errors in your Debug panel
+  window.addEventListener('error', (e)=>dbg('window.onerror', e.message||e));
+  window.addEventListener('unhandledrejection', (e)=>dbg('unhandledrejection', (e.reason && e.reason.message) || String(e.reason)));
 
-  // 2) Ensure we always bind the button once the node exists
-  function bindConnect(){
-    try{
-      const btn = $('connect');
-      if(!btn){ dbg('connect <button> not found yet'); return false; }
-      // Avoid duplicate handlers
-      btn.__bound || (btn.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }), btn.__bound = true);
-      dbg('connect button bound');
-      return true;
-    }catch(err){
-      dbg('bindConnect error', err?.message || err);
-      return false;
-    }
+  function bind(){
+    const btn = document.getElementById('connect');
+    if(!btn){ dbg('connect button not found (yet)'); return false; }
+    if(btn.__bound) return true;
+    btn.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false });
+    btn.__bound = true;
+    dbg('connect button bound');
+    return true;
   }
+
+  // try now, and again on common late-injection moments
+  bind();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind, { once:true });
+  }
+  setTimeout(bind, 400);
+  setTimeout(bind, 1200);
+
+  // inline fallback (works even if binding failed)
+  window.__connect = ()=>{ try{ connect(); }catch(e){ dbg('__connect error', e?.message||e); } };
+})();
 
   // Try now…
   bindConnect();
