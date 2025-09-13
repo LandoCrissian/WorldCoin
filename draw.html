@@ -502,20 +502,7 @@
   window.__connect = ()=>{ try{ connect(); }catch(e){ dbg('__connect error', e?.message||e); } };
 })();
 
-  // Try now…
-  bindConnect();
-  // …and on DOMContentLoaded (some wallet webviews defer DOM)
-  document.readyState === 'loading'
-    ? document.addEventListener('DOMContentLoaded', bindConnect, { once:true })
-    : null;
-
-  // Some mobile wallet browsers rehydrate/late-inject; try again shortly
-  setTimeout(bindConnect, 400);
-  setTimeout(bindConnect, 1200);
-
-  // 3) Global fallback so the inline onclick can call this even if binding failed
-  window.__connect = ()=>{ try{ connect(); } catch(e){ dbg('global __connect error', e?.message || e); } };
-})();
+  
 
     /* ========= App workflow after connect ========= */
     async function afterConnect(){
