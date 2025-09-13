@@ -2,8 +2,10 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>CROnation Draw — Mega Jackpot</title>
+
+  <!-- Force dark before paint -->
   <script>document.documentElement.setAttribute('data-theme','dark');</script>
 
   <!-- Fonts -->
@@ -18,15 +20,36 @@
     :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
     *{ box-sizing:border-box }
     body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--text); background:var(--bg); }
-    .container{ width:min(1120px,92vw); margin-inline:auto; padding:20px 0 60px; }
-    .nav{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,13,18,.75); backdrop-filter:blur(8px); z-index:10; }
+
+    /* ---- Header copied to match index ---- */
+    header{ padding-top:calc(env(safe-area-inset-top,0px)); position:sticky; top:0; z-index:10;
+            backdrop-filter:saturate(120%) blur(8px);
+            background: color-mix(in srgb, var(--bg) 86%, transparent);
+            border-bottom:1px solid var(--line); }
+    .nav{ width:min(1120px,92vw); margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
     .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:800;}
     .brand img{width:32px;height:32px;border-radius:50%}
-    .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; transition:.12s; }
+    .links{ display:flex; gap:16px; }
+    .link{ text-decoration:none; color:var(--muted); font-weight:500; }
+    .actions{ display:flex; align-items:center; gap:10px; flex-wrap:nowrap; min-width:0; }
+    .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; transition:.12s; min-height:44px; }
     .btn:hover{ transform:translateY(-1px) }
     .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
     .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
     .btn.ghost{ background:transparent; }
+    .hamburger{ display:none; width:44px; height:44px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
+    .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
+    .hamburger[aria-expanded="true"] span:nth-child(2){ opacity:0; }
+    .hamburger[aria-expanded="true"] span:nth-child(1){ transform: translateY(6px) rotate(45deg); }
+    .hamburger[aria-expanded="true"] span:nth-child(3){ transform: translateY(-6px) rotate(-45deg); }
+    .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
+    .mobile-menu a.link{ display:block; padding:12px; color:var(--text); text-decoration:none; }
+    .mobile-menu a.link + a.link{ border-top:1px solid var(--line); }
+    .mobile-menu.open{ display:block; }
+    @media (max-width:640px){ .links{ display:none; } .hamburger{ display:inline-flex; } .actions{ margin-left:auto; gap:8px; } .actions .btn{ padding:10px 12px; } }
+
+    /* ---- Page layout ---- */
+    .container{ width:min(1120px,92vw); margin-inline:auto; padding:20px 0 60px; }
     .grid{ display:grid; gap:16px; }
     .two{ grid-template-columns:1.2fr 1fr; } @media (max-width:920px){ .two{ grid-template-columns:1fr } }
     .card{ border:1px solid var(--line); border-radius:14px; background:var(--soft); box-shadow:0 2px 16px rgba(0,0,0,.08); }
@@ -37,6 +60,7 @@
     .muted{ color:var(--muted) }
     .tickets{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+
     /* Debug */
     #debug{ display:none; }
     #debug pre{ white-space:pre-wrap; word-break:break-word; background:#0e1117; border:1px solid var(--line); padding:12px; border-radius:10px; }
@@ -44,16 +68,45 @@
   </style>
 </head>
 <body>
-  <header class="container nav">
-    <a href="/" class="brand">
-      <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation"/>
-      CROnation
-    </a>
-    <div class="row">
-      <a href="/" class="btn ghost">Home</a>
-      <button id="connect" class="btn">Connect Wallet</button>
-      <button id="toggleDebug" class="btn ghost" aria-pressed="false">Show debug</button>
-    </div>
+  <!-- Header identical to index, but links that point to home sections use /#hash -->
+  <header>
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/" aria-label="CROnation home">
+        <img src="https://raw.githubusercontent.com/LandoCrissian/WorldCoin/refs/heads/main/8DAEE2BE-F14F-4EB2-A993-E8EFE1EC2E35.png" alt="CROnation logo"/>
+        <b>CROnation</b>
+      </a>
+
+      <!-- Desktop links -->
+      <div class="links">
+        <a class="link" href="/#map-section">Map</a>
+        <a class="link" href="/#leaderboard-card">Leaderboard</a>
+        <a class="link" href="/#about">About</a>
+        <a class="link" href="/draw.html">Draw</a>
+        <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
+        <a class="link" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
+        <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+        <a class="link" id="adminLink" href="#admin" style="display:none;">Admin</a>
+      </div>
+
+      <div class="actions">
+        <button id="connect" class="btn ghost">Connect Wallet</button>
+        <a id="buyBtn" class="btn ghost" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+        <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+
+      <!-- Mobile menu -->
+      <div class="mobile-menu" id="mobile-menu" role="menu">
+        <a class="link" role="menuitem" href="/#map-section">Map</a>
+        <a class="link" role="menuitem" href="/#leaderboard-card">Leaderboard</a>
+        <a class="link" role="menuitem" href="/#about">About</a>
+        <a class="link" role="menuitem" href="/draw.html">Draw</a>
+        <a class="link" role="menuitem" href="https://x.com/cronation8" target="_blank" rel="noopener">Follow on 𝕏</a>
+        <a class="link" role="menuitem" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Join on Telegram</a>
+        <a class="link" role="menuitem" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
+      </div>
+    </nav>
   </header>
 
   <main class="container grid" style="margin-top:14px;">
@@ -80,7 +133,7 @@
       </div>
     </section>
 
-    <!-- Tickets + actions (stay hidden until connected) -->
+    <!-- Tickets + actions (hidden until connected) -->
     <section id="app" class="grid two" style="display:none;">
       <div class="card">
         <div class="body">
@@ -158,6 +211,20 @@
   </main>
 
   <script>
+    /* ===== Mobile menu (same behavior as index) ===== */
+    (function mobileMenu(){
+      const btn = document.getElementById('hamburger');
+      const menu = document.getElementById('mobile-menu');
+      if(!btn || !menu) return;
+      const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+      const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
+      btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
+      menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+      window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+      window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
+      window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
+    })();
+
     /* ======= CONSTANTS (exact per your spec) ======= */
     const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
     const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
@@ -190,17 +257,24 @@
     const short=(a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
     const DBG = [];
     function dbg(...a){ try{ DBG.push(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' ')); const d=$('dbg'); if(d) d.textContent=DBG.join('\n'); }catch{} }
-    $('toggleDebug').onclick = ()=> {
-      const on = $('debug').style.display !== 'block';
-      $('debug').style.display = on?'block':'none';
-      $('toggleDebug').setAttribute('aria-pressed', on?'true':'false');
-    };
-    if (new URLSearchParams(location.search).get('debug') === '1') $('debug').style.display = 'block';
+    // Toggle debug via button or ?debug=1
+    (function(){
+      const t=document.createElement('button'); /* no-op just keeping structure tidy */
+      const toggle=document.getElementById('toggleDebug');
+      if(toggle){
+        toggle.onclick = ()=> {
+          const on = $('debug').style.display !== 'block';
+          $('debug').style.display = on?'block':'none';
+          toggle.setAttribute('aria-pressed', on?'true':'false');
+        };
+      }
+      if (new URLSearchParams(location.search).get('debug') === '1') { const d=$('debug'); if(d) d.style.display='block'; }
+    })();
 
     // HTTPS guard (wallets often refuse file:// or http://)
     (function httpsGuard(){
       const ok = (location.protocol === 'https:' || location.hostname === 'localhost');
-      if(!ok){ const w=$('envWarn'); w.style.display='block'; w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.'; dbg('WARN non-https', location.href); }
+      if(!ok){ const w=$('envWarn'); if(w){ w.style.display='block'; w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.'; } dbg('WARN non-https', location.href); }
     })();
 
     /* ======= Provider selection ======= */
@@ -288,7 +362,7 @@
       wireProviderEvents();
       await afterConnect();
     }
-    $('connect').addEventListener('click', connect);
+    document.getElementById('connect').addEventListener('click', connect);
 
     /* ======= App after connect ======= */
     async function afterConnect(){
@@ -322,15 +396,14 @@
       setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
     },1000);
 
-    /* ======= Passport pill ======= */
+    /* ======= Passport (placeholder pill for now) ======= */
     async function restorePassport(){
       try{
         const doc = await db.collection('passports').doc(addr).get();
         if(!doc.exists){ return; }
         const p = doc.data();
         const serial = String(p.serial||'000000').padStart(6,'0');
-        // reuse tier/free pills for now (passport shown via pill only)
-        // (kept simple to isolate connect issues first)
+        // You can display serial here if you want, keeping UI clean for now
       }catch(e){ dbg('restorePassport', e?.message); }
     }
 
@@ -357,7 +430,7 @@
       window.__freeLeft = left;
     }
 
-    /* ======= Tickets (minimal) ======= */
+    /* ======= Tickets ======= */
     function qp(){ // quick-pick
       const s=new Set(); while(s.size<NUM.primPick){ s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin); }
       const mega=Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
@@ -375,7 +448,7 @@
       });
       $('tickets').innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
     }
-    $('quick-claim').onclick = async ()=>{
+    document.getElementById('quick-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
       const picks = qp();
@@ -386,7 +459,7 @@
       await loadMine(); await refreshTier();
     };
 
-    // Manual UI (kept super-light just to not block connection testing)
+    // Manual picker (light)
     (function buildManual(){
       const prim=$('prim'), mega=$('mega'); let chosen=new Set(), m=NUM.megaMin;
       function render(){
@@ -417,6 +490,7 @@
       render();
     })();
 
+    /* ======= Buy flow ======= */
     let __nextBuyAt=0;
     $('buy').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
@@ -476,15 +550,21 @@
     $('copy-commit').onclick = ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim());
     $('copy-reveal').onclick = ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim());
 
-    /* ======= Boot: silent restore for connect ======= */
+    /* ======= Boot: header + silent restore ======= */
     (async ()=>{
-      // draw header even if not connected
       await loadDraw();
+
+      // show Admin link if connected later (same pattern as index)
+      function isAdmin(a){ return !!a && a.toLowerCase() === ADMIN_WALLET.toLowerCase(); }
+      function showAdminUI(on){
+        const link = document.getElementById('adminLink');
+        const panel = document.getElementById('admin');
+        if (link)  link.style.display  = on ? 'inline-block' : 'none';
+        if (panel) panel.style.display = on ? 'block' : 'none';
+      }
 
       await waitForEthereum();
       injected = pickInjectedProvider();
-
-      // Try silent restore
       if (injected){
         try{
           const acc = await injected.request({ method:'eth_accounts' });
@@ -497,6 +577,7 @@
             setText('chain-pill','Chain '+(chainId||'?'));
             wireProviderEvents();
             await afterConnect();
+            if (isAdmin(addr)) showAdminUI(true);
           }
         }catch(e){ dbg('silent restore', e?.message); }
       }
