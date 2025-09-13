@@ -24,6 +24,7 @@
     .nav{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,13,18,.75); backdrop-filter:blur(8px); z-index:10; }
     .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; transition:.12s; }
     .btn:hover{ transform:translateY(-1px) }
+    .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
     .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
     .btn.ghost{ background:transparent; }
     .grid{ display:grid; gap:16px; }
@@ -41,6 +42,7 @@
     .n.mega.on{ background:#f59e0b; color:#111827; border-color:#f59e0b; }
     .tickets{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+    small.helper{ display:inline-block;color:var(--muted); }
   </style>
 </head>
 <body>
@@ -59,7 +61,11 @@
           <div>
             <div class="muted">Mega Jackpot</div>
             <div class="h1"><span id="jp-cron8">0</span> CRON8 + <span id="jp-cro">0</span> CRO</div>
-            <div class="muted">Closes: <span id="jp-closes">—</span> • <span class="pill">Rollover enabled</span></div>
+            <div class="muted">
+              Closes: <span id="jp-closes">—</span>
+              • <span class="pill" id="status-pill">—</span>
+              • <span class="pill" id="countdown">—</span>
+            </div>
           </div>
           <div class="row">
             <span class="pill" id="tier-pill">Tier: —</span>
@@ -100,8 +106,8 @@
         </div>
 
         <div class="mono muted" style="margin-top:6px;">
-          Commit: <span id="admin-commit">—</span><br/>
-          Reveal seed (stored client-side until reveal): <span id="admin-reveal">—</span>
+          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit" title="Copy commit hash">Copy</button><br/>
+          Reveal seed (stored client-side until reveal): <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal" title="Copy reveal seed">Copy</button>
         </div>
         <small class="muted">Commit–reveal uses browser crypto: we post the <b>hash</b> at open; at close we post the secret seed so anyone can verify.</small>
       </div>
@@ -136,7 +142,8 @@
             <input id="qty" type="number" min="1" value="1" style="width:80px;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0b0d12;color:var(--text)">
             <button class="btn primary" id="buy">Buy</button>
           </div>
-          <small class="muted">Buying is live: CRO is sent to the dev wallet; tickets + ledger are recorded.</small>
+          <small class="muted">Sends CRO → dev wallet and records tickets + ledger entry.</small><br/>
+          <small class="helper">Anti-spam: 3s cooldown between buys.</small>
         </div>
       </aside>
     </section>
@@ -162,7 +169,7 @@
   </main>
 
   <script>
-    /* --- Config (reuse your Firebase project) --- */
+    /* --- Config --- */
     const FB = {
       apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
       authDomain: "cronation-6058b.firebaseapp.com",
@@ -183,9 +190,8 @@
       { tier:1, min:'1000000',  label:'T1' },
       { tier:0, min:'0',        label:'Basic' }
     ];
-    const FREE = { 0:1, 1:2, 2:3, 3:5 }; // Basic=1, T1=2, T2=3, T3=5
-    const DRAW_ID = 'current'; // weekly doc id
-
+    const FREE = { 0:1, 1:2, 2:3, 3:5 };
+    const DRAW_ID = 'current';
     const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
     const ADMIN_WALLET = DEV_WALLET;
 
@@ -194,13 +200,14 @@
 
     const $ = (id)=>document.getElementById(id);
     function setText(id, v){ const n=$(id); if(n) n.textContent=v; }
+    function short(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
 
     /* ---- Wallet ---- */
     let provider, signer, addr;
 
     async function ensureCronos(){
       if(!window.ethereum) return;
-      const desired = '0x19'; // Cronos Mainnet
+      const desired = '0x19';
       const current = await ethereum.request({ method:'eth_chainId' }).catch(()=>null);
       if ((current||'').toLowerCase() === desired) return;
       try {
@@ -242,27 +249,32 @@
       if(!window.ethereum){ alert('Open in a wallet browser (MetaMask/CDC)'); return; }
 
       try { await ensureCronos(); } catch(e){ alert('Please switch to Cronos Mainnet in your wallet.'); return; }
-      await ethereum.request({ method:'eth_requestAccounts' });
+      try { await ethereum.request({ method:'eth_requestAccounts' }); } catch(e){ alert('Connection cancelled.'); return; }
 
       provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
       signer   = provider.getSigner();
-      addr     = (await signer.getAddress()).toLowerCase();
+      try { addr = (await signer.getAddress()).toLowerCase(); }
+      catch { alert('Could not read wallet address.'); return; }
 
       localStorage.setItem('cronation:lastWallet', addr);
-      $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
+      $('connect').textContent = short(addr);
 
       await refreshTier();
       await restorePassport(addr);
       await loadMine();
       wireAdmin();
+      wireProviderEvents();
+    }
+    $('connect').addEventListener('click', connect);
 
+    function wireProviderEvents(){
       if (window.ethereum && !window.__cron_draw_listeners){
         window.__cron_draw_listeners = true;
         ethereum.on?.('accountsChanged', async (acc)=>{
           if(acc && acc[0]){
             addr = acc[0].toLowerCase();
             localStorage.setItem('cronation:lastWallet', addr);
-            $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
+            $('connect').textContent = short(addr);
             await refreshTier(); await restorePassport(addr); await loadMine(); wireAdmin();
           } else {
             addr = undefined;
@@ -274,7 +286,6 @@
         ethereum.on?.('chainChanged', ()=> location.reload());
       }
     }
-    $('connect').addEventListener('click', connect);
 
     async function cron8Balance(a){
       const read = new ethers.providers.JsonRpcProvider(CHAIN.rpc);
@@ -306,15 +317,28 @@
       return snap.size || 0;
     }
 
-    /* ---- Draw header (pots + commit) ---- */
+    /* ---- Draw header (pots + commit + status + countdown) ---- */
+    let __closeAt = 0, __status = '—';
     async function loadDraw(){
       const d = await db.collection('draws').doc(DRAW_ID).get();
-      const data = d.exists ? d.data() : { pots:{ cron8:0, cro:0 }, closeAt: Date.now()+7*864e5, commitHash:'—' };
+      const data = d.exists ? d.data() : { status:'open', pots:{ cron8:0, cro:0 }, closeAt: Date.now()+7*864e5, commitHash:'—' };
       setText('jp-cron8', (data.pots?.cron8||0).toLocaleString());
       setText('jp-cro',   (data.pots?.cro||0).toLocaleString());
       setText('jp-closes', data.closeAt ? new Date(data.closeAt).toLocaleString() : '—');
       setText('commit', data.commitHash||'—');
+      __closeAt = data.closeAt || 0;
+      __status  = data.status || '—';
+      setText('status-pill', __status);
+      tickCountdown();
     }
+
+    function tickCountdown(){
+      if(!__closeAt){ setText('countdown','—'); return; }
+      const s = Math.max(0, Math.floor((__closeAt - Date.now())/1000));
+      const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = s%60;
+      setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
+    }
+    setInterval(tickCountdown, 1000);
 
     /* ---- Ticket picker ---- */
     const primSel = new Set();
@@ -325,6 +349,7 @@
       prim.innerHTML = ''; m.innerHTML='';
       for(let n=NUM.primMin; n<=NUM.primMax; n++){
         const b = document.createElement('button');
+        b.type = 'button';
         b.className = 'n' + (primSel.has(n)?' on':'');
         b.textContent = String(n);
         b.onclick = ()=>{
@@ -336,6 +361,7 @@
       }
       for(let n=NUM.megaMin; n<=NUM.megaMax; n++){
         const b = document.createElement('button');
+        b.type = 'button';
         b.className = 'n mega' + (mega===n?' on':'');
         b.textContent = String(n);
         b.onclick = ()=>{ mega = n; renderPicker(); };
@@ -413,7 +439,7 @@
         return alert('Payment cancelled or failed.');
       }
 
-      __nextBuyAt = Date.now() + 3000; // 3s cooldown
+      __nextBuyAt = Date.now() + 3000;
 
       // After payment: issue tickets + ledger entry
       const batch = [];
@@ -471,6 +497,7 @@
       const b = new Uint8Array(32); crypto.getRandomValues(b);
       return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
     }
+    function copyTxt(t){ try{ navigator.clipboard.writeText(t); alert('Copied'); }catch(_){} }
 
     const SEED_KEY = 'cronation_draw_seed';
 
@@ -532,6 +559,8 @@
       $('admin-open')?.addEventListener('click', adminOpen);
       $('admin-close')?.addEventListener('click', adminClose);
       $('admin-refresh')?.addEventListener('click', adminRefresh);
+      $('copy-commit')?.addEventListener('click', ()=> copyTxt(($('admin-commit')?.textContent||'').trim()));
+      $('copy-reveal')?.addEventListener('click', ()=> copyTxt(($('admin-reveal')?.textContent||'').trim()));
     }
 
     async function verifyCommit(){
@@ -555,7 +584,7 @@
     (async () => {
       await loadDraw();
 
-      // 1) Authorized accounts (silent)
+      // 1) Silent restore if authorized
       if(window.ethereum){
         try{
           const acc = await ethereum.request({ method:'eth_accounts' });
@@ -563,21 +592,22 @@
             provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
             signer   = provider.getSigner();
             addr     = acc[0].toLowerCase();
-            $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
+            $('connect').textContent = short(addr);
             await refreshTier();
             await restorePassport(addr);
             await loadMine();
             wireAdmin();
+            wireProviderEvents();
             return;
           }
         }catch(_){}
       }
 
-      // 2) Fallback to last wallet (read-only context)
+      // 2) Last wallet (read-only context)
       const last = localStorage.getItem('cronation:lastWallet');
       if(last){
         addr = last;
-        $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
+        $('connect').textContent = short(addr);
         await refreshTier().catch(()=>{});
         await restorePassport(addr).catch(()=>{});
         await loadMine().catch(()=>{});
