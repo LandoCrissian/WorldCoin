@@ -536,6 +536,39 @@
       <div class="stat"><div><small>Country spotlight</small><span id="stat-spotlight">—</span></div></div>
     </div>
   </section>
+
+  <!-- Live Mega Jackpot (insert after the stats grid in the hero) -->
+<div class="card" id="jackpot-live-card" style="margin-top:14px;">
+  <div class="body">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0;">Mega Jackpot (Live)</h3>
+        <small class="muted">
+          Treasury wallet:
+          <a id="jackpot-addr" href="#" target="_blank" rel="noopener">—</a>
+        </small>
+      </div>
+      <a href="/draw" class="btn primary">Enter Draw</a>
+    </div>
+
+    <div class="stats" style="margin-top:12px;">
+      <div class="stat">
+        <div>
+          <small>CRON8 in wallet</small>
+          <span id="jackpot-cron8">Loading…</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div>
+          <small>CRO in wallet</small>
+          <span id="jackpot-cro">Loading…</span>
+        </div>
+      </div>
+    </div>
+
+    <small class="muted" id="jackpot-updated">Refreshing…</small>
+  </div>
+</div>
 <!-- SECTION 3 END -->
   <!-- SECTION 4 START: Map + Leaderboard + Join -->
   
@@ -719,6 +752,58 @@ window.addEventListener('DOMContentLoaded', () => {
       abi: [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}],
     }
   };
+
+  
+  /* === Live Jackpot widget (CRON8 + CRO balances) === */
+  (function jackpotLiveWidget(){
+    const JACKPOT_ADDR = '0xdF88941EC337e730AD27c284D4D31C35e1C83e8f';
+
+    function setJackpotLink(){
+      const a = document.getElementById('jackpot-addr');
+      if (!a) return;
+      a.href = `https://cronoscan.com/address/${JACKPOT_ADDR}`;
+      a.textContent = `${JACKPOT_ADDR.slice(0,6)}…${JACKPOT_ADDR.slice(-4)}`;
+    }
+
+    function setText(id, txt){
+      const n = document.getElementById(id);
+      if (n) n.textContent = txt;
+    }
+
+    async function refreshJackpotBalances(){
+      try{
+        // Read-only provider (no user wallet needed)
+        const provider = new ethers.providers.JsonRpcProvider(LAUNCH.token.rpc);
+
+        // CRO (native) balance
+        const croBal = await provider.getBalance(JACKPOT_ADDR);
+
+        // CRON8 (ERC-20) balance
+        const erc20 = new ethers.Contract(LAUNCH.token.address, LAUNCH.token.abi, provider);
+        const cronBal = await erc20.balanceOf(JACKPOT_ADDR);
+
+        // Format
+        const cro = parseFloat(ethers.utils.formatUnits(croBal, 18));
+        const cron8 = parseFloat(ethers.utils.formatUnits(cronBal, LAUNCH.token.decimals));
+
+        setText('jackpot-cro',    cro.toLocaleString(undefined, { maximumFractionDigits: 4 }));
+        setText('jackpot-cron8',  cron8.toLocaleString(undefined, { maximumFractionDigits: 0 }));
+
+        const ts = new Date().toLocaleTimeString();
+        setText('jackpot-updated', `Updated ${ts}`);
+      }catch(e){
+        console.error('[jackpot] refresh failed:', e);
+        setText('jackpot-updated', 'Unable to refresh (RPC). Retrying…');
+      }
+    }
+
+    // Initialize
+    setJackpotLink();
+    refreshJackpotBalances();
+    // Update every 30s
+    setInterval(refreshJackpotBalances, 30_000);
+  })();
+
 
   /* Admin allow-list (strings, normalized to lowercase) */
 const ADMIN_WALLETS = new Set([
