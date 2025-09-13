@@ -1,4 +1,3 @@
-<!-- draw.html — CROnation Draw (paste-ready, single file) -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -9,11 +8,12 @@
   <!-- Force dark BEFORE paint -->
   <script>document.documentElement.setAttribute('data-theme','dark');</script>
 
+  <!-- Core libs (no defer so boot code can run deterministically) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
 
-  <!-- Canonical + SEO (optional) -->
+  <!-- SEO (optional) -->
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#0b0d12" />
 
@@ -26,7 +26,6 @@
     html,body{ height:100%; }
     body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; color:var(--text); background:var(--bg); line-height:1.5; }
 
-    /* ===== Header/nav (copied to match index.html) ===== */
     header{ padding-top: calc(env(safe-area-inset-top, 0px)); position:sticky; top:0; backdrop-filter:saturate(120%) blur(8px); background: color-mix(in srgb, var(--bg) 86%, transparent); border-bottom:1px solid var(--line); z-index:10; }
     html { scroll-padding-top: 80px; }
     .container{ width:min(1120px, 92vw); margin-inline:auto; padding:24px 0 72px; }
@@ -44,8 +43,8 @@
     .btn.ghost{ background:transparent; }
     a.btn { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
 
-    /* Hamburger + mobile menu (identical behavior) */
-    #connectBtn, #buyBtn, #connect { min-width:160px; text-align:center; }
+    /* Hamburger + mobile menu */
+    #connectBtn, #buyBtn, #connect, #disconnect { min-width:160px; text-align:center; }
     .hamburger{ width:44px; height:44px; display:none; margin-left:8px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
     .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
     .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
@@ -59,7 +58,6 @@
     @media (max-width:640px){ .links{ display:none; } .actions{ margin-left:auto; gap:8px; } .actions .btn{ padding:10px 12px; } }
     @media (min-width:641px){ .mobile-menu{ display:none !important; } }
 
-    /* ===== Page layout ===== */
     .page{ width:min(1120px,92vw); margin-inline:auto; padding:20px 0 72px; }
     .grid{ display:grid; gap:16px; }
     .two{ grid-template-columns:1.2fr 1fr; } @media (max-width:960px){ .two{ grid-template-columns:1fr; } }
@@ -72,14 +70,12 @@
     .tickets{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
 
-    /* Numbers (tap targets ≥44px) */
     .numbers{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .n{ min-width:44px; height:44px; padding:0 12px; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; cursor:pointer; background:transparent; color:var(--text); }
     .n.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
     .n.mega{ border-color:#b45309; }
     .n.mega.on{ background:#f59e0b; color:#111827; border-color:#f59e0b; }
 
-    /* Notice + toast + loader (from index style language) */
     .notice{ background:color-mix(in srgb, var(--accent) 12%, var(--bg) 88%); border-bottom:1px solid var(--line); color:var(--text); }
     .notice .wrap{ width:min(1120px,92vw); margin:0 auto; padding:10px 0; font-weight:600; display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
     .toast { position:fixed;left:50%;bottom:18px;transform:translateX(-50%); background:#0f1219;border:1px solid var(--line);color:var(--text); padding:10px 12px;border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.35); z-index:6000;opacity:0;pointer-events:none;transition:.2s; }
@@ -90,7 +86,6 @@
     .loader .dot:nth-child(2){animation-delay:.15s;} .loader .dot:nth-child(3){animation-delay:.3s;}
     @keyframes ld { 0%,80%,100%{opacity:.2;transform:scale(.8);} 40%{opacity:1;transform:scale(1);} }
 
-    /* Debug section */
     #debug{ display:none; }
     #debug pre{ white-space:pre-wrap; word-break:break-word; background:#0e1117; border:1px solid var(--line); padding:12px; border-radius:10px; }
     .warn{ color:#fde68a } .err{ color:#fca5a5 }
@@ -104,7 +99,7 @@
     <div class="dot"></div><div class="dot"></div><div class="dot"></div>
   </div>
 
-  <!-- Header (identical links + behavior to index.html) -->
+  <!-- Header -->
   <header>
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="/#top" aria-label="CROnation home">
@@ -112,7 +107,6 @@
         <b>CROnation</b>
       </a>
 
-      <!-- Desktop links -->
       <div class="links">
         <a class="link" href="/#map-section">Map</a>
         <a class="link" href="/#leaderboard-card">Leaderboard</a>
@@ -125,14 +119,14 @@
       </div>
 
       <div class="actions">
-        <button id="connect" class="btn ghost" onclick="window.__connect && window.__connect()">Connect Wallet</button>
+        <button id="connect" class="btn ghost">Connect Wallet</button>
+        <button id="disconnect" class="btn ghost" style="display:none;">Disconnect</button>
         <a id="buyBtn" class="btn ghost" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
         <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
       </div>
 
-      <!-- Mobile menu -->
       <div class="mobile-menu" id="mobile-menu" role="menu">
         <a class="link" role="menuitem" href="/#map-section">Map</a>
         <a class="link" role="menuitem" href="/#leaderboard-card">Leaderboard</a>
@@ -148,8 +142,8 @@
   <!-- Status notice -->
   <div class="notice" role="status" aria-live="polite">
     <div class="wrap">
-      <span><b>Mega Jackpot Draw.</b></span>
-      <span><small>Connect your wallet, claim free entries based on CRON8 tier, or buy more with CRO.</small></span>
+      <span id="platformBanner"><b>Mega Jackpot Draw.</b></span>
+      <span><small>Connect your wallet, claim free entries (by CRON8 tier), or buy more with CRO.</small></span>
     </div>
   </div>
 
@@ -190,7 +184,6 @@
             <button class="btn primary" id="quick-claim">Claim — Quick Pick</button>
             <button class="btn" id="manual-claim">Claim — Manual</button>
           </div>
-          <!-- Manual picker -->
           <div id="picker" style="margin-top:6px;">
             <div class="muted" style="margin-bottom:6px;">Pick 5 numbers (1–69)</div>
             <div id="prim" class="numbers"></div>
@@ -204,7 +197,7 @@
         <div class="body">
           <h3>Buy more</h3>
           <p class="muted">Tickets are <b>15 CRO</b> each. v1 sends CRO to the dev wallet.</p>
-          <div class="row">
+        <div class="row">
             <input id="qty" type="number" min="1" value="1" style="width:96px;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0b0d12;color:var(--text)" />
             <button class="btn primary" id="buy">Buy</button>
           </div>
@@ -220,12 +213,26 @@
       </div>
     </section>
 
-    <!-- Admin (commit–reveal) -->
+    <!-- Admin -->
     <section id="admin" class="card" style="display:none;">
       <div class="body">
         <div class="row" style="justify-content:space-between;">
           <h3>Admin — Draw Controls</h3>
           <span class="pill" id="admin-status">status: —</span>
+        </div>
+        <div class="row" style="margin:8px 0;">
+          <label class="row">Platform:
+            <select id="admin-platform" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+          <label class="row">Draw actions:
+            <select id="admin-draw" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
         </div>
         <div class="row" style="margin:8px 0;">
           <label class="row">Close at:
@@ -242,6 +249,7 @@
           <button class="btn primary" id="admin-open">Open Draw (commit)</button>
           <button class="btn" id="admin-close">Close & Reveal</button>
           <button class="btn ghost" id="admin-refresh">Refresh</button>
+          <button class="btn ghost" id="admin-saveFlags">Save Flags</button>
         </div>
         <div class="mono muted" style="margin-top:6px;">
           Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
@@ -251,7 +259,7 @@
     </section>
 
     <!-- Debug -->
-    <section id="debug" class="card" aria-live="polite">
+    <section id="debug" class="card" aria-live="polite" style="display:none;">
       <div class="body">
         <div class="row" style="justify-content:space-between;gap:12px;">
           <h3>Debug</h3>
@@ -273,11 +281,12 @@
   </footer>
 
   <script>
-    /* ========= CONSTANTS (exact as your spec) ========= */
+    /* ========= CONSTANTS ========= */
     const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
     const DRAW_ID = 'current';
     const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
     const ADMIN_WALLET = DEV_WALLET;
+    const LS_CONNECTED = 'cronation_connected_v1';
 
     const CRON8 = {
       address:'0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
@@ -290,7 +299,8 @@
       { tier:1, min:'1000000'  },
       { tier:0, min:'0' }
     ];
-    const FREE = { 0:1, 1:2, 2:3, 3:5 };
+    // zero freebies for tier 0 (adjust as desired)
+    const FREE = { 0:0, 1:2, 2:3, 3:5 };
     const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
 
     /* ========= Firebase ========= */
@@ -303,58 +313,34 @@
     });
     const db = firebase.firestore();
 
-    /* ========= Small helpers ========= */
+    /* ========= Helpers ========= */
     const $ = (id)=>document.getElementById(id);
     const setText=(id,v)=>{ const n=$(id); if(n) n.textContent=v; };
     const short=(a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
     const toast = (msg)=>{ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); };
     const setBusy = (on)=>{ const l=$('loader'); l.setAttribute('aria-busy',on?'true':'false'); l.setAttribute('aria-hidden',on?'false':'true'); };
+    const disable = (id,on)=>{ const el=$(id); if(el) el.disabled=!!on; };
 
     // Debug capture
     const DBG = [];
     function dbg(...a){
-      try{
-        const line = a.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
-        DBG.push(line);
-        const pre = $('dbg'); if(pre) pre.textContent = DBG.join('\n');
+      try{ const line = a.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
+        DBG.push(line); const pre=$('dbg'); if(pre) pre.textContent=DBG.join('\n');
       }catch(_){}
     }
 
     // Footer year
     setText('year', new Date().getFullYear());
 
-    // Debug section toggle (default on if ?debug=1)
-    (function initDebug(){
-      const on = new URLSearchParams(location.search).get('debug') === '1';
-      $('debug').style.display = on ? 'block' : 'none';
-      const btn = $('toggleDebug');
-      if(btn){
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.onclick = () => {
-          const open = $('debug').style.display !== 'block';
-          $('debug').style.display = open ? 'block' : 'none';
-          btn.setAttribute('aria-pressed', open ? 'true':'false');
-          btn.textContent = open ? 'Hide debug' : 'Show debug';
-        };
-      }
-    })();
-
     // HTTPS guard
     (function httpsGuard(){
       const ok = (location.protocol === 'https:' || location.hostname === 'localhost');
-      if(!ok){
-        const w=$('envWarn');
-        w.style.display='block';
-        w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.';
-        dbg('WARN non-https', location.href);
-      }
+      if(!ok){ const w=$('envWarn'); w.style.display='block'; w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.'; dbg('WARN non-https', location.href); }
     })();
 
-    /* ========= Mobile menu (match index) ========= */
+    // Mobile menu
     (function mobileMenu(){
-      const btn = $('hamburger');
-      const menu = $('mobile-menu');
-      if(!btn || !menu) return;
+      const btn = $('hamburger'); const menu = $('mobile-menu'); if(!btn || !menu) return;
       const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
       const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
       btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
@@ -364,7 +350,7 @@
       window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
     })();
 
-    /* ========= Provider detection (MetaMask → DeFi Wallet → first) ========= */
+    /* ========= Wallet detection ========= */
     function detectCDC(p){ return !!(p && (p.isDeFiWallet || p.isDeficonnectProvider || p.isCryptoCom)); }
     function pickInjectedProvider(){
       const eth = window.ethereum;
@@ -384,8 +370,35 @@
       });
     }
 
-    /* ========= Wallet state ========= */
+    /* ========= App state ========= */
     let injected=null, provider=null, signer=null, addr=null;
+    let __closeAt=0;
+    let __platformEnabled = true;  // global kill switch
+    let __drawEnabled = true;      // allow actions
+    let __drawStatus = 'open';     // 'open' | 'closed'
+
+    function applyFlagsToUI(){
+      // Banner + buttons
+      const platformMsg = __platformEnabled ? '<b>Mega Jackpot Draw.</b>' : '<b>Platform is temporarily disabled.</b>';
+      setText('status-pill', __drawStatus || '—');
+      $('platformBanner').innerHTML = platformMsg;
+
+      const canAct = __platformEnabled && __drawEnabled && (__drawStatus === 'open');
+      disable('quick-claim', !canAct);
+      disable('manual-claim', !canAct);
+      disable('buy', !canAct);
+
+      if (!canAct){
+        $('quick-claim').title = 'Actions are currently disabled';
+        $('manual-claim').title = 'Actions are currently disabled';
+        $('buy').title = 'Actions are currently disabled';
+      } else {
+        $('quick-claim').title = '';
+        $('manual-claim').title = '';
+        $('buy').title = '';
+      }
+    }
+
     function wireProviderEvents(){
       if(!injected || injected._wired_draw) return;
       injected._wired_draw = true;
@@ -396,10 +409,7 @@
           setText('addr-pill', short(addr));
           await afterConnect();
         } else {
-          addr = null;
-          setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
-          $('app').style.display='none';
-          $('admin').style.display='none';
+          doDisconnectUI();
         }
       });
       injected.on?.('chainChanged', (cid)=>{ dbg('chainChanged', cid); location.reload(); });
@@ -428,104 +438,81 @@
     }
 
     async function connect(){
-  setBusy(true);
-  try{
-    await waitForEthereum();
-    injected = pickInjectedProvider();
-    dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
-    if(!injected){
-      alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.');
-      dbg('no injected provider found');
-      return;
+      setBusy(true);
+      try{
+        await waitForEthereum();
+        injected = pickInjectedProvider();
+        dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
+        if(!injected){ alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.'); dbg('no injected provider found'); return; }
+
+        try { await injected.request({ method:'eth_requestAccounts' }); }
+        catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
+
+        provider = new ethers.providers.Web3Provider(injected, 'any');
+        signer   = provider.getSigner();
+
+        try { addr = (await signer.getAddress()).toLowerCase(); }
+        catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
+
+        try { await ensureCronos(); } catch(e){ dbg('ensureCronos', e?.message); }
+
+        localStorage.setItem(LS_CONNECTED, '1'); // user explicitly connected
+
+        setText('addr-pill', short(addr));
+        const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+        setText('chain-pill', 'Chain ' + (chainId||'?'));
+
+        $('connect').style.display='none';
+        $('disconnect').style.display='inline-block';
+
+        wireProviderEvents();
+        await afterConnect();
+      }catch(e){
+        dbg('connect error', e?.message || e);
+        alert('Wallet connect failed — try in your wallet’s in-app browser.');
+      }finally{ setBusy(false); }
     }
-
-    // 1) Authorize FIRST
-    try {
-      await injected.request({ method:'eth_requestAccounts' });
-    } catch(e){
-      alert('Connection cancelled.');
-      dbg('eth_requestAccounts', e?.message);
-      return;
-    }
-
-    provider = new ethers.providers.Web3Provider(injected, 'any');
-    signer   = provider.getSigner();
-
-    try { addr = (await signer.getAddress()).toLowerCase(); }
-    catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
-
-    // 2) THEN ensure Cronos
-    try { await ensureCronos(); }
-    catch(e){ dbg('ensureCronos', e?.message); /* still proceed; user is authorized */ }
-
-    setText('addr-pill', short(addr));
-    const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-    setText('chain-pill', 'Chain ' + (chainId||'?'));
-    wireProviderEvents();
-    await afterConnect();
-
-  }catch(e){
-    dbg('connect error', e?.message || e);
-    alert('Wallet connect failed — try in your wallet’s in-app browser.');
-  }finally{
-    setBusy(false);
-  }
-}
     $('connect').addEventListener('click', connect);
 
-    /* ===== Connect safety harness: bind, global fallback, error surfacing ===== */
-(function hardenConnectBinding(){
-  window.addEventListener('error', (e)=>dbg('window.onerror', e.message||e));
-  window.addEventListener('unhandledrejection', (e)=>dbg('unhandledrejection', (e.reason && e.reason.message) || String(e.reason)));
+    function doDisconnectUI(){
+      addr = null; provider=null; signer=null;
+      $('app').style.display='none';
+      $('admin').style.display='none';
+      $('connect').style.display='inline-block';
+      $('disconnect').style.display='none';
+      setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
+    }
+    function disconnect(){
+      // we can’t force-disconnect the wallet extension; this clears *our* remembered state
+      localStorage.removeItem(LS_CONNECTED);
+      doDisconnectUI();
+      toast('Disconnected.');
+    }
+    $('disconnect').addEventListener('click', disconnect);
 
-  function bind(){
-    const btn = document.getElementById('connect');
-    if(!btn){ dbg('connect button not found (yet)'); return false; }
-    if(btn.__bound) return true;
-    btn.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false });
-    btn.__bound = true;
-    dbg('connect button bound');
-    return true;
-  }
-
-  // try now + a couple of retries for late DOM/wallet webviews
-  bind();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind, { once:true });
-  }
-  setTimeout(bind, 400);
-  setTimeout(bind, 1200);
-
-  // inline fallback for: onclick="window.__connect && window.__connect()"
-  window.__connect = ()=>{ try{ connect(); }catch(e){ dbg('__connect error', e?.message||e); } };
-})();
-
-  
-
-    /* ========= App workflow after connect ========= */
-    async function afterConnect(){
-      $('app').style.display='grid';
-      await loadDraw();
-      await refreshTier();
-      await restorePassport(); // silent read for UX (no UI, but ensures passport exists)
-      await loadMine();
-
-      const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase());
-      $('admin').style.display = isAdmin ? 'block' : 'none';
-      const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
+    /* ========= App workflow ========= */
+    async function loadConfigFlags(){
+      // Read platform/draw flags from Firestore: config/app document
+      try{
+        const snap = await db.collection('config').doc('app').get();
+        const cfg = snap.exists ? snap.data() : {};
+        __platformEnabled = cfg.platformEnabled !== false;  // default true
+        __drawEnabled = cfg.drawEnabled !== false;          // default true
+        applyFlagsToUI();
+      }catch(e){ dbg('loadConfigFlags', e?.message); }
     }
 
-    /* ========= Draw header ========= */
-    let __closeAt=0;
     async function loadDraw(){
       try{
         const snap = await db.collection('draws').doc(DRAW_ID).get();
         const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
-        setText('status-pill', d.status||'—');
+        __drawStatus = d.status || 'open';
+        setText('status-pill', __drawStatus);
         setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
         setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
         setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
         __closeAt = d.closeAt||0;
+        applyFlagsToUI();
       }catch(e){ dbg('loadDraw', e?.message); }
     }
     setInterval(()=>{
@@ -535,21 +522,16 @@
       setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
     }, 1000);
 
-    /* ========= Passport (pill only; reads existence) ========= */
     async function restorePassport(){
-      try{
-        if(!addr) return;
-        await db.collection('passports').doc(addr).get(); // existence implies user is in the system
-      }catch(e){ dbg('restorePassport', e?.message); }
+      try{ if(!addr) return; await db.collection('passports').doc(addr).get(); }catch(e){ dbg('restorePassport', e?.message); }
     }
 
-    /* ========= Tier / free logic ========= */
     async function cron8Balance(a){
       const read = new ethers.providers.JsonRpcProvider(CRONOS.rpc);
       const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
       return await erc20.balanceOf(a);
     }
-    function parseUnits(v,d){ return ethers.utils.parseUnits(v,d); }
+    const parseUnits=(v,d)=> ethers.utils.parseUnits(v,d);
 
     async function refreshTier(){
       if(!addr) return;
@@ -559,24 +541,19 @@
         for (const t of TIER){
           if (ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
         }
-        setText('tier-pill', 'Tier: ' + (tier===0?'Basic':('T'+tier)));
+        setText('tier-pill', 'Tier: ' + (tier===0?'None':('T'+tier)));
 
         const claimed = await db.collection('tickets')
           .where('drawId','==',DRAW_ID).where('wallet','==',addr).where('isFree','==',true).get()
           .then(q=>q.size).catch(()=>0);
-        const left = Math.max(0, (FREE[tier] ?? 1) - claimed);
+        const left = Math.max(0, (FREE[tier] ?? 0) - claimed);
         setText('free-pill', 'Free left: ' + left);
         window.__freeLeft = left;
-      }catch(e){
-        dbg('refreshTier', e?.message);
-        setText('tier-pill', 'Tier: —'); setText('free-pill', 'Free left: —');
-      }
+      }catch(e){ dbg('refreshTier', e?.message); setText('tier-pill', 'Tier: —'); setText('free-pill', 'Free left: —'); }
     }
 
-    /* ========= Ticket picker ========= */
     const primSel = new Set();
     let mega = NUM.megaMin;
-
     function renderPicker(){
       const prim = $('prim'), m = $('mega');
       prim.innerHTML = ''; m.innerHTML='';
@@ -602,9 +579,10 @@
       return { primary, mega: megaNum };
     }
 
-    /* ========= Free claim ========= */
+    /* ========= Claim & Buy ========= */
     $('quick-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
+      if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
       try{
         const picks = quickPick();
@@ -619,8 +597,9 @@
 
     $('manual-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
-      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+      if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
       if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
+      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
       try{
         const picks = { primary:[...primSel].sort((a,b)=>a-b), mega };
         await db.collection('tickets').add({
@@ -633,10 +612,10 @@
       }catch(e){ dbg('claim manual', e?.message); alert('Claim failed.'); }
     };
 
-    /* ========= Buy tickets ========= */
     let __nextBuyAt = 0;
     $('buy').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
+      if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
       const now=Date.now(); if(now<__nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s…`);
       try{
         await ensureCronos();
@@ -663,7 +642,6 @@
       }catch(e){ dbg('buy failed', e?.message); alert('Payment cancelled or failed.'); }
     };
 
-    /* ========= My tickets ========= */
     async function loadMine(){
       if(!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
       try{
@@ -681,7 +659,7 @@
       }catch(e){ dbg('loadMine', e?.message); $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>'; }
     }
 
-    /* ========= Admin (commit–reveal) ========= */
+    /* ========= Admin (commit–reveal + flags) ========= */
     const SEED_KEY='cronation_draw_seed';
     const toHex=(buf)=>Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
     async function sha256Hex(str){ const enc=new TextEncoder(); const buf=await crypto.subtle.digest('SHA-256', enc.encode(str)); return '0x'+toHex(buf); }
@@ -692,13 +670,25 @@
         const snap=await db.collection('draws').doc(DRAW_ID).get();
         if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); return; }
         const d=snap.data();
-        setText('admin-status',`status: ${d.status||'—'}`);
+        __drawStatus = d.status || 'open';
+        setText('admin-status',`status: ${__drawStatus}`);
         setText('admin-commit',d.commitHash||'—');
         setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
         if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
         $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
+
+        const cfg = await db.collection('config').doc('app').get();
+        if(cfg.exists){
+          const c = cfg.data();
+          $('admin-platform').value = (c.platformEnabled === false) ? 'disabled' : 'enabled';
+          $('admin-draw').value     = (c.drawEnabled === false) ? 'disabled' : 'enabled';
+          __platformEnabled = c.platformEnabled !== false;
+          __drawEnabled = c.drawEnabled !== false;
+        }
+        applyFlagsToUI();
       }catch(e){ dbg('adminRefresh', e?.message); }
     }
+
     $('admin-open').onclick = async ()=>{
       try{
         const seed=randomSeed(); const commit=await sha256Hex(seed); localStorage.setItem(SEED_KEY,seed);
@@ -711,6 +701,7 @@
         await adminRefresh(); await loadDraw(); alert('Draw opened. Seed saved locally.');
       }catch(e){ dbg('admin-open', e?.message); alert('Open failed.'); }
     };
+
     $('admin-close').onclick = async ()=>{
       try{
         const seed=localStorage.getItem(SEED_KEY); if(!seed) return alert('No local seed to reveal.');
@@ -718,36 +709,101 @@
         await adminRefresh(); await loadDraw(); alert('Draw closed & seed revealed.');
       }catch(e){ dbg('admin-close', e?.message); alert('Close failed.'); }
     };
+
     $('admin-refresh').onclick = adminRefresh;
+
+    $('admin-saveFlags').onclick = async ()=>{
+      try{
+        const platformEnabled = $('admin-platform').value === 'enabled';
+        const drawEnabled     = $('admin-draw').value === 'enabled';
+        await db.collection('config').doc('app').set({ platformEnabled, drawEnabled }, { merge:true });
+        __platformEnabled = platformEnabled;
+        __drawEnabled = drawEnabled;
+        applyFlagsToUI();
+        toast('Flags saved.');
+      }catch(e){ dbg('saveFlags', e?.message); alert('Saving flags failed.'); }
+    };
+
     $('copy-commit').onclick = ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim());
     $('copy-reveal').onclick = ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim());
 
-    /* ========= Boot: draw header + silent restore ========= */
+    /* ========= Boot: cautious restore (no auto-connect UI) ========= */
     (async ()=>{
+      await loadConfigFlags();
       await loadDraw();
 
       await waitForEthereum();
       injected = pickInjectedProvider();
 
+      // bind connect/disconnect
+      (function bindConnectButtons(){
+        const btn = $('connect');
+        const disc = $('disconnect');
+        if(btn && !btn.__bound){ btn.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }); btn.__bound = true; }
+        if(disc && !disc.__bound){ disc.addEventListener('click', (ev)=>{ ev.preventDefault(); disconnect(); }, { passive:false }); disc.__bound = true; }
+      })();
+
       if (injected){
         try{
-          const acc = await injected.request({ method:'eth_accounts' });
-          dbg('eth_accounts', acc);
-          if (acc && acc[0]){
+          const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+          setText('chain-pill','Chain ' + (chainId||'—'));
+
+          const acc = await injected.request({ method:'eth_accounts' }).catch(()=>[]);
+          dbg('eth_accounts (boot)', acc);
+
+          // Check wallet permissions (if available)
+          let hasEthAccountsPerm = false;
+          try {
+            const perms = await injected.request({ method:'wallet_getPermissions' });
+            hasEthAccountsPerm = Array.isArray(perms) && perms.some(p => p?.parentCapability === 'eth_accounts');
+            dbg('wallet_getPermissions', perms);
+          } catch(_) { /* not supported; ignore */ }
+
+          const shouldRestore = hasEthAccountsPerm && localStorage.getItem(LS_CONNECTED) === '1';
+          if (shouldRestore && acc && acc[0]){
             provider = new ethers.providers.Web3Provider(injected, 'any');
             signer   = provider.getSigner();
             addr     = acc[0].toLowerCase();
             setText('addr-pill', short(addr));
-            const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-            setText('chain-pill','Chain ' + (chainId||'?'));
+            $('connect').style.display='none';
+            $('disconnect').style.display='inline-block';
             wireProviderEvents();
             await afterConnect();
           } else {
-            setText('addr-pill','—'); setText('chain-pill','—');
+            doDisconnectUI(); // keep app hidden until explicit connect
           }
         }catch(e){ dbg('silent restore', e?.message); }
       } else {
         dbg('no provider on boot');
+      }
+    })();
+
+    async function afterConnect(){
+      $('app').style.display='grid';
+      await loadDraw();
+      await refreshTier();
+      await restorePassport();
+      await loadMine();
+
+      const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase());
+      $('admin').style.display = isAdmin ? 'block' : 'none';
+      const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
+      if(isAdmin) await adminRefresh();
+    }
+
+    /* ========= Debug panel toggle (optional) ========= */
+    (function initDebug(){
+      const on = new URLSearchParams(location.search).get('debug') === '1';
+      $('debug').style.display = on ? 'block' : 'none';
+      const btn = $('toggleDebug');
+      if(btn){
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.onclick = () => {
+          const open = $('debug').style.display !== 'block';
+          $('debug').style.display = open ? 'block' : 'none';
+          btn.setAttribute('aria-pressed', open ? 'true':'false');
+          btn.textContent = open ? 'Hide debug' : 'Show debug';
+        };
       }
     })();
   </script>
