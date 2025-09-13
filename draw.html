@@ -69,6 +69,43 @@
       </div>
     </section>
 
+    <!-- Admin (dev wallet only) -->
+<section class="card" id="admin-card" style="display:none;">
+  <div class="body">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <h3>Admin — Draw Controls</h3>
+      <span class="pill" id="admin-status">status: —</span>
+    </div>
+
+    <div class="row" style="margin:8px 0;">
+      <label class="row">
+        Close at:
+        <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+      </label>
+      <label class="row">
+        Start pots — CRON8:
+        <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+      </label>
+      <label class="row">
+        CRO:
+        <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+      </label>
+    </div>
+
+    <div class="row" style="margin:8px 0;">
+      <button class="btn primary" id="admin-open">Open Draw (commit)</button>
+      <button class="btn" id="admin-close">Close & Reveal</button>
+      <button class="btn ghost" id="admin-refresh">Refresh</button>
+    </div>
+
+    <div class="mono muted" style="margin-top:6px;">
+      Commit: <span id="admin-commit">—</span><br/>
+      Reveal seed (stored client-side until reveal): <span id="admin-reveal">—</span>
+    </div>
+    <small class="muted">Commit–reveal uses browser crypto: we post the <b>hash</b> at open; at close we post the secret seed so anyone can verify.</small>
+  </div>
+</section>
+
     <section class="grid two">
       <div class="card">
         <div class="body">
@@ -158,6 +195,7 @@
       $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
       await refreshTier();
       await loadMine();
+      wireAdmin();
     }
 
     $('connect').addEventListener('click', connect);
@@ -338,6 +376,93 @@
       $('tickets').innerHTML = rows.join('') || '<div class="muted">No tickets yet.</div>';
     }
 
+    /* === Admin (dev wallet) === */
+const ADMIN_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
+
+function isAdmin(a){ return (a||'').toLowerCase() === ADMIN_WALLET.toLowerCase(); }
+function showAdmin(on){ const c=document.getElementById('admin-card'); if(c) c.style.display = on ? 'block' : 'none'; }
+
+function toHex(buf){
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function sha256Hex(str){
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode(str));
+  return '0x'+toHex(buf);
+}
+function randomSeed(){
+  const b = new Uint8Array(32); crypto.getRandomValues(b);
+  return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+/* Persist seed locally until reveal (for safety if you refresh) */
+const SEED_KEY = 'cronation_draw_seed';
+
+async function adminRefresh(){
+  const snap = await db.collection('draws').doc(DRAW_ID).get();
+  if(!snap.exists){ 
+    setText('admin-status','status: (no draw)');
+    setText('admin-commit','—'); setText('admin-reveal','—');
+    return;
+  }
+  const d = snap.data();
+  setText('admin-status', `status: ${d.status||'—'}`);
+  setText('admin-commit', d.commitHash || '—');
+  setText('admin-reveal', d.revealSeed || localStorage.getItem(SEED_KEY) || '—');
+  if(d.closeAt) $('admin-closeAt').value = new Date(d.closeAt).toISOString().slice(0,16);
+  $('admin-cron8').value = d.pots?.cron8 ?? 0;
+  $('admin-cro').value   = d.pots?.cro   ?? 0;
+}
+
+async function adminOpen(){
+  // generate seed & commit
+  const seed = randomSeed();
+  const commit = await sha256Hex(seed);
+  localStorage.setItem(SEED_KEY, seed);
+
+  const closeAtStr = $('admin-closeAt').value;
+  const closeAt = closeAtStr ? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
+  const cron8 = parseFloat($('admin-cron8').value||'0')||0;
+  const cro   = parseFloat($('admin-cro').value||'0')||0;
+
+  await db.collection('draws').doc(DRAW_ID).set({
+    status: 'open',
+    commitHash: commit,
+    closeAt,
+    pots: { cron8, cro },
+    revealSeed: firebase.firestore.FieldValue.delete()
+  }, { merge:true });
+
+  await adminRefresh();
+  await loadDraw();
+  alert('Draw opened with new commit. Keep the seed safe (stored locally until reveal).');
+}
+
+async function adminClose(){
+  const seed = localStorage.getItem(SEED_KEY);
+  if(!seed) return alert('No local seed found. You must reveal the same seed used to commit.');
+
+  await db.collection('draws').doc(DRAW_ID).set({
+    status: 'closed',
+    revealSeed: seed
+  }, { merge:true });
+
+  // Optional: clear local storage (you can keep it until settlement)
+  // localStorage.removeItem(SEED_KEY);
+
+  await adminRefresh();
+  await loadDraw();
+  alert('Draw closed & seed revealed. (Settlement/winners to be added next.)');
+}
+
+/* Wire admin buttons & show panel if wallet is admin */
+function wireAdmin(){
+  if(isAdmin(addr)){ showAdmin(true); adminRefresh(); }
+  $('admin-open')?.addEventListener('click', adminOpen);
+  $('admin-close')?.addEventListener('click', adminClose);
+  $('admin-refresh')?.addEventListener('click', adminRefresh);
+}
+
     /* ---- Boot ---- */
     (async () => {
       await loadDraw();
@@ -352,6 +477,7 @@
             $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
             await refreshTier();
             await loadMine();
+            wireAdmin();
           }
         }catch(_){}
       }
