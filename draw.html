@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CROnation Draw — Mega Jackpot</title>
+
+  <!-- Dark before paint -->
+  <script>document.documentElement.setAttribute('data-theme','dark');</script>
+
+  <!-- Fonts + base styles (reusing your style vars) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- ethers + firebase (same versions as index) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
+    *{ box-sizing:border-box }
+    body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--text); background:var(--bg); }
+    .container{ width:min(1120px,92vw); margin-inline:auto; padding:20px 0 60px; }
+    .nav{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,13,18,.75); backdrop-filter:blur(8px); z-index:10; }
+    .btn{ appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; transition:.12s; }
+    .btn:hover{ transform:translateY(-1px) }
+    .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn.ghost{ background:transparent; }
+    .grid{ display:grid; gap:16px; }
+    .two{ grid-template-columns:1.2fr 1fr; } @media (max-width:920px){ .two{ grid-template-columns:1fr } }
+    .card{ border:1px solid var(--line); border-radius:14px; background:var(--soft); box-shadow:0 2px 16px rgba(0,0,0,.08); }
+    .card .body{ padding:16px; }
+    .h1{ font-size:clamp(28px,3vw+12px,40px); font-weight:800; margin:10px 0; }
+    .muted{ color:var(--muted) }
+    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:12px; font-weight:700; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .numbers{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .n{ width:40px; height:40px; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; cursor:pointer; }
+    .n.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .n.mega{ border-color:#b45309; }
+    .n.mega.on{ background:#f59e0b; color:#111827; border-color:#f59e0b; }
+    .tickets{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+  </style>
+</head>
+<body>
+  <header class="container nav">
+    <a href="/" class="row" style="text-decoration:none;color:inherit;font-weight:800;">CROnation</a>
+    <div class="row">
+      <a href="/" class="btn ghost">Home</a>
+      <button id="connect" class="btn">Connect Wallet</button>
+    </div>
+  </header>
+
+  <main class="container grid" style="margin-top:14px;">
+    <section class="card">
+      <div class="body">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted">Mega Jackpot</div>
+            <div class="h1"><span id="jp-cron8">0</span> CRON8 + <span id="jp-cro">0</span> CRO</div>
+            <div class="muted">Closes: <span id="jp-closes">—</span> • <span class="pill">Rollover enabled</span></div>
+          </div>
+          <div class="row">
+            <span class="pill" id="tier-pill">Tier: —</span>
+            <span class="pill" id="free-pill">Free left: —</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <div class="card">
+        <div class="body">
+          <h3>Claim your free entries</h3>
+          <p class="muted">Passport holders get free tickets every draw. Quick Pick is instant; Manual lets you choose.</p>
+
+          <div class="row" style="margin:10px 0;">
+            <button class="btn primary" id="quick-claim">Claim — Quick Pick</button>
+            <button class="btn" id="manual-claim">Claim — Manual</button>
+          </div>
+
+          <!-- Manual picker -->
+          <div id="picker" style="margin-top:6px;">
+            <div class="muted" style="margin-bottom:6px;">Pick 5 numbers (1–69)</div>
+            <div id="prim" class="numbers"></div>
+            <div class="muted" style="margin:10px 0 6px;">Mega (1–26)</div>
+            <div id="mega" class="numbers"></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="card">
+        <div class="body">
+          <h3>Buy more</h3>
+          <p class="muted">Tickets are <b>15 CRO</b> each. Split: 50% buybacks → CRON8 prize, 30% dev/ops, 20% CRO → jackpot.</p>
+          <div class="row">
+            <input id="qty" type="number" min="1" value="1" style="width:80px;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0b0d12;color:var(--text)">
+            <button class="btn primary" id="buy">Buy</button>
+          </div>
+          <small class="muted">Buying is stubbed in V1 preview; we only log & store the intent.</small>
+        </div>
+      </aside>
+    </section>
+
+    <section class="card">
+      <div class="body">
+        <h3>Your tickets</h3>
+        <div id="tickets" class="tickets"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="body">
+        <h3>Fairness</h3>
+        <p class="muted">We use commit–reveal. At open we publish a hash; at close we reveal the seed. Anyone can verify.</p>
+        <div class="mono muted">Commit: <span id="commit">—</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /* --- Config (reuse your Firebase project) --- */
+    const FB = {
+      apiKey: "AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+      authDomain: "cronation-6058b.firebaseapp.com",
+      projectId: "cronation-6058b",
+      storageBucket: "cronation-6058b.appspot.com",
+      appId: "1:303748855698:web:b03fe82e7314ab371bf34b"
+    };
+    const CHAIN = { rpc: 'https://evm.cronos.org' };
+    const CRON8 = { address: '0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF', decimals: 18, abi: [{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]};
+    const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
+    const TIER = [
+      { tier:3, min:'25000000', label:'T3' },
+      { tier:2, min:'5000000',  label:'T2' },
+      { tier:1, min:'1000000',  label:'T1' },
+      { tier:0, min:'0',        label:'Basic' }
+    ];
+    const FREE = { 0:1, 1:2, 2:3, 3:5 }; // Basic=1, T1=2, T2=3, T3=5
+    const DRAW_ID = 'current'; // weekly doc id
+
+    firebase.initializeApp(FB);
+    const db = firebase.firestore();
+
+    const $ = (id)=>document.getElementById(id);
+    function setText(id, v){ const n=$(id); if(n) n.textContent=v; }
+
+    /* ---- Wallet ---- */
+    let provider, signer, addr;
+
+    async function connect(){
+      if(!window.ethereum){ alert('Open in a wallet browser (MetaMask/CDC)'); return; }
+      const ok = await ethereum.request({ method:'eth_requestAccounts' });
+      provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      signer   = provider.getSigner();
+      addr     = (await signer.getAddress()).toLowerCase();
+      $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
+      await refreshTier();
+      await loadMine();
+    }
+
+    $('connect').addEventListener('click', connect);
+
+    async function cron8Balance(a){
+      const read = new ethers.providers.JsonRpcProvider(CHAIN.rpc);
+      const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
+      return await erc20.balanceOf(a);
+    }
+    function parseUnits(v, d){ return ethers.utils.parseUnits(v, d); }
+
+    async function refreshTier(){
+      if(!addr) return;
+      const bal = await cron8Balance(addr);
+      let tier = 0;
+      for(const t of TIER){
+        if(ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
+      }
+      setText('tier-pill', 'Tier: ' + (tier===0?'Basic':('T'+tier)));
+      // Free left = allowance - already claimed
+      const claimed = await claimedFreeCount(addr);
+      const left = Math.max(0, (FREE[tier] ?? 1) - claimed);
+      setText('free-pill', 'Free left: ' + left);
+      window.__freeLeft = left;
+    }
+
+    async function claimedFreeCount(a){
+      const snap = await db.collection('tickets')
+        .where('drawId','==',DRAW_ID)
+        .where('wallet','==',a)
+        .where('isFree','==',true)
+        .get();
+      return snap.size || 0;
+    }
+
+    /* ---- Draw header (pots + commit) ---- */
+    async function loadDraw(){
+      const d = await db.collection('draws').doc(DRAW_ID).get();
+      const data = d.exists ? d.data() : { pots:{ cron8:0, cro:0 }, closeAt: Date.now()+7*864e5, commitHash:'—' };
+      setText('jp-cron8', (data.pots?.cron8||0).toLocaleString());
+      setText('jp-cro',   (data.pots?.cro||0).toLocaleString());
+      setText('jp-closes', data.closeAt ? new Date(data.closeAt).toLocaleString() : '—');
+      setText('commit', data.commitHash||'—');
+    }
+
+    /* ---- Ticket picker ---- */
+    const primSel = new Set();
+    let mega = NUM.megaMin;
+
+    function renderPicker(){
+      const prim = $('prim'), m = $('mega');
+      prim.innerHTML = ''; m.innerHTML='';
+      for(let n=NUM.primMin; n<=NUM.primMax; n++){
+        const b = document.createElement('button');
+        b.className = 'n' + (primSel.has(n)?' on':'');
+        b.textContent = String(n);
+        b.onclick = ()=>{
+          if(primSel.has(n)){ primSel.delete(n); }
+          else if(primSel.size < NUM.primPick){ primSel.add(n); }
+          renderPicker();
+        };
+        prim.appendChild(b);
+      }
+      for(let n=NUM.megaMin; n<=NUM.megaMax; n++){
+        const b = document.createElement('button');
+        b.className = 'n mega' + (mega===n?' on':'');
+        b.textContent = String(n);
+        b.onclick = ()=>{ mega = n; renderPicker(); };
+        m.appendChild(b);
+      }
+    }
+    renderPicker();
+
+    function quick(){
+      const s = new Set();
+      while(s.size < NUM.primPick){
+        s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin);
+      }
+      const primary = [...s].sort((a,b)=>a-b);
+      const megaNum = Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
+      return { primary, mega: megaNum };
+    }
+
+    /* ---- Claim / Buy (preview V1) ---- */
+    async function claimQuick(){
+      if(!addr) return alert('Connect wallet first');
+      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+      const picks = quick();
+      await db.collection('tickets').add({
+        drawId: DRAW_ID,
+        wallet: addr,
+        picks: picks.primary,
+        mega: picks.mega,
+        isFree: true,
+        created: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await loadMine();
+      await refreshTier();
+    }
+
+    async function claimManual(){
+      if(!addr) return alert('Connect wallet first');
+      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+      if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
+      const picks = { primary: [...primSel].sort((a,b)=>a-b), mega };
+      await db.collection('tickets').add({
+        drawId: DRAW_ID,
+        wallet: addr,
+        picks: picks.primary,
+        mega: picks.mega,
+        isFree: true,
+        created: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      primSel.clear(); mega = NUM.megaMin; renderPicker();
+      await loadMine();
+      await refreshTier();
+    }
+
+    async function buyPaid(){
+      if(!addr) return alert('Connect wallet first');
+      const qty = Math.max(1, parseInt(($('qty').value||'1'),10));
+      // V1 preview: generate quick picks and store as paid (no CRO transfer here)
+      const batch = [];
+      for(let i=0;i<qty;i++){
+        const picks = quick();
+        batch.push(db.collection('tickets').add({
+          drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
+          isFree:false, created: firebase.firestore.FieldValue.serverTimestamp()
+        }));
+      }
+      await Promise.all(batch);
+      await loadMine();
+      alert(`Reserved ${qty} paid ticket(s). In full V1 this will charge 15 CRO each and update ledger.`);
+    }
+
+    $('quick-claim').onclick = claimQuick;
+    $('manual-claim').onclick = claimManual;
+    $('buy').onclick = buyPaid;
+
+    /* ---- My tickets grid ---- */
+    async function loadMine(){
+      if(!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
+      const snap = await db.collection('tickets')
+        .where('drawId','==',DRAW_ID).where('wallet','==',addr).orderBy('created','desc').get();
+      const rows = [];
+      snap.forEach(doc => {
+        const d = doc.data();
+        rows.push(`<div class="card"><div class="body">
+          <div class="muted">${d.isFree?'Free':'Paid'}</div>
+          <div class="mono" style="margin-top:4px;">${(d.picks||[]).join(' - ')}  |  ★ ${d.mega}</div>
+        </div></div>`);
+      });
+      $('tickets').innerHTML = rows.join('') || '<div class="muted">No tickets yet.</div>';
+    }
+
+    /* ---- Boot ---- */
+    (async () => {
+      await loadDraw();
+      // Try to prefill address if wallet already authorized (best effort)
+      if(window.ethereum){
+        try{
+          const acc = await ethereum.request({ method:'eth_accounts' });
+          if(acc && acc.length){
+            provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+            signer   = provider.getSigner();
+            addr     = acc[0].toLowerCase();
+            $('connect').textContent = addr.slice(0,6)+'…'+addr.slice(-4);
+            await refreshTier();
+            await loadMine();
+          }
+        }catch(_){}
+      }
+    })();
+  </script>
+</body>
+</html>
