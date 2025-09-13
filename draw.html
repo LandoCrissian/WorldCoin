@@ -126,7 +126,7 @@
       </div>
 
       <div class="actions">
-        <button id="connect" class="btn ghost">Connect Wallet</button>
+        <button id="connect" class="btn ghost" onclick="window.__connect && window.__connect()">Connect Wallet</button>
         <a id="buyBtn" class="btn ghost" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
         <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -465,6 +465,42 @@
       }
     }
     $('connect').addEventListener('click', connect);
+
+    /* ===== Connect safety harness: bind, global fallback, error surfacing ===== */
+(function hardenConnectBinding(){
+  // 1) Surface any JS errors to the debug panel (and console)
+  window.addEventListener('error', (e)=>{ dbg('window.onerror', e.message || e); });
+  window.addEventListener('unhandledrejection', (e)=>{ dbg('unhandledrejection', (e.reason && e.reason.message) || String(e.reason)); });
+
+  // 2) Ensure we always bind the button once the node exists
+  function bindConnect(){
+    try{
+      const btn = $('connect');
+      if(!btn){ dbg('connect <button> not found yet'); return false; }
+      // Avoid duplicate handlers
+      btn.__bound || (btn.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }), btn.__bound = true);
+      dbg('connect button bound');
+      return true;
+    }catch(err){
+      dbg('bindConnect error', err?.message || err);
+      return false;
+    }
+  }
+
+  // Try now…
+  bindConnect();
+  // …and on DOMContentLoaded (some wallet webviews defer DOM)
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', bindConnect, { once:true })
+    : null;
+
+  // Some mobile wallet browsers rehydrate/late-inject; try again shortly
+  setTimeout(bindConnect, 400);
+  setTimeout(bindConnect, 1200);
+
+  // 3) Global fallback so the inline onclick can call this even if binding failed
+  window.__connect = ()=>{ try{ connect(); } catch(e){ dbg('global __connect error', e?.message || e); } };
+})();
 
     /* ========= App workflow after connect ========= */
     async function afterConnect(){
