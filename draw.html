@@ -106,8 +106,8 @@
         </div>
 
         <div class="mono muted" style="margin-top:6px;">
-          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit" title="Copy commit hash">Copy</button><br/>
-          Reveal seed (stored client-side until reveal): <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal" title="Copy reveal seed">Copy</button>
+          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
+          Reveal seed (stored client-side until reveal): <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
         </div>
         <small class="muted">Commit–reveal uses browser crypto: we post the <b>hash</b> at open; at close we post the secret seed so anyone can verify.</small>
       </div>
@@ -199,22 +199,36 @@
     const db = firebase.firestore();
 
     const $ = (id)=>document.getElementById(id);
-    function setText(id, v){ const n=$(id); if(n) n.textContent=v; }
-    function short(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+    const setText = (id, v)=>{ const n=$(id); if(n) n.textContent=v; };
+    const short = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
+
+    /* ========= Provider selection (MetaMask → CDC → first available) ========= */
+    function pickInjectedProvider(){
+      const eth = window.ethereum;
+      if (!eth) return null;
+      if (Array.isArray(eth.providers) && eth.providers.length){
+        const mm  = eth.providers.find(p => p && p.isMetaMask);
+        const cdc = eth.providers.find(p => p && (p.isDeficonnectProvider || p.isDeFiWallet || p.isCryptoCom));
+        return mm || cdc || eth.providers[0];
+      }
+      // Some CDC builds expose window.deficonnectProvider
+      if (window.deficonnectProvider) return window.deficonnectProvider;
+      return eth;
+    }
 
     /* ---- Wallet ---- */
-    let provider, signer, addr;
+    let injected = null, provider = null, signer = null, addr = null;
 
     async function ensureCronos(){
-      if(!window.ethereum) return;
+      if(!injected) return;
       const desired = '0x19';
-      const current = await ethereum.request({ method:'eth_chainId' }).catch(()=>null);
+      const current = await injected.request({ method:'eth_chainId' }).catch(()=>null);
       if ((current||'').toLowerCase() === desired) return;
       try {
-        await ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: desired }] });
+        await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId: desired }] });
       } catch (e) {
         if (e.code === 4902) {
-          await ethereum.request({
+          await injected.request({
             method:'wallet_addEthereumChain',
             params: [{
               chainId: desired,
@@ -230,7 +244,7 @@
       }
     }
 
-    function setPassportPill(txt){ const n = $('passport-pill'); if(n) n.textContent = 'Passport: ' + (txt || '—'); }
+    function setPassportPill(txt){ setText('passport-pill', 'Passport: ' + (txt || '—')); }
     async function restorePassport(walletLower){
       try{
         if(!walletLower) { setPassportPill('—'); return; }
@@ -238,26 +252,27 @@
         if(!snap.exists){ setPassportPill('None'); return; }
         const p = snap.data();
         const serial = String(p.serial||'000000').padStart(6,'0');
-        const country = (p.country||'—');
-        setPassportPill(`${country} #${serial}`);
-      }catch(e){
-        setPassportPill('—');
-      }
+        setPassportPill(`${p.country||'—'} #${serial}`);
+      }catch{ setPassportPill('—'); }
     }
 
     async function connect(){
-      if(!window.ethereum){ alert('Open in a wallet browser (MetaMask/CDC)'); return; }
+      injected = pickInjectedProvider();
+      if(!injected){ alert('No wallet found. Open this page in MetaMask or Crypto.com DeFi Wallet.'); return; }
 
-      try { await ensureCronos(); } catch(e){ alert('Please switch to Cronos Mainnet in your wallet.'); return; }
-      try { await ethereum.request({ method:'eth_requestAccounts' }); } catch(e){ alert('Connection cancelled.'); return; }
+      try { await ensureCronos(); } catch(e){ alert('Please switch to Cronos Mainnet.'); return; }
 
-      provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      try { await injected.request({ method:'eth_requestAccounts' }); }
+      catch { alert('Connection cancelled.'); return; }
+
+      provider = new ethers.providers.Web3Provider(injected, 'any');
       signer   = provider.getSigner();
+
       try { addr = (await signer.getAddress()).toLowerCase(); }
       catch { alert('Could not read wallet address.'); return; }
 
       localStorage.setItem('cronation:lastWallet', addr);
-      $('connect').textContent = short(addr);
+      setText('connect', short(addr));
 
       await refreshTier();
       await restorePassport(addr);
@@ -268,23 +283,22 @@
     $('connect').addEventListener('click', connect);
 
     function wireProviderEvents(){
-      if (window.ethereum && !window.__cron_draw_listeners){
-        window.__cron_draw_listeners = true;
-        ethereum.on?.('accountsChanged', async (acc)=>{
-          if(acc && acc[0]){
-            addr = acc[0].toLowerCase();
-            localStorage.setItem('cronation:lastWallet', addr);
-            $('connect').textContent = short(addr);
-            await refreshTier(); await restorePassport(addr); await loadMine(); wireAdmin();
-          } else {
-            addr = undefined;
-            localStorage.removeItem('cronation:lastWallet');
-            $('connect').textContent = 'Connect Wallet';
-            setPassportPill('—');
-          }
-        });
-        ethereum.on?.('chainChanged', ()=> location.reload());
-      }
+      if (!injected || injected._wired_cronation_draw) return;
+      injected._wired_cronation_draw = true;
+      injected.on?.('accountsChanged', async (acc)=>{
+        if(acc && acc[0]){
+          addr = acc[0].toLowerCase();
+          localStorage.setItem('cronation:lastWallet', addr);
+          setText('connect', short(addr));
+          await refreshTier(); await restorePassport(addr); await loadMine(); wireAdmin();
+        } else {
+          addr = undefined;
+          localStorage.removeItem('cronation:lastWallet');
+          setText('connect','Connect Wallet');
+          setPassportPill('—');
+        }
+      });
+      injected.on?.('chainChanged', ()=> location.reload());
     }
 
     async function cron8Balance(a){
@@ -292,7 +306,7 @@
       const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
       return await erc20.balanceOf(a);
     }
-    function parseUnits(v, d){ return ethers.utils.parseUnits(v, d); }
+    const parseUnits = (v,d)=> ethers.utils.parseUnits(v,d);
 
     async function refreshTier(){
       if(!addr) return;
@@ -310,15 +324,12 @@
 
     async function claimedFreeCount(a){
       const snap = await db.collection('tickets')
-        .where('drawId','==',DRAW_ID)
-        .where('wallet','==',a)
-        .where('isFree','==',true)
-        .get();
+        .where('drawId','==',DRAW_ID).where('wallet','==',a).where('isFree','==',true).get();
       return snap.size || 0;
     }
 
     /* ---- Draw header (pots + commit + status + countdown) ---- */
-    let __closeAt = 0, __status = '—';
+    let __closeAt = 0;
     async function loadDraw(){
       const d = await db.collection('draws').doc(DRAW_ID).get();
       const data = d.exists ? d.data() : { status:'open', pots:{ cron8:0, cro:0 }, closeAt: Date.now()+7*864e5, commitHash:'—' };
@@ -326,12 +337,10 @@
       setText('jp-cro',   (data.pots?.cro||0).toLocaleString());
       setText('jp-closes', data.closeAt ? new Date(data.closeAt).toLocaleString() : '—');
       setText('commit', data.commitHash||'—');
+      setText('status-pill', data.status || '—');
       __closeAt = data.closeAt || 0;
-      __status  = data.status || '—';
-      setText('status-pill', __status);
       tickCountdown();
     }
-
     function tickCountdown(){
       if(!__closeAt){ setText('countdown','—'); return; }
       const s = Math.max(0, Math.floor((__closeAt - Date.now())/1000));
@@ -349,19 +358,15 @@
       prim.innerHTML = ''; m.innerHTML='';
       for(let n=NUM.primMin; n<=NUM.primMax; n++){
         const b = document.createElement('button');
-        b.type = 'button';
+        b.type='button';
         b.className = 'n' + (primSel.has(n)?' on':'');
         b.textContent = String(n);
-        b.onclick = ()=>{
-          if(primSel.has(n)){ primSel.delete(n); }
-          else if(primSel.size < NUM.primPick){ primSel.add(n); }
-          renderPicker();
-        };
+        b.onclick = ()=>{ if(primSel.has(n)) primSel.delete(n); else if(primSel.size<NUM.primPick) primSel.add(n); renderPicker(); };
         prim.appendChild(b);
       }
       for(let n=NUM.megaMin; n<=NUM.megaMax; n++){
         const b = document.createElement('button');
-        b.type = 'button';
+        b.type='button';
         b.className = 'n mega' + (mega===n?' on':'');
         b.textContent = String(n);
         b.onclick = ()=>{ mega = n; renderPicker(); };
@@ -386,62 +391,45 @@
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
       const picks = quick();
       await db.collection('tickets').add({
-        drawId: DRAW_ID,
-        wallet: addr,
-        picks: picks.primary,
-        mega: picks.mega,
-        isFree: true,
-        created: firebase.firestore.FieldValue.serverTimestamp()
+        drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
+        isFree: true, created: firebase.firestore.FieldValue.serverTimestamp()
       });
-      await loadMine();
-      await refreshTier();
+      await loadMine(); await refreshTier();
     }
-
     async function claimManual(){
       if(!addr) return alert('Connect wallet first');
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
       if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
       const picks = { primary: [...primSel].sort((a,b)=>a-b), mega };
       await db.collection('tickets').add({
-        drawId: DRAW_ID,
-        wallet: addr,
-        picks: picks.primary,
-        mega: picks.mega,
-        isFree: true,
-        created: firebase.firestore.FieldValue.serverTimestamp()
+        drawId: DRAW_ID, wallet: addr, picks: picks.primary, mega: picks.mega,
+        isFree: true, created: firebase.firestore.FieldValue.serverTimestamp()
       });
       primSel.clear(); mega = NUM.megaMin; renderPicker();
-      await loadMine();
-      await refreshTier();
+      await loadMine(); await refreshTier();
     }
+    $('quick-claim').onclick = claimQuick;
+    $('manual-claim').onclick = claimManual;
 
     let __nextBuyAt = 0;
     async function buyPaid(){
       if(!addr) return alert('Connect wallet first');
       const now = Date.now();
-      if (now < __nextBuyAt) {
-        const wait = Math.ceil((__nextBuyAt - now)/1000);
-        return alert(`Please wait ${wait}s before buying again.`);
-      }
-
-      try { await ensureCronos(); } catch(e){ return alert('Please switch to Cronos Mainnet.'); }
+      if (now < __nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s before buying again.`);
+      if(!injected) injected = pickInjectedProvider();
+      try { await ensureCronos(); } catch{ return alert('Please switch to Cronos Mainnet.'); }
 
       const qty = Math.max(1, parseInt(($('qty').value||'1'),10));
-      const totalCro = ethers.utils.parseEther(String(15 * qty)); // 15 CRO per ticket
-
+      const totalCro = ethers.utils.parseEther(String(15 * qty));
       try{
-        await ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: addr, to: DEV_WALLET, value: totalCro.toHexString() }]
+        await injected.request({
+          method:'eth_sendTransaction',
+          params:[{ from: addr, to: DEV_WALLET, value: totalCro.toHexString() }]
         });
-      }catch(err){
-        console.error('Payment cancelled/failed:', err);
-        return alert('Payment cancelled or failed.');
-      }
+      }catch(err){ console.error('Payment failed:', err); return alert('Payment cancelled or failed.'); }
 
       __nextBuyAt = Date.now() + 3000;
 
-      // After payment: issue tickets + ledger entry
       const batch = [];
       for(let i=0;i<qty;i++){
         const picks = quick();
@@ -450,21 +438,14 @@
           isFree:false, created: firebase.firestore.FieldValue.serverTimestamp()
         }));
       }
-      batch.push(
-        db.collection('ledger').add({
-          drawId: DRAW_ID, type: 'purchase',
-          wallet: addr, qty, priceCro: 15,
-          to: DEV_WALLET,
-          at: firebase.firestore.FieldValue.serverTimestamp()
-        })
-      );
+      batch.push(db.collection('ledger').add({
+        drawId: DRAW_ID, type:'purchase', wallet: addr, qty, priceCro: 15, to: DEV_WALLET,
+        at: firebase.firestore.FieldValue.serverTimestamp()
+      }));
       await Promise.all(batch);
       await loadMine();
       alert(`Purchased ${qty} ticket(s). CRO sent to dev wallet.`);
     }
-
-    $('quick-claim').onclick = claimQuick;
-    $('manual-claim').onclick = claimManual;
     $('buy').onclick = buyPaid;
 
     /* ---- My tickets grid ---- */
@@ -484,30 +465,19 @@
     }
 
     /* === Admin (dev wallet) === */
-    function isAdmin(a){ return (a||'').toLowerCase() === ADMIN_WALLET.toLowerCase(); }
-    function showAdmin(on){ const c=document.getElementById('admin-card'); if(c) c.style.display = on ? 'block' : 'none'; }
+    const isAdmin = (a)=> (a||'').toLowerCase() === ADMIN_WALLET.toLowerCase();
+    const showAdmin = (on)=> { const c=$('admin-card'); if(c) c.style.display = on ? 'block' : 'none'; };
 
-    function toHex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
-    async function sha256Hex(str){
-      const enc = new TextEncoder();
-      const buf = await crypto.subtle.digest('SHA-256', enc.encode(str));
-      return '0x'+toHex(buf);
-    }
-    function randomSeed(){
-      const b = new Uint8Array(32); crypto.getRandomValues(b);
-      return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
-    }
+    const toHex = (buf)=> Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    async function sha256Hex(str){ const enc=new TextEncoder(); const buf=await crypto.subtle.digest('SHA-256', enc.encode(str)); return '0x'+toHex(buf); }
+    function randomSeed(){ const b = new Uint8Array(32); crypto.getRandomValues(b); return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(''); }
     function copyTxt(t){ try{ navigator.clipboard.writeText(t); alert('Copied'); }catch(_){} }
 
     const SEED_KEY = 'cronation_draw_seed';
 
     async function adminRefresh(){
       const snap = await db.collection('draws').doc(DRAW_ID).get();
-      if(!snap.exists){
-        setText('admin-status','status: (no draw)');
-        setText('admin-commit','—'); setText('admin-reveal','—');
-        return;
-      }
+      if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); return; }
       const d = snap.data();
       setText('admin-status', `status: ${d.status||'—'}`);
       setText('admin-commit', d.commitHash || '—');
@@ -516,44 +486,28 @@
       $('admin-cron8').value = d.pots?.cron8 ?? 0;
       $('admin-cro').value   = d.pots?.cro   ?? 0;
     }
-
     async function adminOpen(){
       const seed = randomSeed();
       const commit = await sha256Hex(seed);
       localStorage.setItem(SEED_KEY, seed);
-
       const closeAtStr = $('admin-closeAt').value;
       const closeAt = closeAtStr ? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
       const cron8 = parseFloat($('admin-cron8').value||'0')||0;
       const cro   = parseFloat($('admin-cro').value||'0')||0;
-
       await db.collection('draws').doc(DRAW_ID).set({
-        status: 'open',
-        commitHash: commit,
-        closeAt,
-        pots: { cron8, cro },
+        status:'open', commitHash:commit, closeAt, pots:{cron8, cro},
         revealSeed: firebase.firestore.FieldValue.delete()
       }, { merge:true });
-
-      await adminRefresh();
-      await loadDraw();
-      alert('Draw opened with new commit. Keep the seed safe (stored locally until reveal).');
+      await adminRefresh(); await loadDraw();
+      alert('Draw opened with new commit. Keep the seed safe.');
     }
-
     async function adminClose(){
       const seed = localStorage.getItem(SEED_KEY);
-      if(!seed) return alert('No local seed found. You must reveal the same seed used to commit.');
-
-      await db.collection('draws').doc(DRAW_ID).set({
-        status: 'closed',
-        revealSeed: seed
-      }, { merge:true });
-
-      await adminRefresh();
-      await loadDraw();
-      alert('Draw closed & seed revealed. (Settlement/winners to be added next.)');
+      if(!seed) return alert('No local seed found. Reveal the same seed you committed.');
+      await db.collection('draws').doc(DRAW_ID).set({ status:'closed', revealSeed:seed }, { merge:true });
+      await adminRefresh(); await loadDraw();
+      alert('Draw closed & seed revealed.');
     }
-
     function wireAdmin(){
       if(isAdmin(addr)){ showAdmin(true); adminRefresh(); }
       $('admin-open')?.addEventListener('click', adminOpen);
@@ -566,17 +520,14 @@
     async function verifyCommit(){
       try{
         const snap = await db.collection('draws').doc(DRAW_ID).get();
-        if(!snap.exists) { $('verify-status').textContent = 'No draw'; return; }
+        if(!snap.exists) { setText('verify-status','No draw'); return; }
         const d = snap.data();
         const seed = d.revealSeed;
         const commit = (d.commitHash||'').toLowerCase();
-        if(!seed) { $('verify-status').textContent = 'No reveal yet'; return; }
+        if(!seed) { setText('verify-status','No reveal yet'); return; }
         const calc = (await sha256Hex(seed)).toLowerCase();
-        const ok = (calc === commit);
-        $('verify-status').textContent = ok ? '✅ Verified' : '❌ Mismatch';
-      }catch(e){
-        $('verify-status').textContent = 'Error';
-      }
+        setText('verify-status', (calc === commit) ? '✅ Verified' : '❌ Mismatch');
+      }catch{ setText('verify-status','Error'); }
     }
     $('verify')?.addEventListener('click', verifyCommit);
 
@@ -584,15 +535,16 @@
     (async () => {
       await loadDraw();
 
-      // 1) Silent restore if authorized
-      if(window.ethereum){
+      // 1) Silent restore via injected provider
+      injected = pickInjectedProvider();
+      if (injected){
         try{
-          const acc = await ethereum.request({ method:'eth_accounts' });
+          const acc = await injected.request({ method:'eth_accounts' });
           if(acc && acc.length){
-            provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+            provider = new ethers.providers.Web3Provider(injected, 'any');
             signer   = provider.getSigner();
             addr     = acc[0].toLowerCase();
-            $('connect').textContent = short(addr);
+            setText('connect', short(addr));
             await refreshTier();
             await restorePassport(addr);
             await loadMine();
@@ -603,11 +555,11 @@
         }catch(_){}
       }
 
-      // 2) Last wallet (read-only context)
+      // 2) Fallback to cached address for read-only UI
       const last = localStorage.getItem('cronation:lastWallet');
       if(last){
         addr = last;
-        $('connect').textContent = short(addr);
+        setText('connect', short(addr));
         await refreshTier().catch(()=>{});
         await restorePassport(addr).catch(()=>{});
         await loadMine().catch(()=>{});
