@@ -476,7 +476,6 @@
 
     /* ===== Connect safety harness: bind, global fallback, error surfacing ===== */
 (function hardenConnectBinding(){
-  // Surface any script errors in your Debug panel
   window.addEventListener('error', (e)=>dbg('window.onerror', e.message||e));
   window.addEventListener('unhandledrejection', (e)=>dbg('unhandledrejection', (e.reason && e.reason.message) || String(e.reason)));
 
@@ -490,7 +489,7 @@
     return true;
   }
 
-  // try now, and again on common late-injection moments
+  // try now + a couple of retries for late DOM/wallet webviews
   bind();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bind, { once:true });
@@ -498,7 +497,7 @@
   setTimeout(bind, 400);
   setTimeout(bind, 1200);
 
-  // inline fallback (works even if binding failed)
+  // inline fallback for: onclick="window.__connect && window.__connect()"
   window.__connect = ()=>{ try{ connect(); }catch(e){ dbg('__connect error', e?.message||e); } };
 })();
 
