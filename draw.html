@@ -5,19 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>CROnation — Mega Jackpot Draw</title>
 
-  <!-- Force dark BEFORE paint -->
   <script>document.documentElement.setAttribute('data-theme','dark');</script>
 
-  <!-- Core libs (no defer so boot code can run deterministically) -->
+  <!-- Core libs -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore-compat.js"></script>
 
-  <!-- SEO (optional) -->
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#0b0d12" />
-
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -43,8 +39,7 @@
     .btn.ghost{ background:transparent; }
     a.btn { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
 
-    /* Hamburger + mobile menu */
-    #connectBtn, #buyBtn, #connect, #disconnect { min-width:160px; text-align:center; }
+    #connect, #disconnect, #buyBtn { min-width:160px; text-align:center; }
     .hamburger{ width:44px; height:44px; display:none; margin-left:8px; border:1px solid var(--line); border-radius:10px; background:var(--soft); cursor:pointer; align-items:center; justify-content:center; gap:4px; }
     .hamburger span{ display:block; width:18px; height:2px; background:var(--text); border-radius:2px; }
     .mobile-menu{ display:none; position:fixed; left:0; right:0; top:64px; background:var(--bg); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 12px; z-index:9; }
@@ -78,6 +73,7 @@
 
     .notice{ background:color-mix(in srgb, var(--accent) 12%, var(--bg) 88%); border-bottom:1px solid var(--line); color:var(--text); }
     .notice .wrap{ width:min(1120px,92vw); margin:0 auto; padding:10px 0; font-weight:600; display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+
     .toast { position:fixed;left:50%;bottom:18px;transform:translateX(-50%); background:#0f1219;border:1px solid var(--line);color:var(--text); padding:10px 12px;border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.35); z-index:6000;opacity:0;pointer-events:none;transition:.2s; }
     .toast.show { opacity:1;pointer-events:auto; }
     .loader { position:fixed;inset:0;background:rgba(0,0,0,.45); display:none;align-items:center;justify-content:center; z-index:5500; }
@@ -120,7 +116,6 @@
 
       <div class="actions">
         <button id="connect" class="btn ghost">Connect Wallet</button>
-        <button id="disconnect" class="btn ghost" style="display:none;">Disconnect</button>
         <button id="disconnect" class="btn ghost" style="display:none;">Disconnect</button>
         <a id="buyBtn" class="btn ghost" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
         <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
@@ -198,7 +193,7 @@
         <div class="body">
           <h3>Buy more</h3>
           <p class="muted">Tickets are <b>15 CRO</b> each. v1 sends CRO to the dev wallet.</p>
-        <div class="row">
+          <div class="row">
             <input id="qty" type="number" min="1" value="1" style="width:96px;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0b0d12;color:var(--text)" />
             <button class="btn primary" id="buy">Buy</button>
           </div>
@@ -221,48 +216,42 @@
           <h3>Admin — Draw Controls</h3>
           <span class="pill" id="admin-status">status: —</span>
         </div>
-        
-        <div class="row" style="justify-content:space-between;">
-  <h3>Admin — Draw Controls</h3>
-  <span class="pill" id="admin-status">status: —</span>
-</div>
 
-<div class="row" style="margin:8px 0;">
-  <label class="row">Close at:
-    <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-  </label>
-  <label class="row">Start pots — CRON8:
-    <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-  </label>
-  <label class="row">CRO:
-    <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-  </label>
-</div>
+        <div class="row" style="margin:8px 0;">
+          <label class="row">Close at:
+            <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+          </label>
+          <label class="row">Start pots — CRON8:
+            <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+          </label>
+          <label class="row">CRO:
+            <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+          </label>
+        </div>
 
-<div class="row" style="margin:8px 0;">
-  <button class="btn primary" id="admin-open">Open Draw (commit)</button>
-  <button class="btn" id="admin-close">Close & Reveal</button>
-  <button class="btn ghost" id="admin-refresh">Refresh</button>
-</div>
+        <div class="row" style="margin:8px 0;">
+          <button class="btn primary" id="admin-open">Open Draw (commit)</button>
+          <button class="btn" id="admin-close">Close & Reveal</button>
+          <button class="btn ghost" id="admin-refresh">Refresh</button>
+        </div>
 
-<div class="row" style="margin:10px 0; gap:18px;">
-  <label class="row" style="gap:8px;">
-    <input type="checkbox" id="flag-pause-all"> Pause ALL
-  </label>
-  <label class="row" style="gap:8px;">
-    <input type="checkbox" id="flag-pause-claims"> Pause free claims
-  </label>
-  <label class="row" style="gap:8px;">
-    <input type="checkbox" id="flag-pause-buys"> Pause purchases
-  </label>
-  <button class="btn" id="admin-save-flags">Save Flags</button>
-</div>
+        <div class="row" style="margin:10px 0; gap:18px;">
+          <label class="row" style="gap:8px;">
+            <input type="checkbox" id="flag-pause-all"> Pause ALL
+          </label>
+          <label class="row" style="gap:8px;">
+            <input type="checkbox" id="flag-pause-claims"> Pause free claims
+          </label>
+          <label class="row" style="gap:8px;">
+            <input type="checkbox" id="flag-pause-buys"> Pause purchases
+          </label>
+          <button class="btn" id="admin-save-flags">Save Flags</button>
+        </div>
 
-<div class="mono muted" style="margin-top:6px;">
-  Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
-  Reveal seed: <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
-</div>
-        
+        <div class="mono muted" style="margin-top:6px;">
+          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
+          Reveal seed: <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
+        </div>
       </div>
     </section>
 
@@ -307,14 +296,14 @@
       { tier:1, min:'1000000'  },
       { tier:0, min:'0' }
     ];
-    // zero freebies for tier 0 (adjust as desired)
-    const FREE = { 0:0, 1:1, 2:3, 3:5 }; // or any mapping you want
+    // Zero freebies for tier 0
+    const FREE = { 0:0, 1:1, 2:3, 3:5 };
     const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
 
+    // Admin flags (Firestore: config/app.flags)
     const CONFIG_DOC = { col: 'config', doc: 'app' };
-const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
-let __flags = { ...FLAGS_DEFAULT };
-let __drawStatus = 'open'; // keep the current draw status we loaded
+    const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
+    let __flags = { ...FLAGS_DEFAULT };
 
     /* ========= Firebase ========= */
     firebase.initializeApp({
@@ -326,38 +315,21 @@ let __drawStatus = 'open'; // keep the current draw status we loaded
     });
     const db = firebase.firestore();
 
-    // Live flags subscription so admin toggles apply immediately everywhere
-db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
-  const data = snap.exists ? snap.data() : {};
-  __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
-  dbg('flags', __flags);
-  // optional: surface to the user
-  const notice = document.querySelector('.notice .wrap');
-  if (notice) {
-    const paused = __flags.pauseAll ? 'Platform paused' :
-                   __flags.pauseBuys ? 'Purchases paused' :
-                   __flags.pauseClaims ? 'Free claims paused' : '';
-    notice.dataset.paused = paused ? '1' : '0';
-  }
-}, (err)=>dbg('flags subscribe error', err?.message||err));
-
     /* ========= Helpers ========= */
     const $ = (id)=>document.getElementById(id);
     const setText=(id,v)=>{ const n=$(id); if(n) n.textContent=v; };
     const short=(a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
     const toast = (msg)=>{ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); };
     const setBusy = (on)=>{ const l=$('loader'); l.setAttribute('aria-busy',on?'true':'false'); l.setAttribute('aria-hidden',on?'false':'true'); };
-    const disable = (id,on)=>{ const el=$(id); if(el) el.disabled=!!on; };
 
-    // Debug capture
+    // Debug
     const DBG = [];
     function dbg(...a){
-      try{ const line = a.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
+      try{ const line=a.map(x=>(typeof x==='object'?JSON.stringify(x):String(x))).join(' ');
         DBG.push(line); const pre=$('dbg'); if(pre) pre.textContent=DBG.join('\n');
       }catch(_){}
     }
 
-    // Footer year
     setText('year', new Date().getFullYear());
 
     // HTTPS guard
@@ -401,30 +373,27 @@ db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
     /* ========= App state ========= */
     let injected=null, provider=null, signer=null, addr=null;
     let __closeAt=0;
-    let __platformEnabled = true;  // global kill switch
-    let __drawEnabled = true;      // allow actions
     let __drawStatus = 'open';     // 'open' | 'closed'
 
     function applyFlagsToUI(){
-      // Banner + buttons
-      const platformMsg = __platformEnabled ? '<b>Mega Jackpot Draw.</b>' : '<b>Platform is temporarily disabled.</b>';
-      setText('status-pill', __drawStatus || '—');
-      $('platformBanner').innerHTML = platformMsg;
+      // Banner + buttons tooltips
+      const pausedMsg =
+        __flags.pauseAll ? 'Platform paused' :
+        __flags.pauseBuys ? 'Purchases paused' :
+        __flags.pauseClaims ? 'Free claims paused' : '';
 
-      const canAct = __platformEnabled && __drawEnabled && (__drawStatus === 'open');
-      disable('quick-claim', !canAct);
-      disable('manual-claim', !canAct);
-      disable('buy', !canAct);
-
-      if (!canAct){
-        $('quick-claim').title = 'Actions are currently disabled';
-        $('manual-claim').title = 'Actions are currently disabled';
-        $('buy').title = 'Actions are currently disabled';
-      } else {
-        $('quick-claim').title = '';
-        $('manual-claim').title = '';
-        $('buy').title = '';
+      const banner = $('platformBanner');
+      if (banner){
+        banner.innerHTML = pausedMsg ? `<b>${pausedMsg}.</b>` : '<b>Mega Jackpot Draw.</b>';
       }
+
+      const canClaim = !__flags.pauseAll && !__flags.pauseClaims && (__drawStatus==='open');
+      const canBuy   = !__flags.pauseAll && !__flags.pauseBuys   && (__drawStatus==='open');
+
+      const qc=$('quick-claim'), mc=$('manual-claim'), buy=$('buy');
+      if(qc){ qc.disabled = !canClaim; qc.title = canClaim?'':'Claims disabled'; }
+      if(mc){ mc.disabled = !canClaim; mc.title = canClaim?'':'Claims disabled'; }
+      if(buy){ buy.disabled = !canBuy; buy.title = canBuy?'':'Purchases disabled'; }
     }
 
     function wireProviderEvents(){
@@ -500,7 +469,6 @@ db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
         alert('Wallet connect failed — try in your wallet’s in-app browser.');
       }finally{ setBusy(false); }
     }
-    $('connect').addEventListener('click', connect);
 
     function doDisconnectUI(){
       addr = null; provider=null; signer=null;
@@ -510,68 +478,28 @@ db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
       $('disconnect').style.display='none';
       setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
     }
+
     function disconnect(){
-      // we can’t force-disconnect the wallet extension; this clears *our* remembered state
+      // cannot force the extension to forget, but clear our state
       localStorage.removeItem(LS_CONNECTED);
       doDisconnectUI();
       toast('Disconnected.');
     }
-    $('disconnect').addEventListener('click', disconnect);
 
-    function setConnectedUI(on){
-  const c = $('connect'), d = $('disconnect');
-  if (!c || !d) return;
-  c.style.display = on ? 'none' : 'inline-flex';
-  d.style.display = on ? 'inline-flex' : 'none';
-}
-
-$('disconnect').addEventListener('click', ()=>{
-  // We can’t force the wallet to forget us, but we can clear app state
-  addr = null; provider = null; signer = null;
-  setText('addr-pill','—'); setText('chain-pill','—');
-  $('app').style.display='none'; $('admin').style.display='none';
-  setConnectedUI(false);
-  toast('Disconnected');
-});
-
-// Flip the UI when user *actually* connects
-async function afterConnect(){
-  setConnectedUI(true);
-  $('app').style.display='grid';
-  await loadDraw();
-  await refreshTier();
-  await restorePassport();
-  await loadMine();
-  const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase() /* or list check */);
-  $('admin').style.display = isAdmin ? 'block' : 'none';
-  const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
-  if (isAdmin) await adminRefresh();
-}
-
-    /* ========= App workflow ========= */
-    async function loadConfigFlags(){
-      // Read platform/draw flags from Firestore: config/app document
-      try{
-        const snap = await db.collection('config').doc('app').get();
-        const cfg = snap.exists ? snap.data() : {};
-        __platformEnabled = cfg.platformEnabled !== false;  // default true
-        __drawEnabled = cfg.drawEnabled !== false;          // default true
-        applyFlagsToUI();
-      }catch(e){ dbg('loadConfigFlags', e?.message); }
-    }
-
+    /* ========= Draw + Tier ========= */
     async function loadDraw(){
-  try{
-    const snap = await db.collection('draws').doc(DRAW_ID).get();
-    const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
-    __drawStatus = d.status || 'open'; 
-    setText('status-pill', d.status||'—');
-    setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
-    setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
-    setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
-    __closeAt = d.closeAt||0;
-  }catch(e){ dbg('loadDraw', e?.message); }
-}
+      try{
+        const snap = await db.collection('draws').doc(DRAW_ID).get();
+        const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
+        __drawStatus = d.status || 'open';
+        setText('status-pill', d.status||'—');
+        setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
+        setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
+        setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
+        __closeAt = d.closeAt||0;
+        applyFlagsToUI();
+      }catch(e){ dbg('loadDraw', e?.message); }
+    }
     setInterval(()=>{
       if(!__closeAt){ setText('countdown','—'); return; }
       const s = Math.max(0, Math.floor((__closeAt - Date.now())/1000));
@@ -636,39 +564,41 @@ async function afterConnect(){
       return { primary, mega: megaNum };
     }
 
+    /* ========= Live admin flags subscription ========= */
+    db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
+      const data = snap.exists ? snap.data() : {};
+      __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+      dbg('flags', __flags);
+      applyFlagsToUI();
+    }, (err)=>dbg('flags subscribe error', err?.message||err));
+
     /* ========= Claim & Buy ========= */
     $('quick-claim').onclick = async ()=>{
-  if(!addr) return alert('Connect wallet first');
+      if(!addr) return alert('Connect wallet first');
 
-  // NEW GUARDS
-  if (__flags.pauseAll || __flags.pauseClaims) {
-    return alert('Free claims are currently paused.');
-  }
-  if ((__drawStatus||'open') !== 'open') {
-    return alert('This draw is closed.');
-  }
+      // Guards
+      if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
+      if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
 
-  if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
-  try{
-    const picks = quickPick();
-    await db.collection('tickets').add({
-      drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
-      created: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await loadMine(); await refreshTier();
-    toast('Free ticket claimed ✅');
-  }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
-};
+      try{
+        const picks = quickPick();
+        await db.collection('tickets').add({
+          drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
+          created: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await loadMine(); await refreshTier();
+        toast('Free ticket claimed ✅');
+      }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
+    };
 
     $('manual-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
-      if (__flags.pauseAll || __flags.pauseBuys) {
-  return alert('Purchases are currently paused.');
-}
-if ((__drawStatus||'open') !== 'open') {
-  return alert('This draw is closed.');
-}
-      if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
+
+      // Correct guards for manual free claims
+      if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
+      if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+
       if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
       try{
@@ -686,7 +616,10 @@ if ((__drawStatus||'open') !== 'open') {
     let __nextBuyAt = 0;
     $('buy').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
-      if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
+
+      if (__flags.pauseAll || __flags.pauseBuys) return alert('Purchases are currently paused.');
+      if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+
       const now=Date.now(); if(now<__nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s…`);
       try{
         await ensureCronos();
@@ -739,7 +672,7 @@ if ((__drawStatus||'open') !== 'open') {
     async function adminRefresh(){
       try{
         const snap=await db.collection('draws').doc(DRAW_ID).get();
-        if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); return; }
+        if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); await adminLoadFlags(); return; }
         const d=snap.data();
         __drawStatus = d.status || 'open';
         setText('admin-status',`status: ${__drawStatus}`);
@@ -747,44 +680,34 @@ if ((__drawStatus||'open') !== 'open') {
         setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
         if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
         $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
-
-        const cfg = await db.collection('config').doc('app').get();
-        if(cfg.exists){
-          const c = cfg.data();
-          $('admin-platform').value = (c.platformEnabled === false) ? 'disabled' : 'enabled';
-          $('admin-draw').value     = (c.drawEnabled === false) ? 'disabled' : 'enabled';
-          __platformEnabled = c.platformEnabled !== false;
-          __drawEnabled = c.drawEnabled !== false;
-        }
+        await adminLoadFlags();
         applyFlagsToUI();
       }catch(e){ dbg('adminRefresh', e?.message); }
     }
 
-    // Load flags into checkboxes
-async function adminLoadFlags(){
-  try{
-    const snap = await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).get();
-    const data = snap.exists ? snap.data() : {};
-    const f = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
-    $('flag-pause-all').checked   = !!f.pauseAll;
-    $('flag-pause-claims').checked= !!f.pauseClaims;
-    $('flag-pause-buys').checked  = !!f.pauseBuys;
-  }catch(e){ dbg('adminLoadFlags', e?.message); }
-}
+    async function adminLoadFlags(){
+      try{
+        const snap = await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).get();
+        const data = snap.exists ? snap.data() : {};
+        const f = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+        $('flag-pause-all').checked   = !!f.pauseAll;
+        $('flag-pause-claims').checked= !!f.pauseClaims;
+        $('flag-pause-buys').checked  = !!f.pauseBuys;
+      }catch(e){ dbg('adminLoadFlags', e?.message); }
+    }
 
-// Save flags back to Firestore
-$('admin-save-flags').onclick = async ()=>{
-  try{
-    const f = {
-      pauseAll:   $('flag-pause-all').checked,
-      pauseClaims:$('flag-pause-claims').checked,
-      pauseBuys:  $('flag-pause-buys').checked,
+    $('admin-save-flags').onclick = async ()=>{
+      try{
+        const f = {
+          pauseAll:   $('flag-pause-all').checked,
+          pauseClaims:$('flag-pause-claims').checked,
+          pauseBuys:  $('flag-pause-buys').checked,
+        };
+        await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc)
+          .set({ flags: f }, { merge:true });
+        toast('Flags saved ✅');
+      }catch(e){ dbg('admin-save-flags', e?.message); alert('Saving flags failed. Check Firestore rules.'); }
     };
-    await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc)
-      .set({ flags: f }, { merge:true });
-    toast('Flags saved ✅');
-  }catch(e){ dbg('admin-save-flags', e?.message); alert('Saving flags failed. Check Firestore rules.'); }
-};
 
     $('admin-open').onclick = async ()=>{
       try{
@@ -808,69 +731,30 @@ $('admin-save-flags').onclick = async ()=>{
     };
 
     $('admin-refresh').onclick = adminRefresh;
-
-    async function adminRefresh(){
-  try{
-    const snap=await db.collection('draws').doc(DRAW_ID).get();
-    if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); await adminLoadFlags(); return; }
-    const d=snap.data();
-    setText('admin-status',`status: ${d.status||'—'}`);
-    setText('admin-commit',d.commitHash||'—');
-    setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
-    if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
-    $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
-    await adminLoadFlags(); // NEW
-  }catch(e){ dbg('adminRefresh', e?.message); }
-}
-
-    $('admin-saveFlags').onclick = async ()=>{
-      try{
-        const platformEnabled = $('admin-platform').value === 'enabled';
-        const drawEnabled     = $('admin-draw').value === 'enabled';
-        await db.collection('config').doc('app').set({ platformEnabled, drawEnabled }, { merge:true });
-        __platformEnabled = platformEnabled;
-        __drawEnabled = drawEnabled;
-        applyFlagsToUI();
-        toast('Flags saved.');
-      }catch(e){ dbg('saveFlags', e?.message); alert('Saving flags failed.'); }
-    };
-
     $('copy-commit').onclick = ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim());
     $('copy-reveal').onclick = ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim());
 
-    /* ========= Boot: cautious restore (no auto-connect UI) ========= */
+    /* ========= Boot (no auto-connect UI) ========= */
     (async ()=>{
-      await loadConfigFlags();
       await loadDraw();
 
       await waitForEthereum();
       injected = pickInjectedProvider();
 
-      // bind connect/disconnect
-      (function bindConnectButtons(){
-        const btn = $('connect');
-        const disc = $('disconnect');
-        if(btn && !btn.__bound){ btn.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }); btn.__bound = true; }
-        if(disc && !disc.__bound){ disc.addEventListener('click', (ev)=>{ ev.preventDefault(); disconnect(); }, { passive:false }); disc.__bound = true; }
-      })();
+      // Bind buttons once
+      const btnConnect = $('connect');
+      const btnDisc = $('disconnect');
+      if(btnConnect && !btnConnect.__bound){ btnConnect.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }); btnConnect.__bound = true; }
+      if(btnDisc && !btnDisc.__bound){ btnDisc.addEventListener('click', (ev)=>{ ev.preventDefault(); disconnect(); }, { passive:false }); btnDisc.__bound = true; }
 
       if (injected){
         try{
           const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
           setText('chain-pill','Chain ' + (chainId||'—'));
 
+          // Don’t auto-connect UI; just show address if already authorized AND user opted to remember
           const acc = await injected.request({ method:'eth_accounts' }).catch(()=>[]);
-          dbg('eth_accounts (boot)', acc);
-
-          // Check wallet permissions (if available)
-          let hasEthAccountsPerm = false;
-          try {
-            const perms = await injected.request({ method:'wallet_getPermissions' });
-            hasEthAccountsPerm = Array.isArray(perms) && perms.some(p => p?.parentCapability === 'eth_accounts');
-            dbg('wallet_getPermissions', perms);
-          } catch(_) { /* not supported; ignore */ }
-
-          const shouldRestore = hasEthAccountsPerm && localStorage.getItem(LS_CONNECTED) === '1';
+          const shouldRestore = localStorage.getItem(LS_CONNECTED) === '1';
           if (shouldRestore && acc && acc[0]){
             provider = new ethers.providers.Web3Provider(injected, 'any');
             signer   = provider.getSigner();
@@ -881,14 +765,16 @@ $('admin-save-flags').onclick = async ()=>{
             wireProviderEvents();
             await afterConnect();
           } else {
-            doDisconnectUI(); // keep app hidden until explicit connect
+            // keep UI disconnected
+            setText('addr-pill','—');
           }
-        }catch(e){ dbg('silent restore', e?.message); }
+        }catch(e){ dbg('boot', e?.message); }
       } else {
         dbg('no provider on boot');
       }
     })();
 
+    /* ========= After connect ========= */
     async function afterConnect(){
       $('app').style.display='grid';
       await loadDraw();
@@ -902,38 +788,7 @@ $('admin-save-flags').onclick = async ()=>{
       if(isAdmin) await adminRefresh();
     }
 
-    (async ()=>{
-  await loadDraw();
-
-  await waitForEthereum();
-  injected = pickInjectedProvider();
-
-  if (injected){
-    try{
-      const acc = await injected.request({ method:'eth_accounts' });
-      dbg('eth_accounts', acc);
-      if (acc && acc[0]){
-        // We know who *could* connect, but don't auto-connect UI.
-        provider = new ethers.providers.Web3Provider(injected, 'any');
-        signer   = provider.getSigner();
-        addr     = acc[0].toLowerCase();
-        setText('addr-pill', short(addr));
-        const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-        setText('chain-pill','Chain ' + (chainId||'?'));
-        wireProviderEvents();
-        // IMPORTANT: no afterConnect() here — user must click Connect.
-        $('app').style.display='none';
-        $('admin').style.display='none';
-      } else {
-        setText('addr-pill','—'); setText('chain-pill','—');
-      }
-    }catch(e){ dbg('silent restore', e?.message); }
-  } else {
-    dbg('no provider on boot');
-  }
-})();
-
-    /* ========= Debug panel toggle (optional) ========= */
+    /* ========= Debug toggle ========= */
     (function initDebug(){
       const on = new URLSearchParams(location.search).get('debug') === '1';
       $('debug').style.display = on ? 'block' : 'none';
