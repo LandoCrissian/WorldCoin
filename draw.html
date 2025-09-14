@@ -315,7 +315,7 @@
 
     // One-time disclaimer gate
 const AGREEMENTS = { col:'agreements' }; // Firestore collection: agreements/<wallet>
-const LS_CONNECTED = 'cronation_connected_v1'; // keep; we’ll set it only after signature
+
 
 function agreementRef(addr){ return db.collection(AGREEMENTS.col).doc(addr); }
 
