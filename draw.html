@@ -85,6 +85,114 @@
     #debug{ display:none; }
     #debug pre{ white-space:pre-wrap; word-break:break-word; background:#0e1117; border:1px solid var(--line); padding:12px; border-radius:10px; }
     .warn{ color:#fde68a } .err{ color:#fca5a5 }
+
+    /* === CROnation — Draw: Mobile Polish Pack (≤ 400px) === */
+
+/* Baseline: never allow horizontal scroll */
+html, body, .page { overflow-x: hidden; }
+
+/* Safe-area + breathing room for bottom bars on iOS */
+@supports(padding:max(0px)) {
+  .page { padding-bottom: max(72px, env(safe-area-inset-bottom)); }
+}
+
+/* Cards a bit flatter, tighter on mobile */
+@media (max-width: 400px){
+  .container, .page { width: 94vw; }
+  .card { border-radius: 12px; }
+  .card .body { padding: 12px; }
+  .h1 { font-size: clamp(24px, 5.6vw + 8px, 30px); }
+
+  /* Header row pills: wrap cleanly and shrink just a touch */
+  .row { gap: 6px; }
+  .pill {
+    font-size: 11.5px;
+    padding: 4px 8px;
+    line-height: 1.1;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* Address / chain / tier / free pills live in a wrap line */
+  #status-pill, #countdown, #addr-pill, #chain-pill, #tier-pill, #free-pill {
+    flex: 0 1 auto;
+  }
+
+  /* Inputs + buttons */
+  .btn { min-height: 44px; padding: 10px 12px; }
+  input[type="number"] { height: 44px; }
+
+  /* Number pickers -> true grid; no overflow, minimum 44px squares */
+  .numbers { 
+    display: grid;
+    grid-auto-rows: 44px;
+    gap: 8px;
+  }
+  /* Primary: 7 columns on narrow phones */
+  #prim.numbers { grid-template-columns: repeat(7, 1fr); }
+  /* Mega: 6 columns so the circles stay big */
+  #mega.numbers { grid-template-columns: repeat(6, 1fr); }
+
+  /* Number buttons */
+  .n {
+    min-width: 0;
+    width: 100%;
+    height: 44px;
+    padding: 0;
+    border-radius: 999px;
+    font-weight: 700;
+    touch-action: manipulation;
+  }
+
+  /* Labels above pickers closer to the controls */
+  #picker .muted { margin: 6px 0 4px !important; }
+
+  /* “Buy more” block: stack qty + button */
+  aside .row { flex-direction: row; }
+  @supports (display:grid){
+    aside .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  }
+  #qty { width: 100% !important; }
+
+  /* Tickets: full-bleed, comfortable spacing */
+  .tickets { grid-template-columns: 1fr; gap: 8px; }
+
+  /* Nav: compact */
+  .brand { gap: 8px; }
+  .brand img { width: 28px; height: 28px; }
+}
+
+/* Ultra-narrow devices (≤ 340px): keep tap targets, reduce columns */
+@media (max-width: 340px){
+  #prim.numbers { grid-template-columns: repeat(6, 1fr); }
+  #mega.numbers { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* Improve contrast for the number rings on dark backgrounds */
+.n { box-shadow: 0 0 0 1px var(--line) inset; }
+.n.on { box-shadow: none; }
+
+/* Make the admin panel mobile-friendly: readable, wrapped */
+@media (max-width: 640px){
+  #admin .row { flex-wrap: wrap; }
+  #admin input[type="number"], #admin input[type="datetime-local"] {
+    width: 100% !important;
+  }
+}
+
+/* Sticky action helper (if you later decide to pin actions) */
+@media (max-width: 400px){
+  .sticky-actions {
+    position: sticky;
+    bottom: 0;
+    left: 0; right: 0;
+    padding: 8px 0;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(120%) blur(8px);
+    border-top: 1px solid var(--line);
+    z-index: 12;
+  }
+}
   </style>
 </head>
 <body>
@@ -1031,6 +1139,167 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
     }
   })();
 })();
+
+/* ============================================================
+   CROnation — Draw: Mobile Polish + No-Autoconnect Add-on
+   Paste at the very end of draw.html, after your main script.
+   ============================================================ */
+
+/* ---------- 1) Inject mobile CSS (<=400px) ---------- */
+(function injectMobileCSS(){
+  const css = `
+/* Baseline: never allow horizontal scroll */
+html, body, .page { overflow-x: hidden; }
+
+/* Safe-area bottom padding */
+@supports(padding:max(0px)) { .page { padding-bottom: max(72px, env(safe-area-inset-bottom)); } }
+
+/* General mobile tuning */
+@media (max-width: 400px){
+  .container, .page { width: 94vw; }
+  .card { border-radius: 12px; }
+  .card .body { padding: 12px; }
+  .h1 { font-size: clamp(24px, 5.6vw + 8px, 30px); }
+  .row { gap: 6px; }
+  .pill { font-size: 11.5px; padding: 4px 8px; line-height: 1.1; border-radius: 999px; white-space: nowrap; }
+  #status-pill, #countdown, #addr-pill, #chain-pill, #tier-pill, #free-pill { flex: 0 1 auto; }
+  .btn { min-height: 44px; padding: 10px 12px; }
+  input[type="number"] { height: 44px; }
+  .numbers { display: grid; grid-auto-rows: 44px; gap: 8px; }
+  #prim.numbers { grid-template-columns: repeat(7, 1fr); }
+  #mega.numbers { grid-template-columns: repeat(6, 1fr); }
+  .n { min-width: 0; width: 100%; height: 44px; padding: 0; border-radius: 999px; font-weight: 700; touch-action: manipulation; }
+  #picker .muted { margin: 6px 0 4px !important; }
+  aside .row { flex-direction: row; }
+  @supports (display:grid){ aside .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; } }
+  #qty { width: 100% !important; }
+  .tickets { grid-template-columns: 1fr; gap: 8px; }
+  .brand { gap: 8px; }
+  .brand img { width: 28px; height: 28px; }
+}
+@media (max-width: 340px){
+  #prim.numbers { grid-template-columns: repeat(6, 1fr); }
+  #mega.numbers { grid-template-columns: repeat(5, 1fr); }
+}
+/* Improve contrast for number rings */
+.n { box-shadow: 0 0 0 1px var(--line) inset; }
+.n.on { box-shadow: none; }
+/* Admin: wrap controls on small screens */
+@media (max-width: 640px){
+  #admin .row { flex-wrap: wrap; }
+  #admin input[type="number"], #admin input[type="datetime-local"] { width: 100% !important; }
+}
+/* Optional sticky footer actions shell */
+@media (max-width: 400px){
+  .sticky-actions{
+    position: sticky; bottom: 0; left: 0; right: 0;
+    padding: 8px 0;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(120%) blur(8px);
+    border-top: 1px solid var(--line);
+    z-index: 12;
+  }
+}`;
+  const tag = document.createElement('style');
+  tag.setAttribute('data-cronation-mobile-pack','1');
+  tag.textContent = css;
+  document.head.appendChild(tag);
+})();
+
+/* Reduce motion if user prefers */
+try {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('.btn, .n').forEach(el => el.style.transition = 'none');
+  }
+} catch (_e) {}
+
+/* Collapse Admin on small screens (keeps your panel intact) */
+(function collapseAdminOnMobile(){
+  const admin = document.getElementById('admin');
+  if (!admin) return;
+  if (window.matchMedia('(max-width: 640px)').matches && !admin.__wrapped) {
+    admin.__wrapped = true;
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Admin — Draw Controls';
+    summary.style.cursor = 'pointer';
+    summary.style.fontWeight = '700';
+    summary.style.padding = '10px 12px';
+    summary.style.borderBottom = '1px solid var(--line)';
+    const body = admin.querySelector('.body');
+    admin.replaceChildren(details);
+    details.appendChild(summary);
+    if (body) details.appendChild(body);
+    details.open = false; // closed by default on mobile
+  }
+})();
+
+/* ---------- 2) No auto-connect UI (per-tab) ---------- */
+/*
+  Your main script already respects LS_CONNECTED, but some wallets
+  will still present accounts and your UI restores. This hardens it:
+  - Require a sessionStorage flag set only after an explicit connect
+    in THIS TAB.
+  - If the UI was auto-restored by the wallet, we force it back to a
+    disconnected state until user taps “Connect”.
+*/
+(function noAutoConnectGate(){
+  const SESSION_CONNECTED = 'cronation_session_connected_v1';
+  // Wait until your main script defines these globals
+  function ready(fn){
+    if (document.readyState === 'complete' || document.readyState === 'interactive') return fn();
+    document.addEventListener('DOMContentLoaded', fn, { once:true });
+  }
+  ready(function(){
+    const connectBtn = document.getElementById('connect');
+    const disconnectBtn = document.getElementById('disconnect');
+
+    // If session flag not set, ensure UI is disconnected NOW
+    try {
+      if (sessionStorage.getItem(SESSION_CONNECTED) !== '1') {
+        if (typeof window.doDisconnectUI === 'function') {
+          window.doDisconnectUI();
+        } else {
+          // minimal fallback
+          const app = document.getElementById('app');
+          if (app) app.style.display = 'none';
+          if (connectBtn) connectBtn.style.display = 'inline-block';
+          if (disconnectBtn) disconnectBtn.style.display = 'none';
+          const setText = (id, v)=>{ const n=document.getElementById(id); if(n) n.textContent=v; };
+          setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
+        }
+      }
+    } catch(_) {}
+
+    // Patch connect(): after a successful connect (UI shows “Disconnect”),
+    // set the session flag so refreshes in THIS TAB may restore.
+    if (typeof window.connect === 'function' && !window.connect.__patched_session){
+      const orig = window.connect;
+      window.connect = async function(...args){
+        await orig.apply(this, args);
+        try {
+          const connected = disconnectBtn && getComputedStyle(disconnectBtn).display !== 'none';
+          if (connected) {
+            sessionStorage.setItem(SESSION_CONNECTED, '1');
+            // Your original connect already sets LS_CONNECTED
+          }
+        } catch(_) {}
+      };
+      window.connect.__patched_session = true;
+    }
+
+    // Patch disconnect() to clear the session flag
+    if (typeof window.disconnect === 'function' && !window.disconnect.__patched_session){
+      const origDisc = window.disconnect;
+      window.disconnect = function(...args){
+        try { sessionStorage.removeItem(SESSION_CONNECTED); } catch(_) {}
+        return origDisc.apply(this, args);
+      };
+      window.disconnect.__patched_session = true;
+    }
+  });
+})();
+
 
 /* ========= After connect ========= */
 async function afterConnect(){
