@@ -193,6 +193,40 @@ html, body, .page { overflow-x: hidden; }
     z-index: 12;
   }
 }
+
+    /* --- Mobile overflow fixes (admin + global) --- */
+html, body { max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+.page, .container { overflow-x: hidden; }
+
+/* Wrap long hashes so they don't force horizontal scroll */
+#admin .mono { 
+  white-space: normal;          /* allow wrapping */
+  overflow-wrap: anywhere;      /* break long words/hashes */
+  word-break: break-word;
+}
+#admin .mono span {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+/* Make admin rows fully wrap on small screens */
+#admin .row { flex-wrap: wrap; }
+#admin .row input {
+  min-width: 0;
+  flex: 1 1 200px;              /* inputs shrink instead of pushing layout */
+}
+
+/* Put “Copy” buttons on a new line if needed */
+#admin .mono .btn { 
+  margin-top: 6px;
+}
+
+/* Prevent buttons/pills from overflowing tiny screens */
+.btn, .pill { max-width: 100%; }
+
+/* iOS zoom-on-focus prevention (keeps inputs ≥16px) */
+input, select, textarea, button { font-size: 16px; }
   </style>
 </head>
 <body>
