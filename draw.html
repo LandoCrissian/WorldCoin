@@ -674,6 +674,15 @@ $('dlg-cancel').onclick = ()=> hideDialog();
     $('quick-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
 
+      // ensure the disclaimer was signed (in case they connected in a previous tab)
+const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+if(!agreed){
+  alert('Please accept the disclaimer first (you will be asked to sign once).');
+  // optionally pop the modal and run the same sign flow:
+  $('connect').click(); // leverage the connect flow to show modal/sign again
+  return;
+}
+
       // Guards
       if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
       if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
@@ -692,6 +701,15 @@ $('dlg-cancel').onclick = ()=> hideDialog();
 
     $('manual-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
+
+      // ensure the disclaimer was signed (in case they connected in a previous tab)
+const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+if(!agreed){
+  alert('Please accept the disclaimer first (you will be asked to sign once).');
+  // optionally pop the modal and run the same sign flow:
+  $('connect').click(); // leverage the connect flow to show modal/sign again
+  return;
+}
 
       // Correct guards for manual free claims
       if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
@@ -714,6 +732,15 @@ $('dlg-cancel').onclick = ()=> hideDialog();
     let __nextBuyAt = 0;
     $('buy').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
+
+      // ensure the disclaimer was signed (in case they connected in a previous tab)
+const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+if(!agreed){
+  alert('Please accept the disclaimer first (you will be asked to sign once).');
+  // optionally pop the modal and run the same sign flow:
+  $('connect').click(); // leverage the connect flow to show modal/sign again
+  return;
+}
 
       if (__flags.pauseAll || __flags.pauseBuys) return alert('Purchases are currently paused.');
       if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
