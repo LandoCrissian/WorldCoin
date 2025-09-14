@@ -121,6 +121,7 @@
       <div class="actions">
         <button id="connect" class="btn ghost">Connect Wallet</button>
         <button id="disconnect" class="btn ghost" style="display:none;">Disconnect</button>
+        <button id="disconnect" class="btn ghost" style="display:none;">Disconnect</button>
         <a id="buyBtn" class="btn ghost" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
         <button class="hamburger" id="hamburger" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -220,41 +221,48 @@
           <h3>Admin — Draw Controls</h3>
           <span class="pill" id="admin-status">status: —</span>
         </div>
-        <div class="row" style="margin:8px 0;">
-          <label class="row">Platform:
-            <select id="admin-platform" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </label>
-          <label class="row">Draw actions:
-            <select id="admin-draw" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </label>
-        </div>
-        <div class="row" style="margin:8px 0;">
-          <label class="row">Close at:
-            <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-          </label>
-          <label class="row">Start pots — CRON8:
-            <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-          </label>
-          <label class="row">CRO:
-            <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
-          </label>
-        </div>
-        <div class="row" style="margin:8px 0;">
-          <button class="btn primary" id="admin-open">Open Draw (commit)</button>
-          <button class="btn" id="admin-close">Close & Reveal</button>
-          <button class="btn ghost" id="admin-refresh">Refresh</button>
-          <button class="btn ghost" id="admin-saveFlags">Save Flags</button>
-        </div>
-        <div class="mono muted" style="margin-top:6px;">
-          Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
-          Reveal seed: <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
-        </div>
+        
+        <div class="row" style="justify-content:space-between;">
+  <h3>Admin — Draw Controls</h3>
+  <span class="pill" id="admin-status">status: —</span>
+</div>
+
+<div class="row" style="margin:8px 0;">
+  <label class="row">Close at:
+    <input id="admin-closeAt" type="datetime-local" style="margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+  </label>
+  <label class="row">Start pots — CRON8:
+    <input id="admin-cron8" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+  </label>
+  <label class="row">CRO:
+    <input id="admin-cro" type="number" min="0" value="0" style="width:120px;margin-left:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0b0d12;color:var(--text)">
+  </label>
+</div>
+
+<div class="row" style="margin:8px 0;">
+  <button class="btn primary" id="admin-open">Open Draw (commit)</button>
+  <button class="btn" id="admin-close">Close & Reveal</button>
+  <button class="btn ghost" id="admin-refresh">Refresh</button>
+</div>
+
+<div class="row" style="margin:10px 0; gap:18px;">
+  <label class="row" style="gap:8px;">
+    <input type="checkbox" id="flag-pause-all"> Pause ALL
+  </label>
+  <label class="row" style="gap:8px;">
+    <input type="checkbox" id="flag-pause-claims"> Pause free claims
+  </label>
+  <label class="row" style="gap:8px;">
+    <input type="checkbox" id="flag-pause-buys"> Pause purchases
+  </label>
+  <button class="btn" id="admin-save-flags">Save Flags</button>
+</div>
+
+<div class="mono muted" style="margin-top:6px;">
+  Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
+  Reveal seed: <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
+</div>
+        
       </div>
     </section>
 
@@ -300,8 +308,13 @@
       { tier:0, min:'0' }
     ];
     // zero freebies for tier 0 (adjust as desired)
-    const FREE = { 0:0, 1:2, 2:3, 3:5 };
+    const FREE = { 0:0, 1:1, 2:3, 3:5 }; // or any mapping you want
     const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
+
+    const CONFIG_DOC = { col: 'config', doc: 'app' };
+const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
+let __flags = { ...FLAGS_DEFAULT };
+let __drawStatus = 'open'; // keep the current draw status we loaded
 
     /* ========= Firebase ========= */
     firebase.initializeApp({
@@ -312,6 +325,21 @@
       appId:"1:303748855698:web:b03fe82e7314ab371bf34b"
     });
     const db = firebase.firestore();
+
+    // Live flags subscription so admin toggles apply immediately everywhere
+db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
+  const data = snap.exists ? snap.data() : {};
+  __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+  dbg('flags', __flags);
+  // optional: surface to the user
+  const notice = document.querySelector('.notice .wrap');
+  if (notice) {
+    const paused = __flags.pauseAll ? 'Platform paused' :
+                   __flags.pauseBuys ? 'Purchases paused' :
+                   __flags.pauseClaims ? 'Free claims paused' : '';
+    notice.dataset.paused = paused ? '1' : '0';
+  }
+}, (err)=>dbg('flags subscribe error', err?.message||err));
 
     /* ========= Helpers ========= */
     const $ = (id)=>document.getElementById(id);
@@ -490,6 +518,36 @@
     }
     $('disconnect').addEventListener('click', disconnect);
 
+    function setConnectedUI(on){
+  const c = $('connect'), d = $('disconnect');
+  if (!c || !d) return;
+  c.style.display = on ? 'none' : 'inline-flex';
+  d.style.display = on ? 'inline-flex' : 'none';
+}
+
+$('disconnect').addEventListener('click', ()=>{
+  // We can’t force the wallet to forget us, but we can clear app state
+  addr = null; provider = null; signer = null;
+  setText('addr-pill','—'); setText('chain-pill','—');
+  $('app').style.display='none'; $('admin').style.display='none';
+  setConnectedUI(false);
+  toast('Disconnected');
+});
+
+// Flip the UI when user *actually* connects
+async function afterConnect(){
+  setConnectedUI(true);
+  $('app').style.display='grid';
+  await loadDraw();
+  await refreshTier();
+  await restorePassport();
+  await loadMine();
+  const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase() /* or list check */);
+  $('admin').style.display = isAdmin ? 'block' : 'none';
+  const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
+  if (isAdmin) await adminRefresh();
+}
+
     /* ========= App workflow ========= */
     async function loadConfigFlags(){
       // Read platform/draw flags from Firestore: config/app document
@@ -503,18 +561,17 @@
     }
 
     async function loadDraw(){
-      try{
-        const snap = await db.collection('draws').doc(DRAW_ID).get();
-        const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
-        __drawStatus = d.status || 'open';
-        setText('status-pill', __drawStatus);
-        setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
-        setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
-        setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
-        __closeAt = d.closeAt||0;
-        applyFlagsToUI();
-      }catch(e){ dbg('loadDraw', e?.message); }
-    }
+  try{
+    const snap = await db.collection('draws').doc(DRAW_ID).get();
+    const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
+    __drawStatus = d.status || 'open'; 
+    setText('status-pill', d.status||'—');
+    setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
+    setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
+    setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
+    __closeAt = d.closeAt||0;
+  }catch(e){ dbg('loadDraw', e?.message); }
+}
     setInterval(()=>{
       if(!__closeAt){ setText('countdown','—'); return; }
       const s = Math.max(0, Math.floor((__closeAt - Date.now())/1000));
@@ -581,22 +638,36 @@
 
     /* ========= Claim & Buy ========= */
     $('quick-claim').onclick = async ()=>{
-      if(!addr) return alert('Connect wallet first');
-      if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
-      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
-      try{
-        const picks = quickPick();
-        await db.collection('tickets').add({
-          drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
-          created: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        await loadMine(); await refreshTier();
-        toast('Free ticket claimed ✅');
-      }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
-    };
+  if(!addr) return alert('Connect wallet first');
+
+  // NEW GUARDS
+  if (__flags.pauseAll || __flags.pauseClaims) {
+    return alert('Free claims are currently paused.');
+  }
+  if ((__drawStatus||'open') !== 'open') {
+    return alert('This draw is closed.');
+  }
+
+  if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+  try{
+    const picks = quickPick();
+    await db.collection('tickets').add({
+      drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
+      created: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await loadMine(); await refreshTier();
+    toast('Free ticket claimed ✅');
+  }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
+};
 
     $('manual-claim').onclick = async ()=>{
       if(!addr) return alert('Connect wallet first');
+      if (__flags.pauseAll || __flags.pauseBuys) {
+  return alert('Purchases are currently paused.');
+}
+if ((__drawStatus||'open') !== 'open') {
+  return alert('This draw is closed.');
+}
       if(!(__platformEnabled && __drawEnabled && __drawStatus==='open')) return alert('Actions are disabled right now');
       if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
       if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
@@ -689,6 +760,32 @@
       }catch(e){ dbg('adminRefresh', e?.message); }
     }
 
+    // Load flags into checkboxes
+async function adminLoadFlags(){
+  try{
+    const snap = await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).get();
+    const data = snap.exists ? snap.data() : {};
+    const f = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+    $('flag-pause-all').checked   = !!f.pauseAll;
+    $('flag-pause-claims').checked= !!f.pauseClaims;
+    $('flag-pause-buys').checked  = !!f.pauseBuys;
+  }catch(e){ dbg('adminLoadFlags', e?.message); }
+}
+
+// Save flags back to Firestore
+$('admin-save-flags').onclick = async ()=>{
+  try{
+    const f = {
+      pauseAll:   $('flag-pause-all').checked,
+      pauseClaims:$('flag-pause-claims').checked,
+      pauseBuys:  $('flag-pause-buys').checked,
+    };
+    await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc)
+      .set({ flags: f }, { merge:true });
+    toast('Flags saved ✅');
+  }catch(e){ dbg('admin-save-flags', e?.message); alert('Saving flags failed. Check Firestore rules.'); }
+};
+
     $('admin-open').onclick = async ()=>{
       try{
         const seed=randomSeed(); const commit=await sha256Hex(seed); localStorage.setItem(SEED_KEY,seed);
@@ -711,6 +808,20 @@
     };
 
     $('admin-refresh').onclick = adminRefresh;
+
+    async function adminRefresh(){
+  try{
+    const snap=await db.collection('draws').doc(DRAW_ID).get();
+    if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); await adminLoadFlags(); return; }
+    const d=snap.data();
+    setText('admin-status',`status: ${d.status||'—'}`);
+    setText('admin-commit',d.commitHash||'—');
+    setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
+    if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
+    $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
+    await adminLoadFlags(); // NEW
+  }catch(e){ dbg('adminRefresh', e?.message); }
+}
 
     $('admin-saveFlags').onclick = async ()=>{
       try{
@@ -790,6 +901,37 @@
       const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
       if(isAdmin) await adminRefresh();
     }
+
+    (async ()=>{
+  await loadDraw();
+
+  await waitForEthereum();
+  injected = pickInjectedProvider();
+
+  if (injected){
+    try{
+      const acc = await injected.request({ method:'eth_accounts' });
+      dbg('eth_accounts', acc);
+      if (acc && acc[0]){
+        // We know who *could* connect, but don't auto-connect UI.
+        provider = new ethers.providers.Web3Provider(injected, 'any');
+        signer   = provider.getSigner();
+        addr     = acc[0].toLowerCase();
+        setText('addr-pill', short(addr));
+        const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+        setText('chain-pill','Chain ' + (chainId||'?'));
+        wireProviderEvents();
+        // IMPORTANT: no afterConnect() here — user must click Connect.
+        $('app').style.display='none';
+        $('admin').style.display='none';
+      } else {
+        setText('addr-pill','—'); setText('chain-pill','—');
+      }
+    }catch(e){ dbg('silent restore', e?.message); }
+  } else {
+    dbg('no provider on boot');
+  }
+})();
 
     /* ========= Debug panel toggle (optional) ========= */
     (function initDebug(){
