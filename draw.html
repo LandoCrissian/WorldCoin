@@ -189,6 +189,21 @@
         </div>
       </div>
 
+      <!-- Player Card (renders if passports/<wallet> exists) -->
+<section id="player-card" class="card" style="display:none;">
+  <div class="body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <img id="pc-avatar" alt="" width="44" height="44"
+         style="border-radius:10px;border:1px solid var(--line);background:#0f1219;object-fit:cover;">
+    <div style="min-width:180px;">
+      <div style="font-weight:700;">Passport <span id="pc-serial">#000000</span></div>
+      <div class="muted" id="pc-nick-country">—</div>
+    </div>
+    <span class="pill" id="pc-tier">Tier: —</span>
+    <span class="pill" id="pc-balance">CRON8: —</span>
+    <span class="pill" id="pc-free">Free left: —</span>
+  </div>
+</section>
+
       <aside class="card">
         <div class="body">
           <h3>Buy more</h3>
@@ -294,31 +309,110 @@
   </footer>
 
   <script>
-    /* ========= CONSTANTS ========= */
-    const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
-    const DRAW_ID = 'current';
-    const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
-    const ADMIN_WALLET = DEV_WALLET;
-    const LS_CONNECTED = 'cronation_connected_v1';
+/* =========================================
+   CROnation — Mega Jackpot Draw (all-in-one)
+   - Wallet connect (no auto-UI), 1-time disclaimer signature
+   - Player Card (Passport + Tier + CRON8 bal + Free left)
+   - Flags + draw lifecycle + countdown hardening
+   - Quick/Manual free claims, purchases (15 CRO each), cooldown
+   - Admin (commit/reveal + flags)
+   - A11y: modal focus trap, Esc cancels
+   ========================================= */
 
-    const CRON8 = {
-      address:'0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
-      decimals:18,
-      abi:[{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]
-    };
-    const TIER = [
-      { tier:3, min:'25000000' },
-      { tier:2, min:'5000000'  },
-      { tier:1, min:'1000000'  },
-      { tier:0, min:'0' }
-    ];
+/* ========= CONSTANTS ========= */
+const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
+const DRAW_ID = 'current';
+const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
+const ADMIN_WALLET = DEV_WALLET;
+const LS_CONNECTED = 'cronation_connected_v1';
 
-    // One-time disclaimer gate
-const AGREEMENTS = { col:'agreements' }; // Firestore collection: agreements/<wallet>
+const CRON8 = {
+  address:'0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
+  decimals:18,
+  abi:[{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]
+};
+const TIER = [
+  { tier:3, min:'25000000' },
+  { tier:2, min:'5000000'  },
+  { tier:1, min:'1000000'  },
+  { tier:0, min:'0' }
+];
 
+// Free entries by tier
+const FREE = { 0:0, 1:1, 2:3, 3:5 };
 
+// Number rules
+const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
+
+// Admin flags (Firestore: config/app.flags)
+const CONFIG_DOC = { col: 'config', doc: 'app' };
+const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
+let __flags = { ...FLAGS_DEFAULT };
+
+/* ========= Firebase ========= */
+firebase.initializeApp({
+  apiKey:"AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
+  authDomain:"cronation-6058b.firebaseapp.com",
+  projectId:"cronation-6058b",
+  storageBucket:"cronation-6058b.appspot.com",
+  appId:"1:303748855698:web:b03fe82e7314ab371bf34b"
+});
+const db = firebase.firestore();
+
+/* ========= Helpers ========= */
+const $  = (id)=>document.getElementById(id);
+const setText=(id,v)=>{ const n=$(id); if(n) n.textContent=v; };
+const short=(a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
+const toast = (msg)=>{ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); };
+const setBusy = (on)=>{ const l=$('loader'); l.setAttribute('aria-busy',on?'true':'false'); l.setAttribute('aria-hidden',on?'false':'true'); };
+const compactNumber=(n,max=0)=>{ try{ return Number(n).toLocaleString(undefined, { maximumFractionDigits:max }); }catch{ return String(n); } };
+setText('year', new Date().getFullYear());
+
+// Debug (URL ?debug=1 to show)
+const DBG = [];
+function dbg(...a){ try{ const line=a.map(x=>(typeof x==='object'?JSON.stringify(x):String(x))).join(' '); DBG.push(line); const pre=$('dbg'); if(pre) pre.textContent=DBG.join('\n'); }catch(_){} }
+
+/* ========= HTTPS guard ========= */
+(function httpsGuard(){
+  const ok = (location.protocol === 'https:' || location.hostname === 'localhost');
+  if(!ok){ const w=$('envWarn'); if (w){ w.style.display='block'; w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.'; } dbg('WARN non-https', location.href); }
+})();
+
+/* ========= Mobile menu ========= */
+(function mobileMenu(){
+  const btn = $('hamburger'); const menu = $('mobile-menu'); if(!btn || !menu) return;
+  const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+  const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
+  btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+  window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
+  window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
+  window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
+})();
+
+/* ========= Wallet detection ========= */
+function detectCDC(p){ return !!(p && (p.isDeFiWallet || p.isDeficonnectProvider || p.isCryptoCom)); }
+function pickInjectedProvider(){
+  const eth = window.ethereum;
+  if (!eth) return window.deficonnectProvider || null;
+  if (Array.isArray(eth.providers) && eth.providers.length){
+    const mm  = eth.providers.find(p=>p && p.isMetaMask);
+    const cdc = eth.providers.find(p=>detectCDC(p));
+    return mm || cdc || eth.providers[0];
+  }
+  return eth;
+}
+function waitForEthereum(timeout=1800){
+  return new Promise((resolve)=>{
+    if (window.ethereum) return resolve(window.ethereum);
+    const t=setTimeout(()=>resolve(window.ethereum||null),timeout);
+    window.addEventListener('ethereum#initialized',()=>{ clearTimeout(t); resolve(window.ethereum||null); },{once:true});
+  });
+}
+
+/* ========= One-time disclaimer ========= */
+const AGREEMENTS = { col:'agreements' }; // agreements/<wallet>
 function agreementRef(addr){ return db.collection(AGREEMENTS.col).doc(addr); }
-
 function disclaimerMessage(addr){
   const ts = new Date().toISOString();
   return [
@@ -331,151 +425,281 @@ function disclaimerMessage(addr){
   ].join('\n');
 }
 
-// minimalist modal API
-function showDialog(){ $('dlg').style.display='flex'; }
-function hideDialog(){ $('dlg').style.display='none'; }
-$('dlg-cancel').onclick = ()=> hideDialog();
-
-    
-    // Zero freebies for tier 0
-    const FREE = { 0:0, 1:1, 2:3, 3:5 };
-    const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
-
-    // Admin flags (Firestore: config/app.flags)
-    const CONFIG_DOC = { col: 'config', doc: 'app' };
-    const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
-    let __flags = { ...FLAGS_DEFAULT };
-
-    /* ========= Firebase ========= */
-    firebase.initializeApp({
-      apiKey:"AIzaSyAJ0eSdO1mEYdbVNVRbiB0BlOwn6UEjT10",
-      authDomain:"cronation-6058b.firebaseapp.com",
-      projectId:"cronation-6058b",
-      storageBucket:"cronation-6058b.appspot.com",
-      appId:"1:303748855698:web:b03fe82e7314ab371bf34b"
-    });
-    const db = firebase.firestore();
-
-    /* ========= Helpers ========= */
-    const $ = (id)=>document.getElementById(id);
-    const setText=(id,v)=>{ const n=$(id); if(n) n.textContent=v; };
-    const short=(a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
-    const toast = (msg)=>{ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); };
-    const setBusy = (on)=>{ const l=$('loader'); l.setAttribute('aria-busy',on?'true':'false'); l.setAttribute('aria-hidden',on?'false':'true'); };
-
-    // Debug
-    const DBG = [];
-    function dbg(...a){
-      try{ const line=a.map(x=>(typeof x==='object'?JSON.stringify(x):String(x))).join(' ');
-        DBG.push(line); const pre=$('dbg'); if(pre) pre.textContent=DBG.join('\n');
-      }catch(_){}
+/* ========= Minimalist modal + focus trap ========= */
+let __dlgPrevFocus = null;
+const __dlgSelectors = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
+function showDialog(){
+  const dlg = $('dlg'); if(!dlg) return;
+  __dlgPrevFocus = document.activeElement;
+  dlg.style.display = 'flex';
+  document.body.classList.add('modal-open');
+  const foci = Array.from(dlg.querySelectorAll(__dlgSelectors)).filter(el=>!el.disabled && el.offsetParent!==null);
+  const first = foci[0], last = foci[foci.length-1];
+  (first||dlg).focus();
+  dlg.onkeydown = (e)=>{
+    if(e.key === 'Escape'){ e.preventDefault(); $('dlg-cancel').click(); }
+    if(e.key === 'Tab' && foci.length){
+      if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
     }
+  };
+}
+function hideDialog(){
+  const dlg = $('dlg'); if(!dlg) return;
+  dlg.style.display = 'none';
+  document.body.classList.remove('modal-open');
+  dlg.onkeydown = null;
+  if (__dlgPrevFocus && __dlgPrevFocus.focus) __dlgPrevFocus.focus();
+}
+$('dlg-cancel')?.addEventListener('click', ()=> hideDialog());
 
-    setText('year', new Date().getFullYear());
+/* ========= App state ========= */
+let injected=null, provider=null, signer=null, addr=null;
+let __closeAt=0;
+let __drawStatus = 'open';     // 'open' | 'closed'
 
-    // HTTPS guard
-    (function httpsGuard(){
-      const ok = (location.protocol === 'https:' || location.hostname === 'localhost');
-      if(!ok){ const w=$('envWarn'); w.style.display='block'; w.textContent='Serve over HTTPS or localhost. Wallets may refuse http:// or file://.'; dbg('WARN non-https', location.href); }
-    })();
+/* ========= Draw + Flags ========= */
+function applyFlagsToUI(){
+  const pausedMsg =
+    __flags.pauseAll ? 'Platform paused' :
+    __flags.pauseBuys ? 'Purchases paused' :
+    __flags.pauseClaims ? 'Free claims paused' : '';
+  const banner = $('platformBanner');
+  if (banner){ banner.innerHTML = pausedMsg ? `<b>${pausedMsg}.</b>` : '<b>Mega Jackpot Draw.</b>'; }
 
-    // Mobile menu
-    (function mobileMenu(){
-      const btn = $('hamburger'); const menu = $('mobile-menu'); if(!btn || !menu) return;
-      const close = () => { menu.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
-      const open  = () => { menu.classList.add('open');  btn.setAttribute('aria-expanded','true'); };
-      btn.addEventListener('click', () => { (btn.getAttribute('aria-expanded') === 'true') ? close() : open(); });
-      menu.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-      window.addEventListener('keydown', e => { if(e.key === 'Escape') close(); }, { passive:true });
-      window.addEventListener('click', e => { if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); }, { passive:true });
-      window.addEventListener('resize', () => { if(window.innerWidth > 640) close(); }, { passive:true });
-    })();
+  const canClaim = !__flags.pauseAll && !__flags.pauseClaims && (__drawStatus==='open');
+  const canBuy   = !__flags.pauseAll && !__flags.pauseBuys   && (__drawStatus==='open');
 
-    /* ========= Wallet detection ========= */
-    function detectCDC(p){ return !!(p && (p.isDeFiWallet || p.isDeficonnectProvider || p.isCryptoCom)); }
-    function pickInjectedProvider(){
-      const eth = window.ethereum;
-      if (!eth) return window.deficonnectProvider || null;
-      if (Array.isArray(eth.providers) && eth.providers.length){
-        const mm  = eth.providers.find(p=>p && p.isMetaMask);
-        const cdc = eth.providers.find(p=>detectCDC(p));
-        return mm || cdc || eth.providers[0];
-      }
-      return eth;
+  const qc=$('quick-claim'), mc=$('manual-claim'), buy=$('buy');
+  if(qc){ qc.disabled = !canClaim; qc.title = canClaim?'':'Claims disabled'; }
+  if(mc){ mc.disabled = !canClaim; mc.title = canClaim?'':'Claims disabled'; }
+  if(buy){ buy.disabled = !canBuy; buy.title = canBuy?'':'Purchases disabled'; }
+}
+
+async function loadDraw(){
+  try{
+    const snap = await db.collection('draws').doc(DRAW_ID).get();
+    const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
+    __drawStatus = d.status || 'open';
+    setText('status-pill', d.status||'—');
+    setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
+    setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
+    setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
+    __closeAt = d.closeAt||0;
+    applyFlagsToUI();
+  }catch(e){ dbg('loadDraw', e?.message); }
+}
+
+// Hardened countdown (flips to closed, disables actions at 0)
+setInterval(()=>{
+  if(!__closeAt){ setText('countdown','—'); return; }
+  let s = Math.floor((__closeAt - Date.now())/1000);
+  if (s <= 0){
+    s = 0;
+    if (__drawStatus !== 'closed'){
+      __drawStatus = 'closed';
+      setText('status-pill','closed');
+      applyFlagsToUI();
     }
-    function waitForEthereum(timeout=1800){
-      return new Promise((resolve)=>{
-        if (window.ethereum) return resolve(window.ethereum);
-        const t=setTimeout(()=>resolve(window.ethereum||null),timeout);
-        window.addEventListener('ethereum#initialized',()=>{ clearTimeout(t); resolve(window.ethereum||null); },{once:true});
-      });
+  }
+  const d = Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
+}, 1000);
+
+/* ========= Passport / Player Card ========= */
+// If the Player Card HTML isn’t present, inject it (safe idempotent)
+(function ensurePlayerCardSection(){
+  if ($('player-card')) return;
+  const sec = document.createElement('section');
+  sec.id = 'player-card';
+  sec.className = 'card';
+  sec.style.display = 'none';
+  sec.innerHTML = `
+    <div class="body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <img id="pc-avatar" alt="" width="44" height="44"
+           style="border-radius:10px;border:1px solid var(--line);background:#0f1219;object-fit:cover;">
+      <div style="min-width:180px;">
+        <div style="font-weight:700;">Passport <span id="pc-serial">#000000</span></div>
+        <div class="muted" id="pc-nick-country">—</div>
+      </div>
+      <span class="pill" id="pc-tier">Tier: —</span>
+      <span class="pill" id="pc-balance">CRON8: —</span>
+      <span class="pill" id="pc-free">Free left: —</span>
+    </div>`;
+  const page = document.querySelector('main.page.grid');
+  if (page){
+    // Put it just after the first card (under "Claim your free entries")
+    const firstCard = page.querySelector('.card');
+    if (firstCard && firstCard.nextSibling) page.insertBefore(sec, firstCard.nextSibling);
+    else page.appendChild(sec);
+  }
+})();
+
+async function fetchPassport(addrLc){
+  const snap = await db.collection('passports').doc(addrLc).get();
+  return snap.exists ? snap.data() : null;
+}
+async function cron8Balance(a){
+  const read = new ethers.providers.JsonRpcProvider(CRONOS.rpc);
+  const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
+  return await erc20.balanceOf(a);
+}
+async function loadPlayerCard(addrLc){
+  const box = $('player-card');
+  if (!box || !addrLc) return;
+
+  const passport = await fetchPassport(addrLc);
+  if (!passport){ box.style.display = 'none'; return; }
+
+  // balance + tier + free left
+  let balFmt = '0', tier = 0;
+  try{
+    const b = await cron8Balance(addrLc);
+    balFmt   = ethers.utils.formatUnits(b, CRON8.decimals);
+    for (const t of TIER){
+      if (ethers.BigNumber.from(b).gte(ethers.utils.parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
     }
+  }catch(_){}
 
-    /* ========= App state ========= */
-    let injected=null, provider=null, signer=null, addr=null;
-    let __closeAt=0;
-    let __drawStatus = 'open';     // 'open' | 'closed'
+  const claimed = await db.collection('tickets')
+    .where('drawId','==',DRAW_ID).where('wallet','==',addrLc).where('isFree','==',true)
+    .get().then(q=>q.size).catch(()=>0);
+  const freeLeft = Math.max(0, (FREE[tier] ?? 0) - claimed);
 
-    function applyFlagsToUI(){
-      // Banner + buttons tooltips
-      const pausedMsg =
-        __flags.pauseAll ? 'Platform paused' :
-        __flags.pauseBuys ? 'Purchases paused' :
-        __flags.pauseClaims ? 'Free claims paused' : '';
+  const nick = (passport.nick || 'Citizen');
+  const country = (passport.country || '—');
+  const serial = String(passport.serial||'000000').padStart(6,'0');
 
-      const banner = $('platformBanner');
-      if (banner){
-        banner.innerHTML = pausedMsg ? `<b>${pausedMsg}.</b>` : '<b>Mega Jackpot Draw.</b>';
-      }
+  setText('pc-serial', '#'+serial);
+  setText('pc-nick-country', `${nick} — ${country}`);
+  setText('pc-tier', 'Tier: ' + (tier ? `T${tier}` : 'None'));
+  setText('pc-balance', 'CRON8: ' + compactNumber(balFmt, 0));
+  setText('pc-free', 'Free left: ' + freeLeft);
 
-      const canClaim = !__flags.pauseAll && !__flags.pauseClaims && (__drawStatus==='open');
-      const canBuy   = !__flags.pauseAll && !__flags.pauseBuys   && (__drawStatus==='open');
+  // avatar (local, per wallet)
+  const avatar = $('pc-avatar');
+  if (avatar){
+    const key = `cronation_pfp:${addrLc}`;
+    const dataUrl = localStorage.getItem(key);
+    avatar.src = dataUrl || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    avatar.alt = `${nick} avatar`;
+  }
 
-      const qc=$('quick-claim'), mc=$('manual-claim'), buy=$('buy');
-      if(qc){ qc.disabled = !canClaim; qc.title = canClaim?'':'Claims disabled'; }
-      if(mc){ mc.disabled = !canClaim; mc.title = canClaim?'':'Claims disabled'; }
-      if(buy){ buy.disabled = !canBuy; buy.title = canBuy?'':'Purchases disabled'; }
+  box.style.display = 'block';
+}
+
+/* ========= Picker ========= */
+const primSel = new Set();
+let mega = NUM.megaMin;
+function renderPicker(){
+  const prim = $('prim'), m = $('mega');
+  if(!prim || !m) return;
+  prim.innerHTML = ''; m.innerHTML='';
+  for(let n=NUM.primMin; n<=NUM.primMax; n++){
+    const b = document.createElement('button');
+    b.type='button'; b.className='n' + (primSel.has(n)?' on':''); b.textContent=String(n);
+    b.onclick = ()=>{ if(primSel.has(n)) primSel.delete(n); else if(primSel.size<NUM.primPick) primSel.add(n); renderPicker(); };
+    prim.appendChild(b);
+  }
+  for(let n=NUM.megaMin; n<=NUM.megaMax; n++){
+    const b = document.createElement('button');
+    b.type='button'; b.className='n mega' + (mega===n?' on':''); b.textContent=String(n);
+    b.onclick = ()=>{ mega = n; renderPicker(); };
+    m.appendChild(b);
+  }
+}
+renderPicker();
+
+function quickPick(){
+  const s=new Set(); while(s.size<NUM.primPick){ s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin); }
+  const primary=[...s].sort((a,b)=>a-b);
+  const megaNum=Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
+  return { primary, mega: megaNum };
+}
+
+/* ========= Live admin flags sub ========= */
+db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
+  const data = snap.exists ? snap.data() : {};
+  __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+  dbg('flags', __flags);
+  applyFlagsToUI();
+}, (err)=>dbg('flags subscribe error', err?.message||err));
+
+/* ========= Wallet flow ========= */
+function wireProviderEvents(){
+  if(!injected || injected._wired_draw) return;
+  injected._wired_draw = true;
+  injected.on?.('accountsChanged', async (acc)=>{
+    dbg('accountsChanged', acc);
+    if (acc && acc[0]){
+      addr = acc[0].toLowerCase();
+      setText('addr-pill', short(addr));
+      await afterConnect();
+    } else {
+      doDisconnectUI();
     }
+  });
+  injected.on?.('chainChanged', (cid)=>{ dbg('chainChanged', cid); location.reload(); });
+}
 
-    function wireProviderEvents(){
-      if(!injected || injected._wired_draw) return;
-      injected._wired_draw = true;
-      injected.on?.('accountsChanged', async (acc)=>{
-        dbg('accountsChanged', acc);
-        if (acc && acc[0]){
-          addr = acc[0].toLowerCase();
-          setText('addr-pill', short(addr));
-          await afterConnect();
-        } else {
-          doDisconnectUI();
-        }
-      });
-      injected.on?.('chainChanged', (cid)=>{ dbg('chainChanged', cid); location.reload(); });
+async function ensureCronos(){
+  if(!injected) return;
+  const desired = CRONOS.chainIdHex;
+  let current;
+  try{ current = await injected.request({method:'eth_chainId'}); dbg('chainId', current); }catch(e){ dbg('eth_chainId error', e?.message); }
+  if ((current||'').toLowerCase() === desired) return;
+  try{
+    await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId:desired }]});
+  }catch(e){
+    if (e?.code === 4902){
+      dbg('Adding Cronos via addEthereumChain');
+      await injected.request({ method:'wallet_addEthereumChain', params:[{
+        chainId:desired, chainName:'Cronos Mainnet',
+        nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
+        rpcUrls:[CRONOS.rpc], blockExplorerUrls:['https://cronoscan.com']
+      }]});
+    } else {
+      throw e;
     }
+  }
+}
 
-    async function ensureCronos(){
-      if(!injected) return;
-      const desired = CRONOS.chainIdHex;
-      let current;
-      try{ current = await injected.request({method:'eth_chainId'}); dbg('chainId', current); }catch(e){ dbg('eth_chainId error', e?.message); }
-      if ((current||'').toLowerCase() === desired) return;
+// Require & record 1-time disclaimer signature BEFORE revealing app UI
+async function requireAgreementOnce(){
+  const exists = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+  if (exists) return true;
+
+  return await new Promise((resolve)=>{
+    showDialog();
+    const agree  = $('dlg-agree');
+    const cancel = $('dlg-cancel');
+    const onAgree = async ()=>{
+      agree.disabled = true;
       try{
-        await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId:desired }]});
+        const msg = disclaimerMessage(addr);
+        const sig = await signer.signMessage(msg);
+        await agreementRef(addr).set({
+          wallet: addr,
+          message: msg,
+          signature: sig,
+          ua: navigator.userAgent || '',
+          signedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge:true });
+        hideDialog();
+        resolve(true);
       }catch(e){
-        if (e?.code === 4902){
-          dbg('Adding Cronos via addEthereumChain');
-          await injected.request({ method:'wallet_addEthereumChain', params:[{
-            chainId:desired, chainName:'Cronos Mainnet',
-            nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
-            rpcUrls:[CRONOS.rpc], blockExplorerUrls:['https://cronoscan.com']
-          }]});
-        } else {
-          throw e;
-        }
+        console.warn('sign canceled/failed', e?.message||e);
+        agree.disabled = false;
+        hideDialog();
+        resolve(false);
       }
-    }
+    };
+    const onCancel = ()=>{ hideDialog(); resolve(false); };
+    agree.onclick = onAgree; cancel.onclick = onCancel;
+  });
+}
 
-    async function connect(){
+async function connect(){
   setBusy(true);
   try{
     await waitForEthereum();
@@ -487,72 +711,28 @@ $('dlg-cancel').onclick = ()=> hideDialog();
       return;
     }
 
-    // 1) Ask wallet for permission to expose accounts
+    // Ask for account access
     try { await injected.request({ method:'eth_requestAccounts' }); }
     catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
 
-    // 2) Create provider/signer + discover address
     provider = new ethers.providers.Web3Provider(injected, 'any');
     signer   = provider.getSigner();
     try { addr = (await signer.getAddress()).toLowerCase(); }
     catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
 
-    // (optional) make sure we’re on Cronos
+    // Try Cronos switch (non-fatal if declined)
     try { await ensureCronos(); } catch(e){ dbg('ensureCronos', e?.message); }
 
-    // 3) REQUIRE 1-TIME DISCLAIMER SIGNATURE (inserted here)
-    async function requireAgreement(){
-      const existing = await agreementRef(addr).get().catch(()=>null);
-      if (existing && existing.exists) return true;
+    // Disclaimer signature (HARD gate)
+    const ok = await requireAgreementOnce();
+    if(!ok){ toast('Signature required to continue.'); return; }
 
-      const ok = await new Promise((resolve)=>{
-        showDialog();
-        const agree  = $('dlg-agree');
-        const cancel = $('dlg-cancel');
-
-        const onAgree = async ()=>{
-          agree.disabled = true;
-          try{
-            const msg = disclaimerMessage(addr);
-            const sig = await signer.signMessage(msg); // EIP-191 personal_sign
-            await agreementRef(addr).set({
-              wallet: addr,
-              message: msg,
-              signature: sig,
-              ua: navigator.userAgent || '',
-              signedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge:true });
-            hideDialog();
-            resolve(true);
-          }catch(e){
-            console.warn('sign canceled/failed', e?.message||e);
-            agree.disabled = false;
-            hideDialog();
-            resolve(false);
-          }
-        };
-
-        const onCancel = ()=>{ hideDialog(); resolve(false); };
-
-        agree.onclick  = onAgree;
-        cancel.onclick = onCancel;
-      });
-
-      return ok;
-    }
-
-    const ok = await requireAgreement();
-    if(!ok){
-      toast('Signature required to continue.');
-      return; // do NOT mark as connected, do NOT show app
-    }
-
-    // 4) Only NOW “remember” the connection and reveal the app UI
+    // Only now remember + reveal app
     localStorage.setItem(LS_CONNECTED, '1');
 
-    setText('addr-pill', short(addr));
     const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-    setText('chain-pill', 'Chain ' + (chainId||'?'));
+    setText('addr-pill', short(addr));
+    setText('chain-pill', (chainId?.toLowerCase()==='0x19') ? 'Cronos (25)' : `Chain ${chainId||'?'}`);
 
     $('connect').style.display='none';
     $('disconnect').style.display='inline-block';
@@ -568,366 +748,305 @@ $('dlg-cancel').onclick = ()=> hideDialog();
   }
 }
 
-    function doDisconnectUI(){
-      addr = null; provider=null; signer=null;
-      $('app').style.display='none';
-      $('admin').style.display='none';
-      $('connect').style.display='inline-block';
-      $('disconnect').style.display='none';
-      setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
-    }
-
-    function disconnect(){
-      // cannot force the extension to forget, but clear our state
-      localStorage.removeItem(LS_CONNECTED);
-      doDisconnectUI();
-      toast('Disconnected.');
-    }
-
-    /* ========= Draw + Tier ========= */
-    async function loadDraw(){
-      try{
-        const snap = await db.collection('draws').doc(DRAW_ID).get();
-        const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
-        __drawStatus = d.status || 'open';
-        setText('status-pill', d.status||'—');
-        setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
-        setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
-        setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
-        __closeAt = d.closeAt||0;
-        applyFlagsToUI();
-      }catch(e){ dbg('loadDraw', e?.message); }
-    }
-    setInterval(()=>{
-      if(!__closeAt){ setText('countdown','—'); return; }
-      const s = Math.max(0, Math.floor((__closeAt - Date.now())/1000));
-      const d = Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
-      setText('countdown', `${d}d ${h}h ${m}m ${sec}s`);
-    }, 1000);
-
-    async function restorePassport(){
-      try{ if(!addr) return; await db.collection('passports').doc(addr).get(); }catch(e){ dbg('restorePassport', e?.message); }
-    }
-
-    async function cron8Balance(a){
-      const read = new ethers.providers.JsonRpcProvider(CRONOS.rpc);
-      const erc20 = new ethers.Contract(CRON8.address, CRON8.abi, read);
-      return await erc20.balanceOf(a);
-    }
-    const parseUnits=(v,d)=> ethers.utils.parseUnits(v,d);
-
-    async function refreshTier(){
-      if(!addr) return;
-      try{
-        const bal = await cron8Balance(addr);
-        let tier = 0;
-        for (const t of TIER){
-          if (ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
-        }
-        setText('tier-pill', 'Tier: ' + (tier===0?'None':('T'+tier)));
-
-        const claimed = await db.collection('tickets')
-          .where('drawId','==',DRAW_ID).where('wallet','==',addr).where('isFree','==',true).get()
-          .then(q=>q.size).catch(()=>0);
-        const left = Math.max(0, (FREE[tier] ?? 0) - claimed);
-        setText('free-pill', 'Free left: ' + left);
-        window.__freeLeft = left;
-      }catch(e){ dbg('refreshTier', e?.message); setText('tier-pill', 'Tier: —'); setText('free-pill', 'Free left: —'); }
-    }
-
-    const primSel = new Set();
-    let mega = NUM.megaMin;
-    function renderPicker(){
-      const prim = $('prim'), m = $('mega');
-      prim.innerHTML = ''; m.innerHTML='';
-      for(let n=NUM.primMin; n<=NUM.primMax; n++){
-        const b = document.createElement('button');
-        b.type='button'; b.className='n' + (primSel.has(n)?' on':''); b.textContent=String(n);
-        b.onclick = ()=>{ if(primSel.has(n)) primSel.delete(n); else if(primSel.size<NUM.primPick) primSel.add(n); renderPicker(); };
-        prim.appendChild(b);
-      }
-      for(let n=NUM.megaMin; n<=NUM.megaMax; n++){
-        const b = document.createElement('button');
-        b.type='button'; b.className='n mega' + (mega===n?' on':''); b.textContent=String(n);
-        b.onclick = ()=>{ mega = n; renderPicker(); };
-        m.appendChild(b);
-      }
-    }
-    renderPicker();
-
-    function quickPick(){
-      const s=new Set(); while(s.size<NUM.primPick){ s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin); }
-      const primary=[...s].sort((a,b)=>a-b);
-      const megaNum=Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
-      return { primary, mega: megaNum };
-    }
-
-    /* ========= Live admin flags subscription ========= */
-    db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
-      const data = snap.exists ? snap.data() : {};
-      __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
-      dbg('flags', __flags);
-      applyFlagsToUI();
-    }, (err)=>dbg('flags subscribe error', err?.message||err));
-
-    /* ========= Claim & Buy ========= */
-    $('quick-claim').onclick = async ()=>{
-      if(!addr) return alert('Connect wallet first');
-
-      // ensure the disclaimer was signed (in case they connected in a previous tab)
-const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
-if(!agreed){
-  alert('Please accept the disclaimer first (you will be asked to sign once).');
-  // optionally pop the modal and run the same sign flow:
-  $('connect').click(); // leverage the connect flow to show modal/sign again
-  return;
+function doDisconnectUI(){
+  addr = null; provider=null; signer=null;
+  $('app').style.display='none';
+  $('admin').style.display='none';
+  $('connect').style.display='inline-block';
+  $('disconnect').style.display='none';
+  setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
+  const pc = $('player-card'); if (pc) pc.style.display='none';
 }
 
-      // Guards
-      if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
-      if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
-      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
-
-      try{
-        const picks = quickPick();
-        await db.collection('tickets').add({
-          drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
-          created: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        await loadMine(); await refreshTier();
-        toast('Free ticket claimed ✅');
-      }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
-    };
-
-    $('manual-claim').onclick = async ()=>{
-      if(!addr) return alert('Connect wallet first');
-
-      // ensure the disclaimer was signed (in case they connected in a previous tab)
-const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
-if(!agreed){
-  alert('Please accept the disclaimer first (you will be asked to sign once).');
-  // optionally pop the modal and run the same sign flow:
-  $('connect').click(); // leverage the connect flow to show modal/sign again
-  return;
+function disconnect(){
+  localStorage.removeItem(LS_CONNECTED);
+  doDisconnectUI();
+  toast('Disconnected.');
 }
 
-      // Correct guards for manual free claims
-      if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
-      if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+/* ========= Tier + free left ========= */
+const parseUnits=(v,d)=> ethers.utils.parseUnits(v,d);
 
-      if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
-      if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
-      try{
-        const picks = { primary:[...primSel].sort((a,b)=>a-b), mega };
-        await db.collection('tickets').add({
-          drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
-          created: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        primSel.clear(); mega = NUM.megaMin; renderPicker();
-        await loadMine(); await refreshTier();
-        toast('Free ticket claimed ✅');
-      }catch(e){ dbg('claim manual', e?.message); alert('Claim failed.'); }
-    };
+async function refreshTier(){
+  if(!addr) return;
+  try{
+    const bal = await cron8Balance(addr);
+    let tier = 0;
+    for (const t of TIER){
+      if (ethers.BigNumber.from(bal).gte(parseUnits(t.min, CRON8.decimals))){ tier = t.tier; break; }
+    }
+    setText('tier-pill', 'Tier: ' + (tier===0?'None':('T'+tier)));
 
-    let __nextBuyAt = 0;
-    $('buy').onclick = async ()=>{
-      if(!addr) return alert('Connect wallet first');
-
-      // ensure the disclaimer was signed (in case they connected in a previous tab)
-const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
-if(!agreed){
-  alert('Please accept the disclaimer first (you will be asked to sign once).');
-  // optionally pop the modal and run the same sign flow:
-  $('connect').click(); // leverage the connect flow to show modal/sign again
-  return;
+    const claimed = await db.collection('tickets')
+      .where('drawId','==',DRAW_ID).where('wallet','==',addr).where('isFree','==',true).get()
+      .then(q=>q.size).catch(()=>0);
+    const left = Math.max(0, (FREE[tier] ?? 0) - claimed);
+    setText('free-pill', 'Free left: ' + left);
+    window.__freeLeft = left;
+  }catch(e){ dbg('refreshTier', e?.message); setText('tier-pill', 'Tier: —'); setText('free-pill', 'Free left: —'); }
 }
 
-      if (__flags.pauseAll || __flags.pauseBuys) return alert('Purchases are currently paused.');
-      if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+async function restorePassport(){
+  try{ if(!addr) return; await db.collection('passports').doc(addr).get(); }catch(e){ dbg('restorePassport', e?.message); }
+}
 
-      const now=Date.now(); if(now<__nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s…`);
-      try{
-        await ensureCronos();
-        const qty=Math.max(1, parseInt(($('qty').value||'1'),10));
-        const total=ethers.utils.parseEther(String(15 * qty));
-        await injected.request({ method:'eth_sendTransaction', params:[{ from:addr, to:DEV_WALLET, value: total.toHexString() }]});
-        __nextBuyAt=Date.now()+3000;
+/* ========= Claim & Buy ========= */
+// Gentle Cronos prompt helper
+async function nudgeCronos(){
+  const onCronos = (await injected.request({method:'eth_chainId'}).catch(()=>null))?.toLowerCase() === '0x19';
+  if (!onCronos){
+    const go = confirm('You are not on Cronos. Switch now?');
+    if (go){ try { await ensureCronos(); } catch(_){} }
+  }
+}
 
-        const batch=[];
-        for(let i=0;i<qty;i++){
-          const picks=quickPick();
-          batch.push(db.collection('tickets').add({
-            drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:false,
-            created: firebase.firestore.FieldValue.serverTimestamp()
-          }));
-        }
-        batch.push(db.collection('ledger').add({
-          drawId:DRAW_ID, type:'purchase', wallet:addr, qty, priceCro:15, to:DEV_WALLET,
-          at: firebase.firestore.FieldValue.serverTimestamp()
-        }));
-        await Promise.all(batch);
-        await loadMine();
-        alert(`Purchased ${qty} ticket(s). CRO sent.`);
-      }catch(e){ dbg('buy failed', e?.message); alert('Payment cancelled or failed.'); }
-    };
+$('quick-claim')?.addEventListener('click', async ()=>{
+  if(!addr) return alert('Connect wallet first');
 
-    async function loadMine(){
-      if(!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
-      try{
-        const snap = await db.collection('tickets')
-          .where('drawId','==',DRAW_ID).where('wallet','==',addr).orderBy('created','desc').get();
-        const out=[];
-        snap.forEach(doc=>{
-          const d=doc.data();
-          out.push(`<div class="card"><div class="body">
-            <div class="muted">${d.isFree?'Free':'Paid'}</div>
-            <div class="mono" style="margin-top:4px;">${(d.picks||[]).join(' - ')}  |  ★ ${d.mega}</div>
-          </div></div>`);
-        });
-        $('tickets').innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
-      }catch(e){ dbg('loadMine', e?.message); $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>'; }
+  const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+  if(!agreed){ alert('Please accept the disclaimer first (you will be asked to sign once).'); $('connect').click(); return; }
+
+  if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
+  if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+
+  if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+
+  await nudgeCronos();
+
+  try{
+    const picks = quickPick();
+    await db.collection('tickets').add({
+      drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
+      created: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await loadMine(); await refreshTier(); await loadPlayerCard(addr);
+    toast('Free ticket claimed ✅');
+  }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
+});
+
+$('manual-claim')?.addEventListener('click', async ()=>{
+  if(!addr) return alert('Connect wallet first');
+
+  const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+  if(!agreed){ alert('Please accept the disclaimer first (you will be asked to sign once).'); $('connect').click(); return; }
+
+  if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
+  if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+  if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
+  if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
+
+  await nudgeCronos();
+
+  try{
+    const picks = { primary:[...primSel].sort((a,b)=>a-b), mega };
+    await db.collection('tickets').add({
+      drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
+      created: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    primSel.clear(); mega = NUM.megaMin; renderPicker();
+    await loadMine(); await refreshTier(); await loadPlayerCard(addr);
+    toast('Free ticket claimed ✅');
+  }catch(e){ dbg('claim manual', e?.message); alert('Claim failed.'); }
+});
+
+let __nextBuyAt = 0;
+$('buy')?.addEventListener('click', async ()=>{
+  if(!addr) return alert('Connect wallet first');
+
+  const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
+  if(!agreed){ alert('Please accept the disclaimer first (you will be asked to sign once).'); $('connect').click(); return; }
+
+  if (__flags.pauseAll || __flags.pauseBuys) return alert('Purchases are currently paused.');
+  if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+
+  const now=Date.now(); if(now<__nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s…`);
+  await nudgeCronos();
+
+  try{
+    const rawQty = parseInt(($('qty').value||'1'),10);
+    const qty = Math.min(100, Math.max(1, isFinite(rawQty)?rawQty:1)); // clamp 1..100
+    const total=ethers.utils.parseEther(String(15 * qty));
+    await injected.request({ method:'eth_sendTransaction', params:[{ from:addr, to:DEV_WALLET, value: total.toHexString() }]});
+    __nextBuyAt=Date.now()+3000;
+
+    const batch=[];
+    for(let i=0;i<qty;i++){
+      const picks=quickPick();
+      batch.push(db.collection('tickets').add({
+        drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:false,
+        created: firebase.firestore.FieldValue.serverTimestamp()
+      }));
     }
+    batch.push(db.collection('ledger').add({
+      drawId:DRAW_ID, type:'purchase', wallet:addr, qty, priceCro:15, to:DEV_WALLET,
+      at: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    await Promise.all(batch);
+    await loadMine(); await loadPlayerCard(addr);
+    alert(`Purchased ${qty} ticket(s). CRO sent.`);
+  }catch(e){ dbg('buy failed', e?.message); alert('Payment cancelled or failed.'); }
+});
 
-    /* ========= Admin (commit–reveal + flags) ========= */
-    const SEED_KEY='cronation_draw_seed';
-    const toHex=(buf)=>Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    async function sha256Hex(str){ const enc=new TextEncoder(); const buf=await crypto.subtle.digest('SHA-256', enc.encode(str)); return '0x'+toHex(buf); }
-    function randomSeed(){ const b=new Uint8Array(32); crypto.getRandomValues(b); return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(''); }
+/* ========= Tickets ========= */
+async function loadMine(){
+  if(!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
+  try{
+    const snap = await db.collection('tickets')
+      .where('drawId','==',DRAW_ID).where('wallet','==',addr).orderBy('created','desc').get();
+    const out=[];
+    snap.forEach(doc=>{
+      const d=doc.data();
+      out.push(`<div class="card"><div class="body">
+        <div class="muted">${d.isFree?'Free':'Paid'}</div>
+        <div class="mono" style="margin-top:4px;">${(d.picks||[]).join(' - ')}  |  ★ ${d.mega}</div>
+      </div></div>`);
+    });
+    $('tickets').innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
+  }catch(e){ dbg('loadMine', e?.message); $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>'; }
+}
 
-    async function adminRefresh(){
-      try{
-        const snap=await db.collection('draws').doc(DRAW_ID).get();
-        if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); await adminLoadFlags(); return; }
-        const d=snap.data();
-        __drawStatus = d.status || 'open';
-        setText('admin-status',`status: ${__drawStatus}`);
-        setText('admin-commit',d.commitHash||'—');
-        setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
-        if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
-        $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
-        await adminLoadFlags();
-        applyFlagsToUI();
-      }catch(e){ dbg('adminRefresh', e?.message); }
-    }
+/* ========= Admin (commit–reveal + flags) ========= */
+const SEED_KEY='cronation_draw_seed';
+const toHex=(buf)=>Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+async function sha256Hex(str){ const enc=new TextEncoder(); const buf=await crypto.subtle.digest('SHA-256', enc.encode(str)); return '0x'+toHex(buf); }
+function randomSeed(){ const b=new Uint8Array(32); crypto.getRandomValues(b); return '0x'+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(''); }
 
-    async function adminLoadFlags(){
-      try{
-        const snap = await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).get();
-        const data = snap.exists ? snap.data() : {};
-        const f = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
-        $('flag-pause-all').checked   = !!f.pauseAll;
-        $('flag-pause-claims').checked= !!f.pauseClaims;
-        $('flag-pause-buys').checked  = !!f.pauseBuys;
-      }catch(e){ dbg('adminLoadFlags', e?.message); }
-    }
+async function adminRefresh(){
+  try{
+    const snap=await db.collection('draws').doc(DRAW_ID).get();
+    if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); await adminLoadFlags(); return; }
+    const d=snap.data();
+    __drawStatus = d.status || 'open';
+    setText('admin-status',`status: ${__drawStatus}`);
+    setText('admin-commit',d.commitHash||'—');
+    setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
+    if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
+    $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
+    await adminLoadFlags();
+    applyFlagsToUI();
+  }catch(e){ dbg('adminRefresh', e?.message); }
+}
 
-    $('admin-save-flags').onclick = async ()=>{
-      try{
-        const f = {
-          pauseAll:   $('flag-pause-all').checked,
-          pauseClaims:$('flag-pause-claims').checked,
-          pauseBuys:  $('flag-pause-buys').checked,
-        };
-        await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc)
-          .set({ flags: f }, { merge:true });
-        toast('Flags saved ✅');
-      }catch(e){ dbg('admin-save-flags', e?.message); alert('Saving flags failed. Check Firestore rules.'); }
+async function adminLoadFlags(){
+  try{
+    const snap = await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).get();
+    const data = snap.exists ? snap.data() : {};
+    const f = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+    $('flag-pause-all').checked   = !!f.pauseAll;
+    $('flag-pause-claims').checked= !!f.pauseClaims;
+    $('flag-pause-buys').checked  = !!f.pauseBuys;
+  }catch(e){ dbg('adminLoadFlags', e?.message); }
+}
+
+$('admin-save-flags')?.addEventListener('click', async ()=>{
+  try{
+    const f = {
+      pauseAll:   $('flag-pause-all').checked,
+      pauseClaims:$('flag-pause-claims').checked,
+      pauseBuys:  $('flag-pause-buys').checked,
     };
+    await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc)
+      .set({ flags: f }, { merge:true });
+    toast('Flags saved ✅');
+  }catch(e){ dbg('admin-save-flags', e?.message); alert('Saving flags failed. Check Firestore rules.'); }
+});
 
-    $('admin-open').onclick = async ()=>{
-      try{
-        const seed=randomSeed(); const commit=await sha256Hex(seed); localStorage.setItem(SEED_KEY,seed);
-        const closeAtStr=$('admin-closeAt').value; const closeAt=closeAtStr? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
-        const cron8=parseFloat($('admin-cron8').value||'0')||0; const cro=parseFloat($('admin-cro').value||'0')||0;
-        await db.collection('draws').doc(DRAW_ID).set({
-          status:'open', commitHash:commit, closeAt, pots:{cron8,cro},
-          revealSeed: firebase.firestore.FieldValue.delete()
-        },{merge:true});
-        await adminRefresh(); await loadDraw(); alert('Draw opened. Seed saved locally.');
-      }catch(e){ dbg('admin-open', e?.message); alert('Open failed.'); }
-    };
+$('admin-open')?.addEventListener('click', async ()=>{
+  try{
+    const seed=randomSeed(); const commit=await sha256Hex(seed); localStorage.setItem(SEED_KEY,seed);
+    const closeAtStr=$('admin-closeAt').value; const closeAt=closeAtStr? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
+    const cron8=parseFloat($('admin-cron8').value||'0')||0; const cro=parseFloat($('admin-cro').value||'0')||0;
+    await db.collection('draws').doc(DRAW_ID).set({
+      status:'open', commitHash:commit, closeAt, pots:{cron8,cro},
+      revealSeed: firebase.firestore.FieldValue.delete()
+    },{merge:true});
+    await adminRefresh(); await loadDraw(); alert('Draw opened. Seed saved locally.');
+  }catch(e){ dbg('admin-open', e?.message); alert('Open failed.'); }
+});
 
-    $('admin-close').onclick = async ()=>{
-      try{
-        const seed=localStorage.getItem(SEED_KEY); if(!seed) return alert('No local seed to reveal.');
-        await db.collection('draws').doc(DRAW_ID).set({ status:'closed', revealSeed:seed },{merge:true});
-        await adminRefresh(); await loadDraw(); alert('Draw closed & seed revealed.');
-      }catch(e){ dbg('admin-close', e?.message); alert('Close failed.'); }
-    };
+$('admin-close')?.addEventListener('click', async ()=>{
+  try{
+    const seed=localStorage.getItem(SEED_KEY); if(!seed) return alert('No local seed to reveal.');
+    await db.collection('draws').doc(DRAW_ID).set({ status:'closed', revealSeed:seed },{merge:true});
+    await adminRefresh(); await loadDraw(); alert('Draw closed & seed revealed.');
+  }catch(e){ dbg('admin-close', e?.message); alert('Close failed.'); }
+});
 
-    $('admin-refresh').onclick = adminRefresh;
-    $('copy-commit').onclick = ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim());
-    $('copy-reveal').onclick = ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim());
+$('admin-refresh')?.addEventListener('click', adminRefresh);
+$('copy-commit')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim()));
+$('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim()));
 
-    /* ========= Boot (no auto-connect UI) ========= */
-    (async ()=>{
-      await loadDraw();
+/* ========= Boot (no auto-connect UI) ========= */
+(async ()=>{
+  await loadDraw();
 
-      await waitForEthereum();
-      injected = pickInjectedProvider();
+  await waitForEthereum();
+  injected = pickInjectedProvider();
 
-      // Bind buttons once
-      const btnConnect = $('connect');
-      const btnDisc = $('disconnect');
-      if(btnConnect && !btnConnect.__bound){ btnConnect.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }); btnConnect.__bound = true; }
-      if(btnDisc && !btnDisc.__bound){ btnDisc.addEventListener('click', (ev)=>{ ev.preventDefault(); disconnect(); }, { passive:false }); btnDisc.__bound = true; }
+  // Bind connect/disconnect
+  const btnConnect = $('connect');
+  const btnDisc = $('disconnect');
+  if(btnConnect && !btnConnect.__bound){ btnConnect.addEventListener('click', (ev)=>{ ev.preventDefault(); connect(); }, { passive:false }); btnConnect.__bound = true; }
+  if(btnDisc && !btnDisc.__bound){ btnDisc.addEventListener('click', (ev)=>{ ev.preventDefault(); disconnect(); }, { passive:false }); btnDisc.__bound = true; }
 
-      if (injected){
-        try{
-          const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-          setText('chain-pill','Chain ' + (chainId||'—'));
+  if (injected){
+    try{
+      const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+      setText('chain-pill', (chainId?.toLowerCase()==='0x19') ? 'Cronos (25)' : `Chain ${chainId||'—'}`);
 
-          // Don’t auto-connect UI; just show address if already authorized AND user opted to remember
-          const acc = await injected.request({ method:'eth_accounts' }).catch(()=>[]);
-          const shouldRestore = localStorage.getItem(LS_CONNECTED) === '1';
-          if (shouldRestore && acc && acc[0]){
-            provider = new ethers.providers.Web3Provider(injected, 'any');
-            signer   = provider.getSigner();
-            addr     = acc[0].toLowerCase();
-            setText('addr-pill', short(addr));
-            $('connect').style.display='none';
-            $('disconnect').style.display='inline-block';
-            wireProviderEvents();
-            await afterConnect();
-          } else {
-            // keep UI disconnected
-            setText('addr-pill','—');
-          }
-        }catch(e){ dbg('boot', e?.message); }
+      // Don’t auto-connect UI; only restore if authorized AND LS_CONNECTED==='1'
+      const acc = await injected.request({ method:'eth_accounts' }).catch(()=>[]);
+      const shouldRestore = localStorage.getItem(LS_CONNECTED) === '1';
+      if (shouldRestore && acc && acc[0]){
+        provider = new ethers.providers.Web3Provider(injected, 'any');
+        signer   = provider.getSigner();
+        addr     = acc[0].toLowerCase();
+        setText('addr-pill', short(addr));
+        $('connect').style.display='none';
+        $('disconnect').style.display='inline-block';
+        wireProviderEvents();
+        await afterConnect();
       } else {
-        dbg('no provider on boot');
+        setText('addr-pill','—');
       }
-    })();
+    }catch(e){ dbg('boot', e?.message); }
+  } else {
+    dbg('no provider on boot');
+  }
 
-    /* ========= After connect ========= */
-    async function afterConnect(){
-      $('app').style.display='grid';
-      await loadDraw();
-      await refreshTier();
-      await restorePassport();
-      await loadMine();
-
-      const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase());
-      $('admin').style.display = isAdmin ? 'block' : 'none';
-      const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
-      if(isAdmin) await adminRefresh();
+  // Debug toggle
+  (function initDebug(){
+    const on = new URLSearchParams(location.search).get('debug') === '1';
+    const box = $('debug');
+    if (box) box.style.display = on ? 'block' : 'none';
+    const btn = $('toggleDebug');
+    if(btn){
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.onclick = () => {
+        const open = $('debug').style.display !== 'block';
+        $('debug').style.display = open ? 'block' : 'none';
+        btn.setAttribute('aria-pressed', open ? 'true':'false');
+        btn.textContent = open ? 'Hide debug' : 'Show debug';
+      };
     }
+  })();
+})();
 
-    /* ========= Debug toggle ========= */
-    (function initDebug(){
-      const on = new URLSearchParams(location.search).get('debug') === '1';
-      $('debug').style.display = on ? 'block' : 'none';
-      const btn = $('toggleDebug');
-      if(btn){
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.onclick = () => {
-          const open = $('debug').style.display !== 'block';
-          $('debug').style.display = open ? 'block' : 'none';
-          btn.setAttribute('aria-pressed', open ? 'true':'false');
-          btn.textContent = open ? 'Hide debug' : 'Show debug';
-        };
-      }
-    })();
-  </script>
+/* ========= After connect ========= */
+async function afterConnect(){
+  $('app').style.display='grid';
+  await loadDraw();
+  await refreshTier();
+  await restorePassport();
+  await loadMine();
+
+  await loadPlayerCard(addr);
+
+  const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase());
+  $('admin').style.display = isAdmin ? 'block' : 'none';
+  const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
+  if(isAdmin) await adminRefresh();
+}
+</script>
 </body>
 </html>
