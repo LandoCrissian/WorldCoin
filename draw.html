@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; }
+    :root{ --bg:#0b0d12; --text:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --soft:#0f1219; --accent:#3b82f6; --accent-600:#2563eb; --gold:#f59e0b; }
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{ margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif; color:var(--text); background:var(--bg); line-height:1.5; }
@@ -60,8 +60,8 @@
     .card .body{ padding:16px; }
     .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .muted{ color:var(--muted); }
-    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:12px; font-weight:700; }
-    .h1{ font-size:clamp(28px,3vw+12px,40px); font-weight:800; margin:10px 0; }
+    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:12px; font-weight:700; white-space:nowrap; }
+    .h1{ font-size:clamp(28px,3vw+12px,40px); font-weight:800; margin:10px 0; letter-spacing:-0.01em; }
     .tickets{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
 
@@ -86,147 +86,66 @@
     #debug pre{ white-space:pre-wrap; word-break:break-word; background:#0e1117; border:1px solid var(--line); padding:12px; border-radius:10px; }
     .warn{ color:#fde68a } .err{ color:#fca5a5 }
 
-    /* === CROnation — Draw: Mobile Polish Pack (≤ 400px) === */
+    /* === Mobile Polish (≤ 400px) === */
+    html, body, .page { overflow-x: hidden; }
+    @supports(padding:max(0px)) { .page { padding-bottom: max(72px, env(safe-area-inset-bottom)); } }
 
-/* Baseline: never allow horizontal scroll */
-html, body, .page { overflow-x: hidden; }
+    @media (max-width: 400px){
+      .container, .page { width: 94vw; }
+      .card { border-radius: 12px; }
+      .card .body { padding: 12px; }
+      .h1 { font-size: clamp(24px, 5.6vw + 8px, 30px); }
+      .row { gap: 6px; }
+      .pill { font-size: 11.5px; padding: 4px 8px; }
+      #status-pill, #countdown, #addr-pill, #chain-pill, #tier-pill, #free-pill { flex: 0 1 auto; }
+      .btn { min-height: 44px; padding: 10px 12px; }
+      input[type="number"] { height: 44px; }
+      .numbers { display: grid; grid-auto-rows: 44px; gap: 8px; }
+      #prim.numbers { grid-template-columns: repeat(7, 1fr); }
+      #mega.numbers { grid-template-columns: repeat(6, 1fr); }
+      .n { min-width: 0; width: 100%; height: 44px; padding: 0; border-radius: 999px; font-weight: 700; touch-action: manipulation; }
+      #picker .muted { margin: 6px 0 4px !important; }
+      aside .row { flex-direction: row; }
+      @supports (display:grid){ aside .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; } }
+      #qty { width: 100% !important; }
+      .tickets { grid-template-columns: 1fr; gap: 8px; }
+      .brand { gap: 8px; }
+      .brand img { width: 28px; height: 28px; }
+    }
+    @media (max-width: 340px){
+      #prim.numbers { grid-template-columns: repeat(6, 1fr); }
+      #mega.numbers { grid-template-columns: repeat(5, 1fr); }
+    }
+    .n { box-shadow: 0 0 0 1px var(--line) inset; }
+    .n.on { box-shadow: none; }
 
-/* Safe-area + breathing room for bottom bars on iOS */
-@supports(padding:max(0px)) {
-  .page { padding-bottom: max(72px, env(safe-area-inset-bottom)); }
-}
+    /* Admin mobile wrapping + long-hash wrap */
+    @media (max-width: 640px){
+      #admin .row { flex-wrap: wrap; }
+      #admin input[type="number"], #admin input[type="datetime-local"] { width: 100% !important; }
+    }
+    #admin .mono { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+    #admin .mono .btn { margin-top: 6px; }
+    input, select, textarea, button { font-size: 16px; }
 
-/* Cards a bit flatter, tighter on mobile */
-@media (max-width: 400px){
-  .container, .page { width: 94vw; }
-  .card { border-radius: 12px; }
-  .card .body { padding: 12px; }
-  .h1 { font-size: clamp(24px, 5.6vw + 8px, 30px); }
+    /* ✨ Subtle excitement: countdown pulse */
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.35); }
+      50%     { box-shadow: 0 0 0 6px rgba(59,130,246,.0); }
+    }
+    #countdown { animation: pulse 2.4s infinite; }
 
-  /* Header row pills: wrap cleanly and shrink just a touch */
-  .row { gap: 6px; }
-  .pill {
-    font-size: 11.5px;
-    padding: 4px 8px;
-    line-height: 1.1;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-
-  /* Address / chain / tier / free pills live in a wrap line */
-  #status-pill, #countdown, #addr-pill, #chain-pill, #tier-pill, #free-pill {
-    flex: 0 1 auto;
-  }
-
-  /* Inputs + buttons */
-  .btn { min-height: 44px; padding: 10px 12px; }
-  input[type="number"] { height: 44px; }
-
-  /* Number pickers -> true grid; no overflow, minimum 44px squares */
-  .numbers { 
-    display: grid;
-    grid-auto-rows: 44px;
-    gap: 8px;
-  }
-  /* Primary: 7 columns on narrow phones */
-  #prim.numbers { grid-template-columns: repeat(7, 1fr); }
-  /* Mega: 6 columns so the circles stay big */
-  #mega.numbers { grid-template-columns: repeat(6, 1fr); }
-
-  /* Number buttons */
-  .n {
-    min-width: 0;
-    width: 100%;
-    height: 44px;
-    padding: 0;
-    border-radius: 999px;
-    font-weight: 700;
-    touch-action: manipulation;
-  }
-
-  /* Labels above pickers closer to the controls */
-  #picker .muted { margin: 6px 0 4px !important; }
-
-  /* “Buy more” block: stack qty + button */
-  aside .row { flex-direction: row; }
-  @supports (display:grid){
-    aside .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-  }
-  #qty { width: 100% !important; }
-
-  /* Tickets: full-bleed, comfortable spacing */
-  .tickets { grid-template-columns: 1fr; gap: 8px; }
-
-  /* Nav: compact */
-  .brand { gap: 8px; }
-  .brand img { width: 28px; height: 28px; }
-}
-
-/* Ultra-narrow devices (≤ 340px): keep tap targets, reduce columns */
-@media (max-width: 340px){
-  #prim.numbers { grid-template-columns: repeat(6, 1fr); }
-  #mega.numbers { grid-template-columns: repeat(5, 1fr); }
-}
-
-/* Improve contrast for the number rings on dark backgrounds */
-.n { box-shadow: 0 0 0 1px var(--line) inset; }
-.n.on { box-shadow: none; }
-
-/* Make the admin panel mobile-friendly: readable, wrapped */
-@media (max-width: 640px){
-  #admin .row { flex-wrap: wrap; }
-  #admin input[type="number"], #admin input[type="datetime-local"] {
-    width: 100% !important;
-  }
-}
-
-/* Sticky action helper (if you later decide to pin actions) */
-@media (max-width: 400px){
-  .sticky-actions {
-    position: sticky;
-    bottom: 0;
-    left: 0; right: 0;
-    padding: 8px 0;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: saturate(120%) blur(8px);
-    border-top: 1px solid var(--line);
-    z-index: 12;
-  }
-}
-
-    /* --- Mobile overflow fixes (admin + global) --- */
-html, body { max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
-.page, .container { overflow-x: hidden; }
-
-/* Wrap long hashes so they don't force horizontal scroll */
-#admin .mono { 
-  white-space: normal;          /* allow wrapping */
-  overflow-wrap: anywhere;      /* break long words/hashes */
-  word-break: break-word;
-}
-#admin .mono span {
-  display: inline-block;
-  max-width: 100%;
-  vertical-align: top;
-}
-
-/* Make admin rows fully wrap on small screens */
-#admin .row { flex-wrap: wrap; }
-#admin .row input {
-  min-width: 0;
-  flex: 1 1 200px;              /* inputs shrink instead of pushing layout */
-}
-
-/* Put “Copy” buttons on a new line if needed */
-#admin .mono .btn { 
-  margin-top: 6px;
-}
-
-/* Prevent buttons/pills from overflowing tiny screens */
-.btn, .pill { max-width: 100%; }
-
-/* iOS zoom-on-focus prevention (keeps inputs ≥16px) */
-input, select, textarea, button { font-size: 16px; }
+    /* Optional sticky actions shell if needed later */
+    @media (max-width: 400px){
+      .sticky-actions{
+        position: sticky; bottom: 0; left: 0; right: 0;
+        padding: 8px 0;
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: saturate(120%) blur(8px);
+        border-top: 1px solid var(--line);
+        z-index: 12;
+      }
+    }
   </style>
 </head>
 <body>
@@ -289,7 +208,7 @@ input, select, textarea, button { font-size: 16px; }
   <main class="page grid" style="margin-top:14px;">
 
     <!-- Jackpot header -->
-    <section class="card">
+    <section id="jackpot-card" class="card">
       <div class="body">
         <div class="row" style="justify-content:space-between;">
           <div>
@@ -312,9 +231,24 @@ input, select, textarea, button { font-size: 16px; }
       </div>
     </section>
 
+    <!-- Player Card (directly under Jackpot; hidden until connect/passport) -->
+    <section id="player-card" class="card" style="display:none;">
+      <div class="body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <img id="pc-avatar" alt="" width="44" height="44"
+             style="border-radius:10px;border:1px solid var(--line);background:#0f1219;object-fit:cover;">
+        <div style="min-width:180px;">
+          <div style="font-weight:700;">Passport <span id="pc-serial">#000000</span></div>
+          <div class="muted" id="pc-nick-country">—</div>
+        </div>
+        <span class="pill" id="pc-tier">Tier: —</span>
+        <span class="pill" id="pc-balance">CRON8: —</span>
+        <span class="pill" id="pc-free">Free left: —</span>
+      </div>
+    </section>
+
     <!-- App actions (shown after connect) -->
     <section id="app" class="grid two" style="display:none;">
-      <div class="card">
+      <div id="claim-card" class="card">
         <div class="body">
           <h3>Claim your free entries</h3>
           <p class="muted">Passport holders get free tickets per draw based on CRON8 tier.</p>
@@ -331,22 +265,7 @@ input, select, textarea, button { font-size: 16px; }
         </div>
       </div>
 
-      <!-- Player Card (renders if passports/<wallet> exists) -->
-<section id="player-card" class="card" style="display:none;">
-  <div class="body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-    <img id="pc-avatar" alt="" width="44" height="44"
-         style="border-radius:10px;border:1px solid var(--line);background:#0f1219;object-fit:cover;">
-    <div style="min-width:180px;">
-      <div style="font-weight:700;">Passport <span id="pc-serial">#000000</span></div>
-      <div class="muted" id="pc-nick-country">—</div>
-    </div>
-    <span class="pill" id="pc-tier">Tier: —</span>
-    <span class="pill" id="pc-balance">CRON8: —</span>
-    <span class="pill" id="pc-free">Free left: —</span>
-  </div>
-</section>
-
-      <aside class="card">
+      <aside id="buy-card" class="card">
         <div class="body">
           <h3>Buy more</h3>
           <p class="muted">Tickets are <b>15 CRO</b> each. v1 sends CRO to the dev wallet.</p>
@@ -359,7 +278,7 @@ input, select, textarea, button { font-size: 16px; }
       </aside>
     </section>
 
-    <section class="card">
+    <section id="tickets-card" class="card">
       <div class="body">
         <h3>Your tickets</h3>
         <div id="tickets" class="tickets"></div>
@@ -424,20 +343,20 @@ input, select, textarea, button { font-size: 16px; }
     </section>
 
     <!-- Disclaimer modal -->
-<div id="dlg" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:7000;">
-  <div style="width:min(680px,92vw);background:#0f1219;border:1px solid #1f2937;border-radius:14px;padding:16px;">
-    <h3 style="margin:0 0 8px;">Before you continue</h3>
-    <div style="max-height:38vh;overflow:auto;color:#9ca3af;font-size:14px;line-height:1.5;">
-      <p><b>Play at your own risk.</b> This game is experimental community software. No guarantees. Do not spend what you can’t afford to lose.</p>
-      <p><b>Chances of winning:</b> each ticket picks 5 numbers (1–69) and 1 mega (1–26). The odds of matching all numbers are approximately 1 in 292,201,338.</p>
-      <p>By clicking “I agree & sign”, you acknowledge these terms and consent to the app storing a proof of your consent (signature hash) tied to your wallet.</p>
+    <div id="dlg" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:7000;">
+      <div style="width:min(680px,92vw);background:#0f1219;border:1px solid #1f2937;border-radius:14px;padding:16px;">
+        <h3 style="margin:0 0 8px;">Before you continue</h3>
+        <div style="max-height:38vh;overflow:auto;color:#9ca3af;font-size:14px;line-height:1.5;">
+          <p><b>Play at your own risk.</b> This game is experimental community software. No guarantees. Do not spend what you can’t afford to lose.</p>
+          <p><b>Chances of winning:</b> each ticket picks 5 numbers (1–69) and 1 mega (1–26). The odds of matching all numbers are approximately 1 in 292,201,338.</p>
+          <p>By clicking “I agree & sign”, you acknowledge these terms and consent to the app storing a proof of your consent (signature hash) tied to your wallet.</p>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+          <button id="dlg-cancel" class="btn">Cancel</button>
+          <button id="dlg-agree"  class="btn primary">I agree & sign</button>
+        </div>
+      </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
-      <button id="dlg-cancel" class="btn">Cancel</button>
-      <button id="dlg-agree"  class="btn primary">I agree & sign</button>
-    </div>
-  </div>
-</div>
 
   </main>
 
@@ -452,13 +371,11 @@ input, select, textarea, button { font-size: 16px; }
 
   <script>
 /* =========================================
-   CROnation — Mega Jackpot Draw (all-in-one)
-   - Wallet connect (no auto-UI), 1-time disclaimer signature
-   - Player Card (Passport + Tier + CRON8 bal + Free left)
-   - Flags + draw lifecycle + countdown hardening
-   - Quick/Manual free claims, purchases (15 CRO each), cooldown
-   - Admin (commit/reveal + flags)
-   - A11y: modal focus trap, Esc cancels
+   CROnation — Mega Jackpot Draw (v1)
+   - Strict manual connect (per-tab), 1-time disclaimer
+   - Player Card under Jackpot (tier, CRON8, free left)
+   - Flags + draw lifecycle + countdown
+   - Claims, Buys, Tickets, Admin
    ========================================= */
 
 /* ========= CONSTANTS ========= */
@@ -466,7 +383,8 @@ const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
 const DRAW_ID = 'current';
 const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
 const ADMIN_WALLET = DEV_WALLET;
-const LS_CONNECTED = 'cronation_connected_v1';
+const LS_CONNECTED      = 'cronation_connected_v1';           // persistent opt-in
+const SESSION_CONNECTED = 'cronation_session_connected_v1';   // per-tab opt-in
 
 const CRON8 = {
   address:'0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
@@ -479,14 +397,9 @@ const TIER = [
   { tier:1, min:'1000000'  },
   { tier:0, min:'0' }
 ];
-
-// Free entries by tier
 const FREE = { 0:0, 1:1, 2:3, 3:5 };
-
-// Number rules
 const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
 
-// Admin flags (Firestore: config/app.flags)
 const CONFIG_DOC = { col: 'config', doc: 'app' };
 const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
 let __flags = { ...FLAGS_DEFAULT };
@@ -510,7 +423,7 @@ const setBusy = (on)=>{ const l=$('loader'); l.setAttribute('aria-busy',on?'true
 const compactNumber=(n,max=0)=>{ try{ return Number(n).toLocaleString(undefined, { maximumFractionDigits:max }); }catch{ return String(n); } };
 setText('year', new Date().getFullYear());
 
-// Debug (URL ?debug=1 to show)
+// Debug buffer (enable via ?debug=1)
 const DBG = [];
 function dbg(...a){ try{ const line=a.map(x=>(typeof x==='object'?JSON.stringify(x):String(x))).join(' '); DBG.push(line); const pre=$('dbg'); if(pre) pre.textContent=DBG.join('\n'); }catch(_){} }
 
@@ -552,8 +465,8 @@ function waitForEthereum(timeout=1800){
   });
 }
 
-/* ========= One-time disclaimer ========= */
-const AGREEMENTS = { col:'agreements' }; // agreements/<wallet>
+/* ========= Agreement ========= */
+const AGREEMENTS = { col:'agreements' };
 function agreementRef(addr){ return db.collection(AGREEMENTS.col).doc(addr); }
 function disclaimerMessage(addr){
   const ts = new Date().toISOString();
@@ -567,7 +480,7 @@ function disclaimerMessage(addr){
   ].join('\n');
 }
 
-/* ========= Minimalist modal + focus trap ========= */
+/* ========= Simple modal focus trap ========= */
 let __dlgPrevFocus = null;
 const __dlgSelectors = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
 function showDialog(){
@@ -598,7 +511,7 @@ $('dlg-cancel')?.addEventListener('click', ()=> hideDialog());
 /* ========= App state ========= */
 let injected=null, provider=null, signer=null, addr=null;
 let __closeAt=0;
-let __drawStatus = 'open';     // 'open' | 'closed'
+let __drawStatus = 'open';
 
 /* ========= Draw + Flags ========= */
 function applyFlagsToUI(){
@@ -632,7 +545,6 @@ async function loadDraw(){
   }catch(e){ dbg('loadDraw', e?.message); }
 }
 
-// Hardened countdown (flips to closed, disables actions at 0)
 setInterval(()=>{
   if(!__closeAt){ setText('countdown','—'); return; }
   let s = Math.floor((__closeAt - Date.now())/1000);
@@ -649,34 +561,6 @@ setInterval(()=>{
 }, 1000);
 
 /* ========= Passport / Player Card ========= */
-// If the Player Card HTML isn’t present, inject it (safe idempotent)
-(function ensurePlayerCardSection(){
-  if ($('player-card')) return;
-  const sec = document.createElement('section');
-  sec.id = 'player-card';
-  sec.className = 'card';
-  sec.style.display = 'none';
-  sec.innerHTML = `
-    <div class="body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-      <img id="pc-avatar" alt="" width="44" height="44"
-           style="border-radius:10px;border:1px solid var(--line);background:#0f1219;object-fit:cover;">
-      <div style="min-width:180px;">
-        <div style="font-weight:700;">Passport <span id="pc-serial">#000000</span></div>
-        <div class="muted" id="pc-nick-country">—</div>
-      </div>
-      <span class="pill" id="pc-tier">Tier: —</span>
-      <span class="pill" id="pc-balance">CRON8: —</span>
-      <span class="pill" id="pc-free">Free left: —</span>
-    </div>`;
-  const page = document.querySelector('main.page.grid');
-  if (page){
-    // Put it just after the first card (under "Claim your free entries")
-    const firstCard = page.querySelector('.card');
-    if (firstCard && firstCard.nextSibling) page.insertBefore(sec, firstCard.nextSibling);
-    else page.appendChild(sec);
-  }
-})();
-
 async function fetchPassport(addrLc){
   const snap = await db.collection('passports').doc(addrLc).get();
   return snap.exists ? snap.data() : null;
@@ -693,7 +577,6 @@ async function loadPlayerCard(addrLc){
   const passport = await fetchPassport(addrLc);
   if (!passport){ box.style.display = 'none'; return; }
 
-  // balance + tier + free left
   let balFmt = '0', tier = 0;
   try{
     const b = await cron8Balance(addrLc);
@@ -718,7 +601,6 @@ async function loadPlayerCard(addrLc){
   setText('pc-balance', 'CRON8: ' + compactNumber(balFmt, 0));
   setText('pc-free', 'Free left: ' + freeLeft);
 
-  // avatar (local, per wallet)
   const avatar = $('pc-avatar');
   if (avatar){
     const key = `cronation_pfp:${addrLc}`;
@@ -751,13 +633,6 @@ function renderPicker(){
   }
 }
 renderPicker();
-
-function quickPick(){
-  const s=new Set(); while(s.size<NUM.primPick){ s.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin); }
-  const primary=[...s].sort((a,b)=>a-b);
-  const megaNum=Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin;
-  return { primary, mega: megaNum };
-}
 
 /* ========= Live admin flags sub ========= */
 db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
@@ -794,19 +669,16 @@ async function ensureCronos(){
     await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId:desired }]});
   }catch(e){
     if (e?.code === 4902){
-      dbg('Adding Cronos via addEthereumChain');
       await injected.request({ method:'wallet_addEthereumChain', params:[{
         chainId:desired, chainName:'Cronos Mainnet',
         nativeCurrency:{ name:'Cronos', symbol:'CRO', decimals:18 },
         rpcUrls:[CRONOS.rpc], blockExplorerUrls:['https://cronoscan.com']
       }]});
-    } else {
-      throw e;
-    }
+    } else { throw e; }
   }
 }
 
-// Require & record 1-time disclaimer signature BEFORE revealing app UI
+// Require & record 1-time disclaimer BEFORE revealing app
 async function requireAgreementOnce(){
   const exists = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
   if (exists) return true;
@@ -830,7 +702,6 @@ async function requireAgreementOnce(){
         hideDialog();
         resolve(true);
       }catch(e){
-        console.warn('sign canceled/failed', e?.message||e);
         agree.disabled = false;
         hideDialog();
         resolve(false);
@@ -846,31 +717,27 @@ async function connect(){
   try{
     await waitForEthereum();
     injected = pickInjectedProvider();
-    dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
     if(!injected){
       alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.');
-      dbg('no injected provider found');
       return;
     }
 
-    // Ask for account access
     try { await injected.request({ method:'eth_requestAccounts' }); }
-    catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
+    catch(e){ alert('Connection cancelled.'); return; }
 
     provider = new ethers.providers.Web3Provider(injected, 'any');
     signer   = provider.getSigner();
     try { addr = (await signer.getAddress()).toLowerCase(); }
-    catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
+    catch(e){ alert('Could not read wallet address.'); return; }
 
-    // Try Cronos switch (non-fatal if declined)
-    try { await ensureCronos(); } catch(e){ dbg('ensureCronos', e?.message); }
+    try { await ensureCronos(); } catch(_) {}
 
-    // Disclaimer signature (HARD gate)
     const ok = await requireAgreementOnce();
     if(!ok){ toast('Signature required to continue.'); return; }
 
-    // Only now remember + reveal app
+    // Remember choice (persistent + per-tab)
     localStorage.setItem(LS_CONNECTED, '1');
+    sessionStorage.setItem(SESSION_CONNECTED, '1');
 
     const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
     setText('addr-pill', short(addr));
@@ -902,6 +769,7 @@ function doDisconnectUI(){
 
 function disconnect(){
   localStorage.removeItem(LS_CONNECTED);
+  try { sessionStorage.removeItem(SESSION_CONNECTED); } catch(_){}
   doDisconnectUI();
   toast('Disconnected.');
 }
@@ -933,7 +801,6 @@ async function restorePassport(){
 }
 
 /* ========= Claim & Buy ========= */
-// Gentle Cronos prompt helper
 async function nudgeCronos(){
   const onCronos = (await injected.request({method:'eth_chainId'}).catch(()=>null))?.toLowerCase() === '0x19';
   if (!onCronos){
@@ -950,7 +817,6 @@ $('quick-claim')?.addEventListener('click', async ()=>{
 
   if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
   if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
-
   if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
 
   await nudgeCronos();
@@ -1006,7 +872,7 @@ $('buy')?.addEventListener('click', async ()=>{
 
   try{
     const rawQty = parseInt(($('qty').value||'1'),10);
-    const qty = Math.min(100, Math.max(1, isFinite(rawQty)?rawQty:1)); // clamp 1..100
+    const qty = Math.min(100, Math.max(1, isFinite(rawQty)?rawQty:1));
     const total=ethers.utils.parseEther(String(15 * qty));
     await injected.request({ method:'eth_sendTransaction', params:[{ from:addr, to:DEV_WALLET, value: total.toHexString() }]});
     __nextBuyAt=Date.now()+3000;
@@ -1118,7 +984,7 @@ $('admin-refresh')?.addEventListener('click', adminRefresh);
 $('copy-commit')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim()));
 $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim()));
 
-/* ========= Boot (no auto-connect UI) ========= */
+/* ========= Boot (strict manual connect per-tab) ========= */
 (async ()=>{
   await loadDraw();
 
@@ -1136,9 +1002,12 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
       const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
       setText('chain-pill', (chainId?.toLowerCase()==='0x19') ? 'Cronos (25)' : `Chain ${chainId||'—'}`);
 
-      // Don’t auto-connect UI; only restore if authorized AND LS_CONNECTED==='1'
+      // Restore only if authorized AND user explicitly connected in THIS tab
       const acc = await injected.request({ method:'eth_accounts' }).catch(()=>[]);
-      const shouldRestore = localStorage.getItem(LS_CONNECTED) === '1';
+      const shouldRestore =
+        localStorage.getItem(LS_CONNECTED) === '1' &&
+        sessionStorage.getItem(SESSION_CONNECTED) === '1';
+
       if (shouldRestore && acc && acc[0]){
         provider = new ethers.providers.Web3Provider(injected, 'any');
         signer   = provider.getSigner();
@@ -1172,168 +1041,28 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
       };
     }
   })();
-})();
 
-/* ============================================================
-   CROnation — Draw: Mobile Polish + No-Autoconnect Add-on
-   Paste at the very end of draw.html, after your main script.
-   ============================================================ */
-
-/* ---------- 1) Inject mobile CSS (<=400px) ---------- */
-(function injectMobileCSS(){
-  const css = `
-/* Baseline: never allow horizontal scroll */
-html, body, .page { overflow-x: hidden; }
-
-/* Safe-area bottom padding */
-@supports(padding:max(0px)) { .page { padding-bottom: max(72px, env(safe-area-inset-bottom)); } }
-
-/* General mobile tuning */
-@media (max-width: 400px){
-  .container, .page { width: 94vw; }
-  .card { border-radius: 12px; }
-  .card .body { padding: 12px; }
-  .h1 { font-size: clamp(24px, 5.6vw + 8px, 30px); }
-  .row { gap: 6px; }
-  .pill { font-size: 11.5px; padding: 4px 8px; line-height: 1.1; border-radius: 999px; white-space: nowrap; }
-  #status-pill, #countdown, #addr-pill, #chain-pill, #tier-pill, #free-pill { flex: 0 1 auto; }
-  .btn { min-height: 44px; padding: 10px 12px; }
-  input[type="number"] { height: 44px; }
-  .numbers { display: grid; grid-auto-rows: 44px; gap: 8px; }
-  #prim.numbers { grid-template-columns: repeat(7, 1fr); }
-  #mega.numbers { grid-template-columns: repeat(6, 1fr); }
-  .n { min-width: 0; width: 100%; height: 44px; padding: 0; border-radius: 999px; font-weight: 700; touch-action: manipulation; }
-  #picker .muted { margin: 6px 0 4px !important; }
-  aside .row { flex-direction: row; }
-  @supports (display:grid){ aside .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; } }
-  #qty { width: 100% !important; }
-  .tickets { grid-template-columns: 1fr; gap: 8px; }
-  .brand { gap: 8px; }
-  .brand img { width: 28px; height: 28px; }
-}
-@media (max-width: 340px){
-  #prim.numbers { grid-template-columns: repeat(6, 1fr); }
-  #mega.numbers { grid-template-columns: repeat(5, 1fr); }
-}
-/* Improve contrast for number rings */
-.n { box-shadow: 0 0 0 1px var(--line) inset; }
-.n.on { box-shadow: none; }
-/* Admin: wrap controls on small screens */
-@media (max-width: 640px){
-  #admin .row { flex-wrap: wrap; }
-  #admin input[type="number"], #admin input[type="datetime-local"] { width: 100% !important; }
-}
-/* Optional sticky footer actions shell */
-@media (max-width: 400px){
-  .sticky-actions{
-    position: sticky; bottom: 0; left: 0; right: 0;
-    padding: 8px 0;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: saturate(120%) blur(8px);
-    border-top: 1px solid var(--line);
-    z-index: 12;
-  }
-}`;
-  const tag = document.createElement('style');
-  tag.setAttribute('data-cronation-mobile-pack','1');
-  tag.textContent = css;
-  document.head.appendChild(tag);
-})();
-
-/* Reduce motion if user prefers */
-try {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.querySelectorAll('.btn, .n').forEach(el => el.style.transition = 'none');
-  }
-} catch (_e) {}
-
-/* Collapse Admin on small screens (keeps your panel intact) */
-(function collapseAdminOnMobile(){
-  const admin = document.getElementById('admin');
-  if (!admin) return;
-  if (window.matchMedia('(max-width: 640px)').matches && !admin.__wrapped) {
-    admin.__wrapped = true;
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    summary.textContent = 'Admin — Draw Controls';
-    summary.style.cursor = 'pointer';
-    summary.style.fontWeight = '700';
-    summary.style.padding = '10px 12px';
-    summary.style.borderBottom = '1px solid var(--line)';
-    const body = admin.querySelector('.body');
-    admin.replaceChildren(details);
-    details.appendChild(summary);
-    if (body) details.appendChild(body);
-    details.open = false; // closed by default on mobile
-  }
-})();
-
-/* ---------- 2) No auto-connect UI (per-tab) ---------- */
-/*
-  Your main script already respects LS_CONNECTED, but some wallets
-  will still present accounts and your UI restores. This hardens it:
-  - Require a sessionStorage flag set only after an explicit connect
-    in THIS TAB.
-  - If the UI was auto-restored by the wallet, we force it back to a
-    disconnected state until user taps “Connect”.
-*/
-(function noAutoConnectGate(){
-  const SESSION_CONNECTED = 'cronation_session_connected_v1';
-  // Wait until your main script defines these globals
-  function ready(fn){
-    if (document.readyState === 'complete' || document.readyState === 'interactive') return fn();
-    document.addEventListener('DOMContentLoaded', fn, { once:true });
-  }
-  ready(function(){
-    const connectBtn = document.getElementById('connect');
-    const disconnectBtn = document.getElementById('disconnect');
-
-    // If session flag not set, ensure UI is disconnected NOW
-    try {
-      if (sessionStorage.getItem(SESSION_CONNECTED) !== '1') {
-        if (typeof window.doDisconnectUI === 'function') {
-          window.doDisconnectUI();
-        } else {
-          // minimal fallback
-          const app = document.getElementById('app');
-          if (app) app.style.display = 'none';
-          if (connectBtn) connectBtn.style.display = 'inline-block';
-          if (disconnectBtn) disconnectBtn.style.display = 'none';
-          const setText = (id, v)=>{ const n=document.getElementById(id); if(n) n.textContent=v; };
-          setText('addr-pill','—'); setText('tier-pill','Tier: —'); setText('free-pill','Free left: —');
-        }
-      }
-    } catch(_) {}
-
-    // Patch connect(): after a successful connect (UI shows “Disconnect”),
-    // set the session flag so refreshes in THIS TAB may restore.
-    if (typeof window.connect === 'function' && !window.connect.__patched_session){
-      const orig = window.connect;
-      window.connect = async function(...args){
-        await orig.apply(this, args);
-        try {
-          const connected = disconnectBtn && getComputedStyle(disconnectBtn).display !== 'none';
-          if (connected) {
-            sessionStorage.setItem(SESSION_CONNECTED, '1');
-            // Your original connect already sets LS_CONNECTED
-          }
-        } catch(_) {}
-      };
-      window.connect.__patched_session = true;
+  // Collapse Admin into an accordion on mobile by default
+  (function collapseAdminOnMobile(){
+    const admin = document.getElementById('admin');
+    if (!admin) return;
+    if (window.matchMedia('(max-width: 640px)').matches && !admin.__wrapped) {
+      admin.__wrapped = true;
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.textContent = 'Admin — Draw Controls';
+      summary.style.cursor = 'pointer';
+      summary.style.fontWeight = '700';
+      summary.style.padding = '10px 12px';
+      summary.style.borderBottom = '1px solid var(--line)';
+      const body = admin.querySelector('.body');
+      admin.replaceChildren(details);
+      details.appendChild(summary);
+      if (body) details.appendChild(body);
+      details.open = false;
     }
-
-    // Patch disconnect() to clear the session flag
-    if (typeof window.disconnect === 'function' && !window.disconnect.__patched_session){
-      const origDisc = window.disconnect;
-      window.disconnect = function(...args){
-        try { sessionStorage.removeItem(SESSION_CONNECTED); } catch(_) {}
-        return origDisc.apply(this, args);
-      };
-      window.disconnect.__patched_session = true;
-    }
-  });
+  })();
 })();
-
 
 /* ========= After connect ========= */
 async function afterConnect(){
@@ -1342,7 +1071,6 @@ async function afterConnect(){
   await refreshTier();
   await restorePassport();
   await loadMine();
-
   await loadPlayerCard(addr);
 
   const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase());
@@ -1350,6 +1078,6 @@ async function afterConnect(){
   const link = $('adminLink'); if (link) link.style.display = isAdmin ? 'inline-block' : 'none';
   if(isAdmin) await adminRefresh();
 }
-</script>
+  </script>
 </body>
 </html>
