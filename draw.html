@@ -266,6 +266,22 @@
       </div>
     </section>
 
+    <!-- Disclaimer modal -->
+<div id="dlg" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:7000;">
+  <div style="width:min(680px,92vw);background:#0f1219;border:1px solid #1f2937;border-radius:14px;padding:16px;">
+    <h3 style="margin:0 0 8px;">Before you continue</h3>
+    <div style="max-height:38vh;overflow:auto;color:#9ca3af;font-size:14px;line-height:1.5;">
+      <p><b>Play at your own risk.</b> This game is experimental community software. No guarantees. Do not spend what you can’t afford to lose.</p>
+      <p><b>Chances of winning:</b> each ticket picks 5 numbers (1–69) and 1 mega (1–26). The odds of matching all numbers are approximately 1 in 292,201,338.</p>
+      <p>By clicking “I agree & sign”, you acknowledge these terms and consent to the app storing a proof of your consent (signature hash) tied to your wallet.</p>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+      <button id="dlg-cancel" class="btn">Cancel</button>
+      <button id="dlg-agree"  class="btn primary">I agree & sign</button>
+    </div>
+  </div>
+</div>
+
   </main>
 
   <footer class="footer">
@@ -296,6 +312,31 @@
       { tier:1, min:'1000000'  },
       { tier:0, min:'0' }
     ];
+
+    // One-time disclaimer gate
+const AGREEMENTS = { col:'agreements' }; // Firestore collection: agreements/<wallet>
+const LS_CONNECTED = 'cronation_connected_v1'; // keep; we’ll set it only after signature
+
+function agreementRef(addr){ return db.collection(AGREEMENTS.col).doc(addr); }
+
+function disclaimerMessage(addr){
+  const ts = new Date().toISOString();
+  return [
+    'CROnation — Play at your own risk.',
+    'Odds ~1 in 292,201,338 per ticket.',
+    'No guarantees. Experimental community software.',
+    `Wallet: ${addr}`,
+    `Timestamp: ${ts}`,
+    'By signing you acknowledge the above.'
+  ].join('\n');
+}
+
+// minimalist modal API
+function showDialog(){ $('dlg').style.display='flex'; }
+function hideDialog(){ $('dlg').style.display='none'; }
+$('dlg-cancel').onclick = ()=> hideDialog();
+
+    
     // Zero freebies for tier 0
     const FREE = { 0:0, 1:1, 2:3, 3:5 };
     const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
@@ -435,40 +476,97 @@
     }
 
     async function connect(){
-      setBusy(true);
-      try{
-        await waitForEthereum();
-        injected = pickInjectedProvider();
-        dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
-        if(!injected){ alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.'); dbg('no injected provider found'); return; }
-
-        try { await injected.request({ method:'eth_requestAccounts' }); }
-        catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
-
-        provider = new ethers.providers.Web3Provider(injected, 'any');
-        signer   = provider.getSigner();
-
-        try { addr = (await signer.getAddress()).toLowerCase(); }
-        catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
-
-        try { await ensureCronos(); } catch(e){ dbg('ensureCronos', e?.message); }
-
-        localStorage.setItem(LS_CONNECTED, '1'); // user explicitly connected
-
-        setText('addr-pill', short(addr));
-        const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
-        setText('chain-pill', 'Chain ' + (chainId||'?'));
-
-        $('connect').style.display='none';
-        $('disconnect').style.display='inline-block';
-
-        wireProviderEvents();
-        await afterConnect();
-      }catch(e){
-        dbg('connect error', e?.message || e);
-        alert('Wallet connect failed — try in your wallet’s in-app browser.');
-      }finally{ setBusy(false); }
+  setBusy(true);
+  try{
+    await waitForEthereum();
+    injected = pickInjectedProvider();
+    dbg('picked provider', injected ? (injected.isMetaMask?'MetaMask':'CDC/Other') : 'none');
+    if(!injected){
+      alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.');
+      dbg('no injected provider found');
+      return;
     }
+
+    // 1) Ask wallet for permission to expose accounts
+    try { await injected.request({ method:'eth_requestAccounts' }); }
+    catch(e){ alert('Connection cancelled.'); dbg('eth_requestAccounts', e?.message); return; }
+
+    // 2) Create provider/signer + discover address
+    provider = new ethers.providers.Web3Provider(injected, 'any');
+    signer   = provider.getSigner();
+    try { addr = (await signer.getAddress()).toLowerCase(); }
+    catch(e){ alert('Could not read wallet address.'); dbg('getAddress', e?.message); return; }
+
+    // (optional) make sure we’re on Cronos
+    try { await ensureCronos(); } catch(e){ dbg('ensureCronos', e?.message); }
+
+    // 3) REQUIRE 1-TIME DISCLAIMER SIGNATURE (inserted here)
+    async function requireAgreement(){
+      const existing = await agreementRef(addr).get().catch(()=>null);
+      if (existing && existing.exists) return true;
+
+      const ok = await new Promise((resolve)=>{
+        showDialog();
+        const agree  = $('dlg-agree');
+        const cancel = $('dlg-cancel');
+
+        const onAgree = async ()=>{
+          agree.disabled = true;
+          try{
+            const msg = disclaimerMessage(addr);
+            const sig = await signer.signMessage(msg); // EIP-191 personal_sign
+            await agreementRef(addr).set({
+              wallet: addr,
+              message: msg,
+              signature: sig,
+              ua: navigator.userAgent || '',
+              signedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge:true });
+            hideDialog();
+            resolve(true);
+          }catch(e){
+            console.warn('sign canceled/failed', e?.message||e);
+            agree.disabled = false;
+            hideDialog();
+            resolve(false);
+          }
+        };
+
+        const onCancel = ()=>{ hideDialog(); resolve(false); };
+
+        agree.onclick  = onAgree;
+        cancel.onclick = onCancel;
+      });
+
+      return ok;
+    }
+
+    const ok = await requireAgreement();
+    if(!ok){
+      toast('Signature required to continue.');
+      return; // do NOT mark as connected, do NOT show app
+    }
+
+    // 4) Only NOW “remember” the connection and reveal the app UI
+    localStorage.setItem(LS_CONNECTED, '1');
+
+    setText('addr-pill', short(addr));
+    const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
+    setText('chain-pill', 'Chain ' + (chainId||'?'));
+
+    $('connect').style.display='none';
+    $('disconnect').style.display='inline-block';
+
+    wireProviderEvents();
+    await afterConnect();
+
+  }catch(e){
+    dbg('connect error', e?.message || e);
+    alert('Wallet connect failed — try in your wallet’s in-app browser.');
+  }finally{
+    setBusy(false);
+  }
+}
 
     function doDisconnectUI(){
       addr = null; provider=null; signer=null;
