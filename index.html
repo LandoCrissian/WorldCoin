@@ -125,6 +125,10 @@
     body.modal-open{ overflow:hidden; }
     body.modal-open .leaflet-tooltip{ opacity:0 !important; pointer-events:none !important; }
 
+    @media (max-width: 720px){
+  #drawBtn{ display:none; }
+}
+
     /* --- Nav sizing/behavior --- */
     .actions{ display:flex; align-items:center; gap:10px; flex-wrap:nowrap; min-width:0; }
     .actions .btn, .actions a.btn{ display:inline-flex; align-items:center; justify-content:center; min-width:160px; white-space:nowrap; text-decoration:none; }
@@ -490,7 +494,6 @@
         <a class="link" href="#map-section">Map</a>
         <a class="link" href="#leaderboard-card">Leaderboard</a>
         <a class="link" href="#about">About</a>
-        <a href="/draw.html" class="btn primary">Enter Draw</a>
         <a class="link" href="https://x.com/cronation8" target="_blank" rel="noopener">𝕏</a>
         <a class="link" href="https://t.me/CRONationOfficial" target="_blank" rel="noopener">Telegram</a>
         <a class="link" href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" target="_blank" rel="noopener">Buy CRON8</a>
@@ -499,6 +502,7 @@
 
       <div class="actions">
         <button id="connectBtn" class="btn ghost">Connect Wallet</button>
+        <a id="drawBtn" class="btn ghost" href="/draw.html">Enter Draw</a>
         <a id="buyBtn" class="btn ghost" 
            href="https://www.puush.fun/coin/0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF" 
            target="_blank" rel="noopener">Buy CRON8</a>
