@@ -121,6 +121,36 @@
     /* countdown pulse */
     @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.35); } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); } }
     #countdown { animation: pulse 2.4s infinite; }
+
+    /* --- Fix Admin dropdown layout jump on mobile --- */
+#admin .mono {
+  white-space: normal;
+  overflow-wrap: anywhere;   /* break long hashes */
+  word-break: break-word;
+}
+
+#admin .mono span {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#admin .body {
+  overflow-x: hidden;         /* never allow horizontal push */
+}
+
+/* Make the hash + Copy button layout stable */
+#admin .mono .btn {
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px){
+  #admin .row { flex-wrap: wrap; }
+  #admin input[type="number"],
+  #admin input[type="datetime-local"] { width: 100% !important; }
+}
   </style>
 </head>
 <body>
