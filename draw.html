@@ -904,16 +904,24 @@ $('quick-claim')?.addEventListener('click', async ()=>{
   await nudgeCronos();
 
   try{
-    const picks = quickPick();
-    await TICKETS_COL().add({
-      owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await bumpStatsFor(addr);
-    await refreshTier(); await loadPlayerCard(addr);
-    toast('Free ticket claimed ✅');
-  }catch(e){ alert('Claim failed.'); }
-});
+  const picks = quickPick();
+  await TICKETS_COL().add({
+    owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // stats are best-effort; don't fail the claim if they error
+  try { await bumpStatsFor(addr); } catch (sErr) { dbg('stats bump', sErr?.message || sErr); }
+
+  // refresh UI
+  await refreshTier();
+  await loadPlayerCard(addr);
+  toast('Free ticket claimed ✅');
+}catch(e){
+  const msg = e?.message || e?.code || 'Unknown error';
+  alert('Claim failed: ' + msg);
+  dbg('claim quick error', msg);
+}
 
 $('manual-claim')?.addEventListener('click', async ()=>{
   if(!addr) return alert('Connect wallet first');
@@ -929,17 +937,23 @@ $('manual-claim')?.addEventListener('click', async ()=>{
   await nudgeCronos();
 
   try{
-    const picks = { primary:[...primSel].sort((a,b)=>a-b), mega };
-    await TICKETS_COL().add({
-      owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await bumpStatsFor(addr);
-    primSel.clear(); mega = NUM.megaMin; renderPicker();
-    await refreshTier(); await loadPlayerCard(addr);
-    toast('Free ticket claimed ✅');
-  }catch(e){ alert('Claim failed.'); }
-});
+  const picks = { primary:[...primSel].sort((a,b)=>a-b), mega };
+  await TICKETS_COL().add({
+    owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // best-effort stats
+  try { await bumpStatsFor(addr); } catch (sErr) { dbg('stats bump', sErr?.message || sErr); }
+
+  primSel.clear(); mega = NUM.megaMin; renderPicker();
+  await refreshTier(); await loadPlayerCard(addr);
+  toast('Free ticket claimed ✅');
+}catch(e){
+  const msg = e?.message || e?.code || 'Unknown error';
+  alert('Claim failed: ' + msg);
+  dbg('claim manual error', msg);
+}
 
 let __nextBuyAt = 0;
 $('buy')?.addEventListener('click', async ()=>{
@@ -976,7 +990,11 @@ $('buy')?.addEventListener('click', async ()=>{
     await Promise.all(batch);
     await loadPlayerCard(addr);
     alert(`Purchased ${qty} ticket(s). CRO sent.`);
-  }catch(e){ alert('Payment cancelled or failed.'); }
+  }catch(e){
+  const msg = e?.message || e?.code || 'Payment cancelled or failed.';
+  alert(msg);
+  dbg('buy error', msg);
+}
 });
 
 /* ========= My Tickets — real-time ========= */
@@ -985,34 +1003,55 @@ function startMyTicketsListener(){
   if (!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
   if (__mineUnsub) { __mineUnsub(); __mineUnsub = null; }
   const q = TICKETS_COL().where('owner','==',addr).orderBy('createdAt','desc');
-  __mineUnsub = q.onSnapshot(snap=>{
-    const out=[];
-    snap.forEach(doc=>{
-      const d=doc.data();
-      out.push(`<div class="card"><div class="body">
-        <div class="row" style="justify-content:space-between;align-items:center;">
-          <div>
-            <div class="muted">${d.isFree?'Free':'Paid'}</div>
-            <div class="mono" style="margin-top:4px;">${(d.primary||[]).join(' - ')}  |  ★ ${d.mega}</div>
-          </div>
-          <button class="btn ghost" data-share="${doc.id}">Share</button>
+__mineUnsub = q.onSnapshot(snap=>{
+  const out=[];
+  snap.forEach(doc=>{
+    const d=doc.data();
+    out.push(`<div class="card"><div class="body">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <div>
+          <div class="muted">${d.isFree?'Free':'Paid'}</div>
+          <div class="mono" style="margin-top:4px;">${(d.primary||[]).join(' - ')}  |  ★ ${d.mega}</div>
         </div>
-      </div></div>`);
-    });
-    const box = $('tickets');
-    box.innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
-    // Wire share buttons
-    box.querySelectorAll('button[data-share]').forEach(btn=>{
-      btn.onclick = async ()=>{
-        const id = btn.getAttribute('data-share');
-        const snap = await TICKETS_COL().doc(id).get();
-        if (snap.exists) await shareTicketToX(snap.data());
-      };
-    });
-  }, err=>{
-    $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>';
+        <button class="btn ghost" data-share="${doc.id}">Share</button>
+      </div>
+    </div></div>`);
   });
-}
+  const box = $('tickets');
+  box.innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
+  // wire share buttons
+  box.querySelectorAll('button[data-share]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-share');
+      const snap = await TICKETS_COL().doc(id).get();
+      if (snap.exists) await shareTicketToX(snap.data());
+    };
+  });
+}, async (err)=>{
+  // Clearer message + fallback while index builds
+  const code = err?.code || '';
+  dbg('tickets onSnapshot error', code, err?.message || err);
+  if (code === 'failed-precondition') {
+    // Fallback: show unsorted list via one-time get()
+    try{
+      const snap = await TICKETS_COL().where('owner','==',addr).get();
+      const out=[];
+      snap.forEach(doc=>{
+        const d=doc.data();
+        out.push(`<div class="card"><div class="body">
+          <div class="muted">${d.isFree?'Free':'Paid'}</div>
+          <div class="mono" style="margin-top:4px;">${(d.primary||[]).join(' - ')}  |  ★ ${d.mega}</div>
+        </div></div>`);
+      });
+      $('tickets').innerHTML = (out.join('') || '<div class="muted">No tickets yet.</div>') +
+        '<div class="muted" style="margin-top:6px;">(Showing unsorted while index builds)</div>';
+    }catch(_){
+      $('tickets').innerHTML = '<div class="muted">Tickets unavailable. Index building…</div>';
+    }
+  } else {
+    $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>';
+  }
+});
 
 /* ========= Admin (commit–reveal + flags) ========= */
 const SEED_KEY='cronation_draw_seed';
