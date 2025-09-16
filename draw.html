@@ -923,6 +923,7 @@ $('quick-claim')?.addEventListener('click', async ()=>{
   dbg('claim quick error', msg);
 }
 });
+}
 
 $('manual-claim')?.addEventListener('click', async ()=>{
   if(!addr) return alert('Connect wallet first');
@@ -943,6 +944,7 @@ $('manual-claim')?.addEventListener('click', async ()=>{
     owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+  }
 
   // best-effort stats
   try { await bumpStatsFor(addr); } catch (sErr) { dbg('stats bump', sErr?.message || sErr); }
