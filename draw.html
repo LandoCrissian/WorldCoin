@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>CROnation — Mega Jackpot Draw</title>
 
+  <!-- Force dark BEFORE paint -->
   <script>document.documentElement.setAttribute('data-theme','dark');</script>
 
   <!-- Core libs -->
@@ -66,8 +67,8 @@
     .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
 
     .numbers{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .n{ min-width:44px; height:44px; padding:0 12px; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; cursor:pointer; background:transparent; color:var(--text); }
-    .n.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .n{ min-width:44px; height:44px; padding:0 12px; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; cursor:pointer; background:transparent; color:var(--text); box-shadow:0 0 0 1px var(--line) inset; }
+    .n.on{ background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:none; }
     .n.mega{ border-color:#b45309; }
     .n.mega.on{ background:#f59e0b; color:#111827; border-color:#f59e0b; }
 
@@ -86,7 +87,7 @@
     #debug pre{ white-space:pre-wrap; word-break:break-word; background:#0e1117; border:1px solid var(--line); padding:12px; border-radius:10px; }
     .warn{ color:#fde68a } .err{ color:#fca5a5 }
 
-    /* === Mobile Polish (≤ 400px) === */
+    /* Mobile polish */
     html, body, .page { overflow-x: hidden; }
     @supports(padding:max(0px)) { .page { padding-bottom: max(72px, env(safe-area-inset-bottom)); } }
 
@@ -116,36 +117,10 @@
       #prim.numbers { grid-template-columns: repeat(6, 1fr); }
       #mega.numbers { grid-template-columns: repeat(5, 1fr); }
     }
-    .n { box-shadow: 0 0 0 1px var(--line) inset; }
-    .n.on { box-shadow: none; }
 
-    /* Admin mobile wrapping + long-hash wrap */
-    @media (max-width: 640px){
-      #admin .row { flex-wrap: wrap; }
-      #admin input[type="number"], #admin input[type="datetime-local"] { width: 100% !important; }
-    }
-    #admin .mono { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
-    #admin .mono .btn { margin-top: 6px; }
-    input, select, textarea, button { font-size: 16px; }
-
-    /* ✨ Subtle excitement: countdown pulse */
-    @keyframes pulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.35); }
-      50%     { box-shadow: 0 0 0 6px rgba(59,130,246,.0); }
-    }
+    /* countdown pulse */
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.35); } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); } }
     #countdown { animation: pulse 2.4s infinite; }
-
-    /* Optional sticky actions shell if needed later */
-    @media (max-width: 400px){
-      .sticky-actions{
-        position: sticky; bottom: 0; left: 0; right: 0;
-        padding: 8px 0;
-        background: color-mix(in srgb, var(--bg) 88%, transparent);
-        backdrop-filter: saturate(120%) blur(8px);
-        border-top: 1px solid var(--line);
-        z-index: 12;
-      }
-    }
   </style>
 </head>
 <body>
@@ -231,7 +206,7 @@
       </div>
     </section>
 
-    <!-- Player Card (directly under Jackpot; hidden until connect/passport) -->
+    <!-- Player Card (shown after connect/passport) -->
     <section id="player-card" class="card" style="display:none;">
       <div class="body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <img id="pc-avatar" alt="" width="44" height="44"
@@ -306,8 +281,9 @@
         </div>
 
         <div class="row" style="margin:8px 0;">
-          <button class="btn primary" id="admin-open">Open Draw (commit)</button>
-          <button class="btn" id="admin-close">Close & Reveal</button>
+          <button class="btn primary" id="admin-open">Open Draw</button>
+          <button class="btn" id="admin-lock">Lock Entries</button>
+          <button class="btn" id="admin-reveal">Reveal Winners</button>
           <button class="btn ghost" id="admin-refresh">Refresh</button>
         </div>
 
@@ -326,7 +302,7 @@
 
         <div class="mono muted" style="margin-top:6px;">
           Commit: <span id="admin-commit">—</span> <button class="btn" id="copy-commit">Copy</button><br/>
-          Reveal seed: <span id="admin-reveal">—</span> <button class="btn" id="copy-reveal">Copy</button>
+          Reveal seed: <span id="admin-reveal-seed">—</span> <button class="btn" id="copy-reveal">Copy</button>
         </div>
       </div>
     </section>
@@ -347,8 +323,8 @@
       <div style="width:min(680px,92vw);background:#0f1219;border:1px solid #1f2937;border-radius:14px;padding:16px;">
         <h3 style="margin:0 0 8px;">Before you continue</h3>
         <div style="max-height:38vh;overflow:auto;color:#9ca3af;font-size:14px;line-height:1.5;">
-          <p><b>Play at your own risk.</b> This game is experimental community software. No guarantees. Do not spend what you can’t afford to lose.</p>
-          <p><b>Chances of winning:</b> each ticket picks 5 numbers (1–69) and 1 mega (1–26). The odds of matching all numbers are approximately 1 in 292,201,338.</p>
+          <p><b>Play at your own risk.</b> This game is experimental community software. Do not spend what you can’t afford to lose.</p>
+          <p><b>Odds:</b> each ticket picks 5 numbers (1–69) and 1 mega (1–26); jackpot odds ≈ 1 in 292,201,338.</p>
           <p>By clicking “I agree & sign”, you acknowledge these terms and consent to the app storing a proof of your consent (signature hash) tied to your wallet.</p>
         </div>
         <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
@@ -371,11 +347,14 @@
 
   <script>
 /* =========================================
-   CROnation — Mega Jackpot Draw (v1)
-   - Strict manual connect (per-tab), 1-time disclaimer
-   - Player Card under Jackpot (tier, CRON8, free left)
-   - Flags + draw lifecycle + countdown
-   - Claims, Buys, Tickets, Admin
+   CROnation — Mega Jackpot Draw (v1.1)
+   - Subcollection tickets: draws/{drawId}/tickets
+   - Real-time listeners (draw + my tickets)
+   - Canonical statuses: OPEN → LOCKED → REVEALED → PAID
+   - Split admin: Open, Lock, Reveal
+   - Number ranges hydrated from config/app
+   - Stats bumps (per draw + lifetime)
+   - Share-to-X PNG scaffold
    ========================================= */
 
 /* ========= CONSTANTS ========= */
@@ -383,14 +362,19 @@ const CRONOS = { chainIdHex:'0x19', rpc:'https://evm.cronos.org' };
 const DRAW_ID = 'current';
 const DEV_WALLET = '0x69b6c23E59F9Fd56fa3DE3edF624D5c2C67c05F0';
 const ADMIN_WALLET = DEV_WALLET;
-const LS_CONNECTED      = 'cronation_connected_v1';           // persistent opt-in
-const SESSION_CONNECTED = 'cronation_session_connected_v1';   // per-tab opt-in
+
+const LS_CONNECTED      = 'cronation_connected_v1';
+const SESSION_CONNECTED = 'cronation_session_connected_v1';
 
 const CRON8 = {
   address:'0x59405C88eC1145Ca56076aeC7f9EE0c435F75baF',
   decimals:18,
   abi:[{"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]
 };
+
+// Default ranges; may be overridden by config/app.numberRange
+let NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
+
 const TIER = [
   { tier:3, min:'25000000' },
   { tier:2, min:'5000000'  },
@@ -398,11 +382,13 @@ const TIER = [
   { tier:0, min:'0' }
 ];
 const FREE = { 0:0, 1:1, 2:3, 3:5 };
-const NUM = { primMin:1, primMax:69, primPick:5, megaMin:1, megaMax:26 };
 
 const CONFIG_DOC = { col: 'config', doc: 'app' };
 const FLAGS_DEFAULT = { pauseAll:false, pauseClaims:false, pauseBuys:false };
 let __flags = { ...FLAGS_DEFAULT };
+
+let __closeAt=0;
+let __drawStatus = 'OPEN';
 
 /* ========= Firebase ========= */
 firebase.initializeApp({
@@ -423,7 +409,7 @@ const setBusy = (on)=>{ const l=$('loader'); l.setAttribute('aria-busy',on?'true
 const compactNumber=(n,max=0)=>{ try{ return Number(n).toLocaleString(undefined, { maximumFractionDigits:max }); }catch{ return String(n); } };
 setText('year', new Date().getFullYear());
 
-// Debug buffer (enable via ?debug=1)
+// Debug buffer
 const DBG = [];
 function dbg(...a){ try{ const line=a.map(x=>(typeof x==='object'?JSON.stringify(x):String(x))).join(' '); DBG.push(line); const pre=$('dbg'); if(pre) pre.textContent=DBG.join('\n'); }catch(_){} }
 
@@ -480,7 +466,7 @@ function disclaimerMessage(addr){
   ].join('\n');
 }
 
-/* ========= Simple modal focus trap ========= */
+/* ========= Modal focus trap ========= */
 let __dlgPrevFocus = null;
 const __dlgSelectors = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
 function showDialog(){
@@ -510,10 +496,12 @@ $('dlg-cancel')?.addEventListener('click', ()=> hideDialog());
 
 /* ========= App state ========= */
 let injected=null, provider=null, signer=null, addr=null;
-let __closeAt=0;
-let __drawStatus = 'open';
 
-/* ========= Draw + Flags ========= */
+/* ========= Firestore doc/col helpers ========= */
+const DRAW_DOC = () => db.collection('draws').doc(DRAW_ID);
+const TICKETS_COL = () => DRAW_DOC().collection('tickets');
+
+/* ========= Flags & UI gating ========= */
 function applyFlagsToUI(){
   const pausedMsg =
     __flags.pauseAll ? 'Platform paused' :
@@ -522,8 +510,8 @@ function applyFlagsToUI(){
   const banner = $('platformBanner');
   if (banner){ banner.innerHTML = pausedMsg ? `<b>${pausedMsg}.</b>` : '<b>Mega Jackpot Draw.</b>'; }
 
-  const canClaim = !__flags.pauseAll && !__flags.pauseClaims && (__drawStatus==='open');
-  const canBuy   = !__flags.pauseAll && !__flags.pauseBuys   && (__drawStatus==='open');
+  const canClaim = !__flags.pauseAll && !__flags.pauseClaims && (__drawStatus==='OPEN');
+  const canBuy   = !__flags.pauseAll && !__flags.pauseBuys   && (__drawStatus==='OPEN');
 
   const qc=$('quick-claim'), mc=$('manual-claim'), buy=$('buy');
   if(qc){ qc.disabled = !canClaim; qc.title = canClaim?'':'Claims disabled'; }
@@ -531,28 +519,74 @@ function applyFlagsToUI(){
   if(buy){ buy.disabled = !canBuy; buy.title = canBuy?'':'Purchases disabled'; }
 }
 
-async function loadDraw(){
-  try{
-    const snap = await db.collection('draws').doc(DRAW_ID).get();
-    const d = snap.exists ? snap.data() : { status:'open', commitHash:'—', closeAt:Date.now()+7*864e5, pots:{cron8:0,cro:0} };
-    __drawStatus = d.status || 'open';
-    setText('status-pill', d.status||'—');
+/* ========= Hydrate number ranges ========= */
+async function hydrateNumberRanges() {
+  try {
+    const snap = await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).get();
+    const data = snap.exists ? snap.data() : {};
+    const nr = data.numberRange || null;
+    __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
+    if (nr) {
+      NUM = {
+        primMin: nr.primaryMin ?? NUM.primMin,
+        primMax: nr.primaryMax ?? NUM.primMax,
+        primPick: nr.primaryPick ?? NUM.primPick,
+        megaMin: nr.megaMin ?? NUM.megaMin,
+        megaMax: nr.megaMax ?? NUM.megaMax
+      };
+    }
+    renderPicker();
+    applyFlagsToUI();
+  } catch(e){ dbg('hydrateNumberRanges', e?.message); }
+}
+
+/* ========= Draw listener ========= */
+let __drawUnsub = null;
+let __closeAtMs = 0;
+function startDrawListener(){
+  if (__drawUnsub) return;
+  __drawUnsub = DRAW_DOC().onSnapshot(snap=>{
+    const d = snap.exists ? snap.data() : null;
+    if (!d){
+      setText('status-pill','—');
+      setText('jp-closes','—');
+      setText('jp-cron8','0'); setText('jp-cro','0');
+      __drawStatus = 'OPEN';
+      __closeAtMs = 0;
+      applyFlagsToUI();
+      return;
+    }
+    __drawStatus = d.status || 'OPEN';
+    setText('status-pill', __drawStatus);
     setText('jp-closes', d.closeAt ? new Date(d.closeAt).toLocaleString() : '—');
     setText('jp-cron8', (d.pots?.cron8||0).toLocaleString());
     setText('jp-cro',   (d.pots?.cro||0).toLocaleString());
-    __closeAt = d.closeAt||0;
+    __closeAtMs = d.closeAt || 0;
+
+    if (d.status === 'REVEALED' && d.winning){
+      const banner = $('platformBanner');
+      const w = d.winning;
+      if (banner){
+        banner.innerHTML = `<b>Winning Numbers:</b> ${w.primary?.join(' - ') || '—'}  •  ★ ${w.mega ?? '—'}`;
+      }
+    } else {
+      const banner = $('platformBanner');
+      if (banner) banner.innerHTML = '<b>Mega Jackpot Draw.</b>';
+    }
+
     applyFlagsToUI();
-  }catch(e){ dbg('loadDraw', e?.message); }
+  }, err=>dbg('draw onSnapshot', err?.message||err));
 }
 
+/* ========= Countdown ========= */
 setInterval(()=>{
-  if(!__closeAt){ setText('countdown','—'); return; }
-  let s = Math.floor((__closeAt - Date.now())/1000);
+  if(!__closeAtMs){ setText('countdown','—'); return; }
+  let s = Math.floor((__closeAtMs - Date.now())/1000);
   if (s <= 0){
     s = 0;
-    if (__drawStatus !== 'closed'){
-      __drawStatus = 'closed';
-      setText('status-pill','closed');
+    if (__drawStatus === 'OPEN'){
+      __drawStatus = 'LOCKED';
+      setText('status-pill','LOCKED');
       applyFlagsToUI();
     }
   }
@@ -586,8 +620,8 @@ async function loadPlayerCard(addrLc){
     }
   }catch(_){}
 
-  const claimed = await db.collection('tickets')
-    .where('drawId','==',DRAW_ID).where('wallet','==',addrLc).where('isFree','==',true)
+  const claimed = await TICKETS_COL()
+    .where('owner','==',addrLc).where('isFree','==',true)
     .get().then(q=>q.size).catch(()=>0);
   const freeLeft = Math.max(0, (FREE[tier] ?? 0) - claimed);
 
@@ -634,11 +668,10 @@ function renderPicker(){
 }
 renderPicker();
 
-/* ========= Live admin flags sub ========= */
+/* ========= Flags live sub ========= */
 db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).onSnapshot(snap => {
   const data = snap.exists ? snap.data() : {};
   __flags = { ...FLAGS_DEFAULT, ...(data.flags || {}) };
-  dbg('flags', __flags);
   applyFlagsToUI();
 }, (err)=>dbg('flags subscribe error', err?.message||err));
 
@@ -647,7 +680,6 @@ function wireProviderEvents(){
   if(!injected || injected._wired_draw) return;
   injected._wired_draw = true;
   injected.on?.('accountsChanged', async (acc)=>{
-    dbg('accountsChanged', acc);
     if (acc && acc[0]){
       addr = acc[0].toLowerCase();
       setText('addr-pill', short(addr));
@@ -656,14 +688,14 @@ function wireProviderEvents(){
       doDisconnectUI();
     }
   });
-  injected.on?.('chainChanged', (cid)=>{ dbg('chainChanged', cid); location.reload(); });
+  injected.on?.('chainChanged', (cid)=>{ location.reload(); });
 }
 
 async function ensureCronos(){
   if(!injected) return;
   const desired = CRONOS.chainIdHex;
   let current;
-  try{ current = await injected.request({method:'eth_chainId'}); dbg('chainId', current); }catch(e){ dbg('eth_chainId error', e?.message); }
+  try{ current = await injected.request({method:'eth_chainId'}); }catch(e){}
   if ((current||'').toLowerCase() === desired) return;
   try{
     await injected.request({ method:'wallet_switchEthereumChain', params:[{ chainId:desired }]});
@@ -678,7 +710,7 @@ async function ensureCronos(){
   }
 }
 
-// Require & record 1-time disclaimer BEFORE revealing app
+// Require & record 1-time disclaimer BEFORE app
 async function requireAgreementOnce(){
   const exists = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
   if (exists) return true;
@@ -717,10 +749,7 @@ async function connect(){
   try{
     await waitForEthereum();
     injected = pickInjectedProvider();
-    if(!injected){
-      alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.');
-      return;
-    }
+    if(!injected){ alert('No wallet detected. Open this page inside MetaMask or Crypto.com DeFi Wallet.'); return; }
 
     try { await injected.request({ method:'eth_requestAccounts' }); }
     catch(e){ alert('Connection cancelled.'); return; }
@@ -750,7 +779,6 @@ async function connect(){
     await afterConnect();
 
   }catch(e){
-    dbg('connect error', e?.message || e);
     alert('Wallet connect failed — try in your wallet’s in-app browser.');
   }finally{
     setBusy(false);
@@ -787,17 +815,41 @@ async function refreshTier(){
     }
     setText('tier-pill', 'Tier: ' + (tier===0?'None':('T'+tier)));
 
-    const claimed = await db.collection('tickets')
-      .where('drawId','==',DRAW_ID).where('wallet','==',addr).where('isFree','==',true).get()
+    const claimed = await TICKETS_COL()
+      .where('owner','==',addr).where('isFree','==',true).get()
       .then(q=>q.size).catch(()=>0);
     const left = Math.max(0, (FREE[tier] ?? 0) - claimed);
     setText('free-pill', 'Free left: ' + left);
     window.__freeLeft = left;
-  }catch(e){ dbg('refreshTier', e?.message); setText('tier-pill', 'Tier: —'); setText('free-pill', 'Free left: —'); }
+  }catch(e){ setText('tier-pill', 'Tier: —'); setText('free-pill', 'Free left: —'); }
 }
 
 async function restorePassport(){
-  try{ if(!addr) return; await db.collection('passports').doc(addr).get(); }catch(e){ dbg('restorePassport', e?.message); }
+  try{ if(!addr) return; await db.collection('passports').doc(addr).get(); }catch(e){}
+}
+
+/* ========= Quick pick helper ========= */
+function quickPick(){
+  const nums = new Set();
+  while(nums.size < NUM.primPick){
+    nums.add(Math.floor(Math.random()*(NUM.primMax-NUM.primMin+1))+NUM.primMin);
+  }
+  return { primary:[...nums].sort((a,b)=>a-b), mega: Math.floor(Math.random()*(NUM.megaMax-NUM.megaMin+1))+NUM.megaMin };
+}
+
+/* ========= Stats bump (client v1) ========= */
+async function bumpStatsFor(owner){
+  const perDraw = db.collection('stats').doc(DRAW_ID).collection('players').doc(owner);
+  const lifetime= db.collection('stats').doc('lifetime').collection('players').doc(owner);
+  await db.runTransaction(async tx=>{
+    const a = await tx.get(perDraw);
+    const b = await tx.get(lifetime);
+    tx.set(perDraw, { count: (a.exists ? (a.data().count||0) : 0) + 1 }, { merge:true });
+    tx.set(lifetime, { count: (b.exists ? (b.data().count||0) : 0) + 1 }, { merge:true });
+    const d = await tx.get(DRAW_DOC());
+    const prev = d.exists ? (d.data().entriesCount||0) : 0;
+    tx.set(DRAW_DOC(), { entriesCount: prev + 1 }, { merge:true });
+  });
 }
 
 /* ========= Claim & Buy ========= */
@@ -813,33 +865,34 @@ $('quick-claim')?.addEventListener('click', async ()=>{
   if(!addr) return alert('Connect wallet first');
 
   const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
-  if(!agreed){ alert('Please accept the disclaimer first (you will be asked to sign once).'); $('connect').click(); return; }
+  if(!agreed){ alert('Please accept the disclaimer first.'); $('connect').click(); return; }
 
   if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
-  if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+  if (__drawStatus !== 'OPEN') return alert('This draw is not open.');
   if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
 
   await nudgeCronos();
 
   try{
     const picks = quickPick();
-    await db.collection('tickets').add({
-      drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
-      created: firebase.firestore.FieldValue.serverTimestamp()
+    await TICKETS_COL().add({
+      owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    await loadMine(); await refreshTier(); await loadPlayerCard(addr);
+    await bumpStatsFor(addr);
+    await refreshTier(); await loadPlayerCard(addr);
     toast('Free ticket claimed ✅');
-  }catch(e){ dbg('claim quick', e?.message); alert('Claim failed.'); }
+  }catch(e){ alert('Claim failed.'); }
 });
 
 $('manual-claim')?.addEventListener('click', async ()=>{
   if(!addr) return alert('Connect wallet first');
 
   const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
-  if(!agreed){ alert('Please accept the disclaimer first (you will be asked to sign once).'); $('connect').click(); return; }
+  if(!agreed){ alert('Please accept the disclaimer first.'); $('connect').click(); return; }
 
   if (__flags.pauseAll || __flags.pauseClaims) return alert('Free claims are currently paused.');
-  if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+  if (__drawStatus !== 'OPEN') return alert('This draw is not open.');
   if(primSel.size !== NUM.primPick) return alert(`Pick exactly ${NUM.primPick} numbers`);
   if((window.__freeLeft ?? 0) <= 0) return alert('No free entries left for your tier');
 
@@ -847,14 +900,15 @@ $('manual-claim')?.addEventListener('click', async ()=>{
 
   try{
     const picks = { primary:[...primSel].sort((a,b)=>a-b), mega };
-    await db.collection('tickets').add({
-      drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:true,
-      created: firebase.firestore.FieldValue.serverTimestamp()
+    await TICKETS_COL().add({
+      owner: addr, primary: picks.primary, mega: picks.mega, isFree:true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    await bumpStatsFor(addr);
     primSel.clear(); mega = NUM.megaMin; renderPicker();
-    await loadMine(); await refreshTier(); await loadPlayerCard(addr);
+    await refreshTier(); await loadPlayerCard(addr);
     toast('Free ticket claimed ✅');
-  }catch(e){ dbg('claim manual', e?.message); alert('Claim failed.'); }
+  }catch(e){ alert('Claim failed.'); }
 });
 
 let __nextBuyAt = 0;
@@ -862,10 +916,10 @@ $('buy')?.addEventListener('click', async ()=>{
   if(!addr) return alert('Connect wallet first');
 
   const agreed = await agreementRef(addr).get().then(s=>s.exists).catch(()=>false);
-  if(!agreed){ alert('Please accept the disclaimer first (you will be asked to sign once).'); $('connect').click(); return; }
+  if(!agreed){ alert('Please accept the disclaimer first.'); $('connect').click(); return; }
 
   if (__flags.pauseAll || __flags.pauseBuys) return alert('Purchases are currently paused.');
-  if ((__drawStatus||'open') !== 'open') return alert('This draw is closed.');
+  if (__drawStatus !== 'OPEN') return alert('This draw is not open.');
 
   const now=Date.now(); if(now<__nextBuyAt) return alert(`Please wait ${Math.ceil((__nextBuyAt-now)/1000)}s…`);
   await nudgeCronos();
@@ -880,37 +934,54 @@ $('buy')?.addEventListener('click', async ()=>{
     const batch=[];
     for(let i=0;i<qty;i++){
       const picks=quickPick();
-      batch.push(db.collection('tickets').add({
-        drawId:DRAW_ID, wallet:addr, picks:picks.primary, mega:picks.mega, isFree:false,
-        created: firebase.firestore.FieldValue.serverTimestamp()
-      }));
+      batch.push(TICKETS_COL().add({
+        owner: addr, primary: picks.primary, mega: picks.mega, isFree:false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(()=>bumpStatsFor(addr)));
     }
     batch.push(db.collection('ledger').add({
       drawId:DRAW_ID, type:'purchase', wallet:addr, qty, priceCro:15, to:DEV_WALLET,
       at: firebase.firestore.FieldValue.serverTimestamp()
     }));
     await Promise.all(batch);
-    await loadMine(); await loadPlayerCard(addr);
+    await loadPlayerCard(addr);
     alert(`Purchased ${qty} ticket(s). CRO sent.`);
-  }catch(e){ dbg('buy failed', e?.message); alert('Payment cancelled or failed.'); }
+  }catch(e){ alert('Payment cancelled or failed.'); }
 });
 
-/* ========= Tickets ========= */
-async function loadMine(){
-  if(!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
-  try{
-    const snap = await db.collection('tickets')
-      .where('drawId','==',DRAW_ID).where('wallet','==',addr).orderBy('created','desc').get();
+/* ========= My Tickets — real-time ========= */
+let __mineUnsub = null;
+function startMyTicketsListener(){
+  if (!addr){ $('tickets').innerHTML = '<div class="muted">Connect wallet to see your tickets.</div>'; return; }
+  if (__mineUnsub) { __mineUnsub(); __mineUnsub = null; }
+  const q = TICKETS_COL().where('owner','==',addr).orderBy('createdAt','desc');
+  __mineUnsub = q.onSnapshot(snap=>{
     const out=[];
     snap.forEach(doc=>{
       const d=doc.data();
       out.push(`<div class="card"><div class="body">
-        <div class="muted">${d.isFree?'Free':'Paid'}</div>
-        <div class="mono" style="margin-top:4px;">${(d.picks||[]).join(' - ')}  |  ★ ${d.mega}</div>
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <div>
+            <div class="muted">${d.isFree?'Free':'Paid'}</div>
+            <div class="mono" style="margin-top:4px;">${(d.primary||[]).join(' - ')}  |  ★ ${d.mega}</div>
+          </div>
+          <button class="btn ghost" data-share="${doc.id}">Share</button>
+        </div>
       </div></div>`);
     });
-    $('tickets').innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
-  }catch(e){ dbg('loadMine', e?.message); $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>'; }
+    const box = $('tickets');
+    box.innerHTML = out.join('') || '<div class="muted">No tickets yet.</div>';
+    // Wire share buttons
+    box.querySelectorAll('button[data-share]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const id = btn.getAttribute('data-share');
+        const snap = await TICKETS_COL().doc(id).get();
+        if (snap.exists) await shareTicketToX(snap.data());
+      };
+    });
+  }, err=>{
+    $('tickets').innerHTML = '<div class="muted">Could not load tickets.</div>';
+  });
 }
 
 /* ========= Admin (commit–reveal + flags) ========= */
@@ -921,18 +992,18 @@ function randomSeed(){ const b=new Uint8Array(32); crypto.getRandomValues(b); re
 
 async function adminRefresh(){
   try{
-    const snap=await db.collection('draws').doc(DRAW_ID).get();
-    if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal','—'); await adminLoadFlags(); return; }
+    const snap=await DRAW_DOC().get();
+    if(!snap.exists){ setText('admin-status','status: (no draw)'); setText('admin-commit','—'); setText('admin-reveal-seed','—'); await adminLoadFlags(); applyFlagsToUI(); return; }
     const d=snap.data();
-    __drawStatus = d.status || 'open';
+    __drawStatus = d.status || 'OPEN';
     setText('admin-status',`status: ${__drawStatus}`);
     setText('admin-commit',d.commitHash||'—');
-    setText('admin-reveal',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
+    setText('admin-reveal-seed',d.revealSeed||localStorage.getItem(SEED_KEY)||'—');
     if(d.closeAt) $('admin-closeAt').value=new Date(d.closeAt).toISOString().slice(0,16);
     $('admin-cron8').value=d.pots?.cron8 ?? 0; $('admin-cro').value=d.pots?.cro ?? 0;
     await adminLoadFlags();
     applyFlagsToUI();
-  }catch(e){ dbg('adminRefresh', e?.message); }
+  }catch(e){}
 }
 
 async function adminLoadFlags(){
@@ -943,7 +1014,7 @@ async function adminLoadFlags(){
     $('flag-pause-all').checked   = !!f.pauseAll;
     $('flag-pause-claims').checked= !!f.pauseClaims;
     $('flag-pause-buys').checked  = !!f.pauseBuys;
-  }catch(e){ dbg('adminLoadFlags', e?.message); }
+  }catch(e){}
 }
 
 $('admin-save-flags')?.addEventListener('click', async ()=>{
@@ -953,10 +1024,9 @@ $('admin-save-flags')?.addEventListener('click', async ()=>{
       pauseClaims:$('flag-pause-claims').checked,
       pauseBuys:  $('flag-pause-buys').checked,
     };
-    await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc)
-      .set({ flags: f }, { merge:true });
+    await db.collection(CONFIG_DOC.col).doc(CONFIG_DOC.doc).set({ flags: f }, { merge:true });
     toast('Flags saved ✅');
-  }catch(e){ dbg('admin-save-flags', e?.message); alert('Saving flags failed. Check Firestore rules.'); }
+  }catch(e){ alert('Saving flags failed.'); }
 });
 
 $('admin-open')?.addEventListener('click', async ()=>{
@@ -964,29 +1034,99 @@ $('admin-open')?.addEventListener('click', async ()=>{
     const seed=randomSeed(); const commit=await sha256Hex(seed); localStorage.setItem(SEED_KEY,seed);
     const closeAtStr=$('admin-closeAt').value; const closeAt=closeAtStr? new Date(closeAtStr).getTime() : (Date.now()+7*864e5);
     const cron8=parseFloat($('admin-cron8').value||'0')||0; const cro=parseFloat($('admin-cro').value||'0')||0;
-    await db.collection('draws').doc(DRAW_ID).set({
-      status:'open', commitHash:commit, closeAt, pots:{cron8,cro},
-      revealSeed: firebase.firestore.FieldValue.delete()
+    await DRAW_DOC().set({
+      status:'OPEN',
+      commitHash:commit,
+      closeAt,
+      pots:{cron8,cro},
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      winning: firebase.firestore.FieldValue.delete(),
+      winners: firebase.firestore.FieldValue.delete()
     },{merge:true});
-    await adminRefresh(); await loadDraw(); alert('Draw opened. Seed saved locally.');
-  }catch(e){ dbg('admin-open', e?.message); alert('Open failed.'); }
+    await adminRefresh(); toast('Draw opened ✅');
+  }catch(e){ alert('Open failed.'); }
 });
 
-$('admin-close')?.addEventListener('click', async ()=>{
+$('admin-lock')?.addEventListener('click', async ()=>{
   try{
-    const seed=localStorage.getItem(SEED_KEY); if(!seed) return alert('No local seed to reveal.');
-    await db.collection('draws').doc(DRAW_ID).set({ status:'closed', revealSeed:seed },{merge:true});
-    await adminRefresh(); await loadDraw(); alert('Draw closed & seed revealed.');
-  }catch(e){ dbg('admin-close', e?.message); alert('Close failed.'); }
+    await DRAW_DOC().set({ status:'LOCKED' }, { merge:true });
+    await adminRefresh(); toast('Entries locked ✅');
+  }catch(e){ alert('Lock failed.'); }
+});
+
+$('admin-reveal')?.addEventListener('click', async ()=>{
+  try{
+    const primStr = prompt(`Enter ${NUM.primPick} primary numbers (comma-separated):`, '');
+    const megaStr = prompt('Enter MEGA number:', '');
+    if (!primStr || !megaStr) return;
+    const primary = primStr.split(',').map(s=>parseInt(s.trim(),10)).filter(n=>Number.isFinite(n));
+    const megaNum    = parseInt(megaStr,10);
+
+    if (primary.length !== NUM.primPick) return alert(`Must supply exactly ${NUM.primPick} numbers`);
+    if (primary.some(n=>n<NUM.primMin || n>NUM.primMax)) return alert('Primary out of range');
+    if (megaNum<NUM.megaMin || megaNum>NUM.megaMax) return alert('Mega out of range');
+
+    await DRAW_DOC().set({
+      status: 'REVEALED',
+      winning: { primary: primary.sort((a,b)=>a-b), mega: megaNum },
+      revealAt: Date.now()
+    }, { merge:true });
+
+    // Compute winners (jackpot only in v1)
+    const shots = await TICKETS_COL().get();
+    const winners=[];
+    shots.forEach(doc=>{
+      const t = doc.data();
+      const matches = (t.primary||[]).filter(n=>primary.includes(n)).length + (t.mega===megaNum ? 1 : 0);
+      if (matches === NUM.primPick+1){
+        winners.push({ wallet: t.owner, matches, prizeCro: 0, prizeCron8: 0, paid:false, txHash:'' });
+      }
+    });
+    await DRAW_DOC().set({ winners }, { merge:true });
+    await adminRefresh(); toast(`Revealed ✅ — Winners: ${winners.length}`);
+  }catch(e){ alert('Reveal failed.'); }
 });
 
 $('admin-refresh')?.addEventListener('click', adminRefresh);
 $('copy-commit')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-commit').textContent||'').trim()));
-$('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-reveal').textContent||'').trim()));
+$('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText(($('admin-reveal-seed').textContent||'').trim()));
 
-/* ========= Boot (strict manual connect per-tab) ========= */
+/* ========= Share to 𝕏 (PNG scaffold) ========= */
+async function renderTicketPNG(ticket){
+  const c=document.createElement('canvas'); c.width=800; c.height=418;
+  const g=c.getContext('2d');
+  g.fillStyle='#0b0d12'; g.fillRect(0,0,c.width,c.height);
+  g.fillStyle='#fff'; g.font='700 28px Inter, sans-serif';
+  g.fillText('CROnation — Mega Jackpot', 24, 48);
+  g.font='600 22px Inter, sans-serif';
+  g.fillText(`Wallet: ${short(ticket.owner||'')}`, 24, 88);
+  g.fillText(`Numbers: ${(ticket.primary||[]).join(' - ')}  |  ★ ${ticket.mega}`, 24, 126);
+  g.fillStyle='#9ca3af'; g.font='16px Inter, sans-serif';
+  g.fillText(new Date().toLocaleString(), 24, 162);
+  return new Promise(res=>c.toBlob(b=>res(b),'image/png',0.95));
+}
+async function shareTicketToX(ticket){
+  const blob = await renderTicketPNG(ticket);
+  const file = new File([blob], 'cronation-ticket.png', { type:'image/png' });
+  try{
+    if (navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file], text:'My CROnation ticket — let’s go! #CROFam' });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='cronation-ticket.png'; a.click();
+      const intent = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent('My CROnation ticket — let’s go! #CROFam https://cronation.netlify.app/draw.html');
+      window.open(intent,'_blank');
+    }
+  }catch(_){}
+}
+
+/* ========= Boot ========= */
 (async ()=>{
-  await loadDraw();
+  // hydrate ranges + flags
+  await hydrateNumberRanges();
+
+  // draw listener
+  startDrawListener();
 
   await waitForEthereum();
   injected = pickInjectedProvider();
@@ -1002,7 +1142,6 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
       const chainId = await injected.request({method:'eth_chainId'}).catch(()=>null);
       setText('chain-pill', (chainId?.toLowerCase()==='0x19') ? 'Cronos (25)' : `Chain ${chainId||'—'}`);
 
-      // Restore only if authorized AND user explicitly connected in THIS tab
       const acc = await injected.request({ method:'eth_accounts' }).catch(()=>[]);
       const shouldRestore =
         localStorage.getItem(LS_CONNECTED) === '1' &&
@@ -1020,9 +1159,7 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
       } else {
         setText('addr-pill','—');
       }
-    }catch(e){ dbg('boot', e?.message); }
-  } else {
-    dbg('no provider on boot');
+    }catch(e){}
   }
 
   // Debug toggle
@@ -1042,7 +1179,7 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
     }
   })();
 
-  // Collapse Admin into an accordion on mobile by default
+  // Collapse Admin into an accordion on mobile
   (function collapseAdminOnMobile(){
     const admin = document.getElementById('admin');
     if (!admin) return;
@@ -1067,11 +1204,10 @@ $('copy-reveal')?.addEventListener('click', ()=> navigator.clipboard.writeText((
 /* ========= After connect ========= */
 async function afterConnect(){
   $('app').style.display='grid';
-  await loadDraw();
   await refreshTier();
   await restorePassport();
-  await loadMine();
   await loadPlayerCard(addr);
+  startMyTicketsListener();
 
   const isAdmin = !!addr && (addr.toLowerCase() === ADMIN_WALLET.toLowerCase());
   $('admin').style.display = isAdmin ? 'block' : 'none';
