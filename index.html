@@ -1796,12 +1796,12 @@ if (shareBtn){
 
   box.style.display = 'block';
 
-  // 👇 reset + retrigger the pulse every time
+  // reset + retrigger the pulse every time
   box.classList.remove('pulse');
   void box.offsetWidth; // force reflow
   box.classList.add('pulse');
 
-  // 👇 remember the last spotlight (for refresh restore)
+  // remember the last spotlight (for refresh restore)
   try {
     localStorage.setItem('cr8_lastSpotlight',
       JSON.stringify({ name, ts: Date.now() })
@@ -1809,20 +1809,7 @@ if (shareBtn){
   } catch (_) {}
 }
 
-  text.textContent = `New country joined: ${name}!`;
-  const iso2 = countryToISO2(name);
-  if (iso2){
-    flag.src = `https://flagcdn.com/24x18/${iso2}.png`;
-    flag.alt = `${name} flag`;
-  } else {
-    flag.removeAttribute('src');
-    flag.alt = '';
-  }
-
-  box.style.display = 'block';
-
   async function warmSpotlightOnBoot(){
-  // 1) Prefer a recent cached spotlight (e.g., last 15 minutes)
   try {
     const cached = JSON.parse(localStorage.getItem('cr8_lastSpotlight') || 'null');
     if (cached && (Date.now() - cached.ts) < 15 * 60 * 1000) {
@@ -1831,26 +1818,17 @@ if (shareBtn){
     }
   } catch (_) {}
 
-  // 2) Fallback: show the most recently first-lit country from 'countries'
   try {
     const q = await db.collection('countries')
       .orderBy('created','desc')
       .limit(1)
       .get();
-
     let latest = null;
     q.forEach(doc => { const d = doc.data(); if (d?.name) latest = d.name; });
     renderSpotlight(latest);
-  } catch (_) {
-    // noop — banner will stay hidden until a new first-light happens
-  }
+  } catch (_) {}
 }
 
-  // 👇 reset + retrigger the pulse every time
-  box.classList.remove('pulse');
-  void box.offsetWidth; // force reflow
-  box.classList.add('pulse');
-}
 
   // recolor after counts change
   countryLayers.forEach((_, name) => updateCountryStyle(name));
