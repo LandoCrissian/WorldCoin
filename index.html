@@ -461,42 +461,6 @@
       0%,80%,100%{opacity:.2;transform:scale(.8);}
       40%{opacity:1;transform:scale(1);}
     }
-
-    /* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .country-spotlight, .country-pulse {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* Big one-time spotlight (glow + ring sweep) */
-@keyframes cr8-spotlight-glow {
-  0%   { filter: drop-shadow(0 0 0px rgba(0,255,200,0.0)); }
-  30%  { filter: drop-shadow(0 0 24px rgba(0,255,200,0.8)); }
-  100% { filter: drop-shadow(0 0 0px rgba(0,255,200,0.0)); }
-}
-
-.country-spotlight {
-  animation: cr8-spotlight-glow 1200ms ease-in-out;
-}
-
-/* Subtle pulse for subsequent joins */
-@keyframes cr8-pulse {
-  0%   { transform: scale(1); opacity: 1; }
-  50%  { transform: scale(1.03); opacity: 0.9; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.country-pulse {
-  animation: cr8-pulse 420ms ease-out;
-}
-
-/* Optional: faint fill bump during pulse if your countries are SVG paths */
-.country-pulse.cr8-svg {
-  transition: fill-opacity 240ms ease;
-  fill-opacity: 0.85;
-}
   </style>
 </head>
 <!-- SECTION 1 END -->
@@ -1150,212 +1114,21 @@ async function renderPassportPNGViaCanvas({ country, nick, serial, address, tier
   }
 
   (async function initMap(){
-  let data;
-  try {
-    data = await loadGeojson(REMOTE_GEOJSON_URL);
-  } catch (e1) {
-    console.warn('Remote GeoJSON failed, using local fallback', e1);
-    try {
-      data = await loadGeojson(LOCAL_FALLBACK_URL);
-    } catch (e2) {
-      console.error('Fallback GeoJSON failed', e2);
-      el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
-        Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
-      </div>`;
-      return;
-    }
-  }
-
-  // --- INIT MAP ---
-  const map = L.map('map').setView([20, 0], 2);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  // --- COUNTRY LAYER LOOKUP ---
-  const countryLayerByISO = new Map();
-
-  const geojson = L.geoJSON(data, {
-    onEachFeature: (feature, layer) => {
-      const iso = (feature.properties.ISO_A2 || feature.properties.iso_a2 || '').toUpperCase();
-      if (iso) {
-        countryLayerByISO.set(iso, layer);
+    let data;
+    try{
+      data = await loadGeojson(REMOTE_GEOJSON_URL);
+    }catch(e1){
+      console.warn('Remote GeoJSON failed, using local fallback', e1);
+      try{
+        data = await loadGeojson(LOCAL_FALLBACK_URL);
+      }catch(e2){
+        console.error('Fallback GeoJSON failed', e2);
+        el('map').innerHTML = `<div style="padding:16px;color:var(--muted)">
+          Unable to load map. <button class="btn" onclick="location.reload()">Retry</button>
+        </div>`;
+        return;
       }
-    },
-    style: { weight: 1, fillOpacity: 0.6 }
-  }).addTo(map);
-
-  // now your spotlight/pulse logic can call:
-  // const layer = countryLayerByISO.get('GB');
-})();
-
-    // --- STATE -------------------------------------------------------------------
-/** Track countries that have been lit at least once this session */
-const litCountries = new Set(JSON.parse(localStorage.getItem('cr8_lit_countries') || '[]'));
-
-/** Avoid spamming spotlight if multiple joins stream in quickly */
-let lastSpotlightAt = 0;
-const SPOTLIGHT_COOLDOWN_MS = 1000;
-
-// Persist helper
-function persistLit() {
-  localStorage.setItem('cr8_lit_countries', JSON.stringify([...litCountries]));
-}
-
-// --- MAP LAYER RESOLVER ------------------------------------------------------
-// Implement one of these depending on your setup.
-
-// (A) If you have SVG paths with ids like #country-GB or data-iso="GB":
-function getCountryEl(code) {
-  const el = document.querySelector(`#country-${code}`) || document.querySelector(`[data-iso="${code}"]`);
-  return el || null;
-}
-
-// (B) If using Leaflet with a GeoJSON layer, keep a map of ISO->layer on init:
-/// const countryLayerByISO = new Map(); // filled when adding GeoJSON features
-function getLeafletLayer(code) {
-  return countryLayerByISO?.get(code) || null;
-}
-
-// (C) If using MapLibre GL, query by feature-state or property:
-/// function getMaplibreFeature(code) { ... }
-
-// Use whatever you wired up:
-function getCountryHandle(code) {
-  return getCountryEl(code) || getLeafletLayer(code); // or getMaplibreFeature(code)
-}
-
-// --- EFFECTS -----------------------------------------------------------------
-function spotlightCountry(code) {
-  const handle = getCountryHandle(code);
-  if (!handle) return;
-
-  const now = Date.now();
-  if (now - lastSpotlightAt < SPOTLIGHT_COOLDOWN_MS) return;
-  lastSpotlightAt = now;
-
-  // VISUAL: add class then clean up
-  applyAnimClass(handle, 'country-spotlight');
-
-  // CAMERA: gently focus country once (optional)
-  tryFocusCountry(code, { animate: true, maxZoom: 4 });
-}
-
-function pulseCountry(code) {
-  const handle = getCountryHandle(code);
-  if (!handle) return;
-
-  applyAnimClass(handle, 'country-pulse', /*extra*/ isSVG(handle) ? 'cr8-svg' : null);
-}
-
-function applyAnimClass(handle, cls, extra) {
-  const el = extractDomEl(handle);
-  if (!el) return;
-
-  // Restart animation by toggling classes
-  el.classList.remove(cls);
-  if (extra) el.classList.add(extra);
-  // Force reflow to allow re-adding the class
-  // eslint-disable-next-line no-unused-expressions
-  void el.offsetWidth;
-  el.classList.add(cls);
-
-  // Remove animation class after it finishes (fallback cleanup at 2s)
-  const cleanup = () => el.classList.remove(cls);
-  el.addEventListener('animationend', cleanup, { once: true });
-  setTimeout(cleanup, 2000);
-}
-
-function isSVG(handle) {
-  const el = extractDomEl(handle);
-  return !!el && el instanceof SVGElement;
-}
-
-function extractDomEl(handle) {
-  // Leaflet layer -> get its path element
-  if (handle && typeof handle.getElement === 'function') {
-    return handle.getElement();
-  }
-  // SVG DOM element directly
-  if (handle instanceof Element) return handle;
-  return null;
-}
-
-// --- CAMERA FOCUS (Leaflet / MapLibre / fallback) ----------------------------
-function tryFocusCountry(code, opts = {}) {
-  // Leaflet example:
-  const layer = getLeafletLayer?.(code);
-  if (layer && typeof layer.getBounds === 'function' && window.L && window.map) {
-    try {
-      const b = layer.getBounds();
-      window.map.flyToBounds(b, { padding: [40, 40], duration: 1.0, maxZoom: opts.maxZoom ?? 5 });
-      return;
-    } catch (_) {}
-  }
-
-  // MapLibre example:
-  // const feature = getMaplibreFeature?.(code);
-  // if (feature && window.map) { ... }
-
-  // No camera available: ignore
-}
-
-// --- PUBLIC API ---------------------------------------------------------------
-/**
- * Call this when a citizen joins.
- * @param {{ countryCode: string }} evt
- */
-function onNewCitizen(evt) {
-  const code = (evt?.countryCode || '').toUpperCase();
-  if (!code) return;
-
-  const isFirstTime = !litCountries.has(code);
-
-  if (isFirstTime) {
-    spotlightCountry(code);   // Big, one-time effect
-    litCountries.add(code);
-    persistLit();
-  } else {
-    pulseCountry(code);       // Subtle feedback on subsequent joins
-  }
-
-  updateCitizenCountUI(code);
-}
-
-// Minimal counter UI hook—replace with your own logic
-function updateCitizenCountUI(code) {
-  const el = document.querySelector(`[data-citizen-count="${code}"]`);
-  if (el) {
-    const n = Number(el.textContent || '0') + 1;
-    el.textContent = String(n);
-  }
-}
-
-// --- FIRESTORE STREAM (example wiring) ---------------------------------------
-// Assuming you have Firebase already loaded and `db` is a Firestore instance.
-// This listens for newly added citizens and triggers the effect logic.
-// Adjust collection/fields for your schema.
-
-function startCitizenStream() {
-  // Replace with your collection and index by createdAt
-  const since = new Date(Date.now() - 10 * 60 * 1000); // last 10 min bootstrap (optional)
-  firebase.firestore()
-    .collection('citizens')
-    .where('createdAt', '>=', since)
-    .orderBy('createdAt', 'asc')
-    .onSnapshot((snap) => {
-      snap.docChanges().forEach((ch) => {
-        if (ch.type === 'added') {
-          const data = ch.doc.data();
-          onNewCitizen({ countryCode: data.countryCode || data.iso2 || data.country });
-        }
-      });
-    });
-}
-
-// Call once when the app loads:
-startCitizenStream();
+    }
 
     // Build country list for dropdown
     (data.features||[]).forEach(f => {
